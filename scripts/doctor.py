@@ -353,23 +353,28 @@ def check_comfyui(cfg: dict[str, Any]) -> list[Result]:
         status = OK if node_dir.is_dir() else MISSING
         results.append(Result("comfyui", f"node: {node}", status, "", str(node_dir)))
 
-    # Model files come from config/models.toml: the default image preset + required files.
+    # Model files come from config/models.toml: the default style + required files.
     with MODELS_MANIFEST.open("rb") as fh:
         manifest = tomllib.load(fh)
-    files, presets = manifest["files"], manifest["image_models"]
+    files, styles = manifest["files"], manifest["styles"]
     models_dir = expand(comfy["models_dir"])
-    default = comfy.get("default_image_model", "")
+    default = comfy.get("default_style", "")
     wanted: list[tuple[str, str]] = []  # (label, file id)
-    if default in presets:
-        preset = presets[default]
-        wanted.append((f"{default}: checkpoint", preset["checkpoint"]))
-        if preset.get("vae"):
-            wanted.append((f"{default}: vae", preset["vae"]))
-        wanted += [(f"{default}: lora", lora["file"]) for lora in preset.get("loras", [])]
-        if preset.get("fast", {}).get("lora"):
-            wanted.append((f"{default}: speed lora", preset["fast"]["lora"]))
+    if default in styles:
+        style = styles[default]
+        wanted.append((f"style {default}: checkpoint", style["checkpoint"]))
+        if style.get("vae"):
+            wanted.append((f"style {default}: vae", style["vae"]))
+        wanted += [(f"style {default}: lora", lora["file"]) for lora in style.get("loras", [])]
+        if style.get("fast", {}).get("lora"):
+            wanted.append((f"style {default}: speed lora", style["fast"]["lora"]))
+        bad = [f for _, f in wanted if files[f]["commercial"] != "yes"]
+        if bad:
+            results.append(
+                Result("comfyui", "default style", FAIL, "", f"not commercial-OK: {bad}")
+            )
     else:
-        results.append(Result("comfyui", "default image model", FAIL, "", f"unknown: {default!r}"))
+        results.append(Result("comfyui", "default style", FAIL, "", f"unknown: {default!r}"))
     wanted += [("required", file_id) for file_id in comfy.get("required_files", [])]
     for label, file_id in wanted:
         entry = files[file_id]

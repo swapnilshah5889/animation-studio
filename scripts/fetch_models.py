@@ -1,7 +1,7 @@
 """Download model weights listed in config/models.toml (idempotent, sha256-verified).
 
-    uv run scripts/fetch_models.py --list                 # files and presets, with status
-    uv run scripts/fetch_models.py sdxl-storybook         # a preset = all of its files
+    uv run scripts/fetch_models.py --list                 # files and styles, with status
+    uv run scripts/fetch_models.py storybook              # a style = all of its files
     uv run scripts/fetch_models.py sam2.1-hiera-small depth-anything-v2-small
 
 Files already present with the right size are skipped. Each file is fetched as N parallel HTTP
@@ -120,22 +120,22 @@ def show(manifest: Manifest, models_dir: Path, default: str) -> None:
         state = "present" if f.is_present(models_dir) else "-"
         size = f"{f.size / GB:6.2f} GB"
         print(f"  {state:<8} {f.id:<30} {size}  commercial={f.commercial:<8} {f.license}")
-    print("\nimage-model presets (switcher)")
-    for p in manifest.presets.values():
-        ready = all(f.is_present(models_dir) for f in manifest.preset_files(p.id))
-        mark = "*" if p.id == default else " "
+    print("\nstyles (switcher)")
+    for st in manifest.styles.values():
+        ready = all(f.is_present(models_dir) for f in manifest.style_files(st.id))
+        mark = "*" if st.id == default else " "
         print(
-            f" {mark}{'ready' if ready else '-':<7} {p.id:<30} "
-            f"commercial={manifest.preset_commercial(p.id):<8} {p.label}"
+            f" {mark}{'ready' if ready else '-':<7} {st.id:<24} "
+            f"commercial={manifest.style_commercial(st.id):<8} {st.label}"
         )
-    print("\n* = default_image_model in config/studio.toml")
+    print("\n* = default_style in config/studio.toml")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("ids", nargs="*", help="preset ids and/or file ids")
+    parser.add_argument("ids", nargs="*", help="style ids and/or file ids")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--connections", type=int, default=8, help="parallel ranges per file")
     args = parser.parse_args()
@@ -144,7 +144,7 @@ def main() -> int:
     manifest = load_manifest()
     models_dir = comfy_models_dir(cfg)
     if args.list or not args.ids:
-        show(manifest, models_dir, cfg.get("comfyui", "default_image_model", ""))
+        show(manifest, models_dir, cfg.get("comfyui", "default_style", ""))
         return 0
 
     files = manifest.expand(args.ids)

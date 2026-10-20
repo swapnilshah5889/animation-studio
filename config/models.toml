@@ -1,13 +1,13 @@
-# Model manifest: every downloadable weight file, plus the image-model presets the switcher offers.
-# Committed (same on every machine). Which preset is the default is per-machine:
-# config/studio.toml [comfyui] default_image_model. Human-readable registry: docs/MODELS.md.
+# Model manifest: every downloadable weight file, plus the style presets the switcher offers.
+# Committed (same on every machine). Which style is the default is per-machine:
+# config/studio.toml [comfyui] default_style. Human-readable registry: docs/MODELS.md.
 #
 #   uv run scripts/fetch_models.py --list            # what exists, what is downloaded
-#   uv run scripts/fetch_models.py sdxl-storybook    # download a preset (all its files)
+#   uv run scripts/fetch_models.py storybook         # download a style (all its files)
 #   uv run scripts/fetch_models.py sam2.1-hiera-small depth-anything-v2-small
 #
 # Rules (D-012, D-019): check the license before adding a file; commercial = "yes" | "no" |
-# "unclear". Only presets whose every file is commercial = "yes" may be the default.
+# "unclear". Only styles whose every file is commercial = "yes" may be the default.
 # `dest` is relative to [comfyui] models_dir.
 
 # --------------------------------------------------------------------------- files
@@ -86,44 +86,60 @@ dest = "annotators/depth-anything/Depth-Anything-V2-Small/depth_anything_v2_vits
 license = "Apache-2.0"
 commercial = "yes"
 
-# --------------------------------------------------------------------------- image-model presets
-# The switcher: comfy_mcp (Step 4) takes a preset id; workflows get these settings injected.
-# `fast` = the few-step variant with a speed LoRA (or a model that is few-step already).
+# --------------------------------------------------------------------------- style presets
+# The style switcher (D-019, D-025). studio_core.comfy_graphs builds the ComfyUI workflow from a
+# style; comfy_mcp tools (Step 4) take a `style` argument and the app shows a dropdown.
+# A film's style is locked once it has characters (studio_core.film), so looks stay consistent.
+#
+#   prompt_prefix / prompt_suffix  wrap every prompt (trigger words, quality tags)
+#   negative                       the style's negative prompt (kid-safety terms are always added)
+#   normal / fast                  sampler settings; `fast` may add a speed LoRA
+#   vae                            all SDXL styles use the fp16-fix VAE (fp16 NaNs on MPS otherwise)
 
-[image_models.sdxl-storybook]
-label = "SDXL Base 1.0 + StoryBook flat kids'-book LoRA"
+[styles.storybook]
+label = "Storybook (SDXL Base 1.0 + StoryBook flat kids'-book LoRA)"
 checkpoint = "sdxl-base-1.0"
 vae = "sdxl-vae-fp16-fix"
 loras = [{ file = "storybook-redmond-v2", strength = 0.9 }]
-trigger = "KidsRedmAF, Kids Book"
+prompt_prefix = "KidsRedmAF, Kids Book, flat colors, simple shapes, clean outlines"
+prompt_suffix = ""
+negative = "photo, realistic, 3d render"
 normal = { steps = 25, cfg = 6.0, sampler = "dpmpp_2m", scheduler = "karras" }
 fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
-notes = "Default (D-019). Cleanest license chain; good base for our own LoRAs later."
+notes = "Default (owner's pick A). Cleanest license chain; good base for our own LoRAs later."
 
-[image_models.sdxl-cutecartoon]
-label = "SDXL Base 1.0 + CuteCartoon LoRA"
+[styles.cutecartoon]
+label = "Cute cartoon (SDXL Base 1.0 + CuteCartoon LoRA)"
 checkpoint = "sdxl-base-1.0"
 vae = "sdxl-vae-fp16-fix"
 loras = [{ file = "cutecartoon-redmond-v2", strength = 0.9 }]
-trigger = "CuteCartoonAF, Cute Cartoon"
+prompt_prefix = "CuteCartoonAF, Cute Cartoon, flat colors, simple shapes"
+prompt_suffix = ""
+negative = "photo, realistic, 3d render"
 normal = { steps = 25, cfg = 6.0, sampler = "dpmpp_2m", scheduler = "karras" }
 fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
-notes = "Alternative style on the same base; only the 170 MB LoRA to download."
+notes = "Alternative look on the same base; only a 170 MB LoRA."
 
-[image_models.dreamshaper-xl-lightning-sfw]
+[styles.dreamshaper-lightning]
 label = "DreamShaper XL Lightning (SFW)"
 checkpoint = "dreamshaper-xl-lightning-sfw"
+vae = "sdxl-vae-fp16-fix"
 loras = []
-trigger = ""
+prompt_prefix = "children's book illustration, cartoon, flat colors, simple shapes"
+prompt_suffix = ""
+negative = "photo, realistic"
 normal = { steps = 6, cfg = 2.0, sampler = "dpmpp_sde", scheduler = "karras" }
 fast = { steps = 4, cfg = 2.0, sampler = "dpmpp_sde", scheduler = "karras" }
-notes = "Commercial use unverified: never the default. Leans painterly/3D."
+notes = "Owner's option B. Commercial use UNCLEAR (turbo/lcm lineage): never the default."
 
-[image_models.animagine-xl-4]
-label = "Animagine XL 4.0 (anime tier, later)"
+[styles.animagine]
+label = "Animagine XL 4.0 (anime look)"
 checkpoint = "animagine-xl-4.0-opt"
+vae = "sdxl-vae-fp16-fix"
 loras = []
-trigger = "safe"
+prompt_prefix = "no humans, chibi, cute"
+prompt_suffix = "safe, masterpiece, high score, great score, absurdres"
+negative = "nsfw, lowres, bad anatomy, bad hands, text, error, worst quality, low quality, jpeg artifacts, signature, watermark"
 normal = { steps = 28, cfg = 5.0, sampler = "euler_ancestral", scheduler = "normal" }
 fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
-notes = "Anime proportions; for the future anime tier. Always include the 'safe' tag; never artist tags."
+notes = "Owner's option C, for the later anime tier. Danbooru-trained: 'safe' tag always, never artist tags."

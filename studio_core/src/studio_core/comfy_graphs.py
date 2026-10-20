@@ -1,0 +1,113 @@
+"""Build ComfyUI workflows (API format) from a style preset instead of hard-coding a checkpoint.
+
+    manifest = load_manifest()
+    workflow = txt2img(manifest, "storybook", "a cheerful little rabbit, full body", fast=True)
+    paths, seconds = Comfy().run(workflow, out_dir)
+
+The graph is: checkpoint → (VAE) → style LoRAs → (speed LoRA) → prompts → KSampler → decode → save.
+Node ids are assigned in order, so the same inputs always produce the same JSON (golden-tested
+against comfy_workflows/txt2img_sdxl*.json, which scripts/export_workflows.py regenerates).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from studio_core.models import Manifest
+
+# Always appended to the negative prompt, whatever the style (D-013: children's content).
+KID_SAFE_NEGATIVE = (
+    "nsfw, nude, scary, horror, violent, blood, weapon, text, watermark, signature, blurry, "
+    "extra limbs, deformed"
+)
+
+
+class _Graph:
+    def __init__(self) -> None:
+        self.nodes: dict[str, dict[str, Any]] = {}
+
+    def add(self, class_type: str, title: str | None = None, **inputs: Any) -> str:
+        node_id = str(len(self.nodes) + 1)
+        node: dict[str, Any] = {"class_type": class_type, "inputs": inputs}
+        if title:
+            node["_meta"] = {"title": title}
+        self.nodes[node_id] = node
+        return node_id
+
+
+def join_prompt(*parts: str) -> str:
+    return ", ".join(p.strip() for p in parts if p and p.strip())
+
+
+def txt2img(
+    manifest: Manifest,
+    style_id: str,
+    prompt: str,
+    *,
+    fast: bool = False,
+    negative: str = "",
+    seed: int = 42,
+    width: int = 1024,
+    height: int = 1024,
+    filename_prefix: str = "txt2img",
+) -> dict[str, dict[str, Any]]:
+    """A text-to-image workflow for one style. `fast` uses the style's few-step settings."""
+    style = manifest.styles[style_id]
+    files = manifest.files
+    settings = style.settings(fast)
+    g = _Graph()
+
+    ckpt = g.add(
+        "CheckpointLoaderSimple",
+        f"checkpoint ({style_id})",
+        ckpt_name=files[style.data["checkpoint"]].comfy_name,
+    )
+    model, clip, vae = [ckpt, 0], [ckpt, 1], [ckpt, 2]
+    if vae_id := style.data.get("vae"):
+        vae = [g.add("VAELoader", "VAE", vae_name=files[vae_id].comfy_name), 0]
+    for lora in style.data.get("loras", []):
+        node = g.add(
+            "LoraLoader",
+            "style LoRA",
+            model=model,
+            clip=clip,
+            lora_name=files[lora["file"]].comfy_name,
+            strength_model=lora["strength"],
+            strength_clip=lora["strength"],
+        )
+        model, clip = [node, 0], [node, 1]
+    if speed := settings.get("lora"):
+        node = g.add(
+            "LoraLoader",
+            "speed LoRA",
+            model=model,
+            clip=clip,
+            lora_name=files[speed].comfy_name,
+            strength_model=1.0,
+            strength_clip=1.0,
+        )
+        model, clip = [node, 0], [node, 1]
+
+    positive_text = join_prompt(
+        style.data.get("prompt_prefix", ""), prompt, style.data.get("prompt_suffix", "")
+    )
+    negative_text = join_prompt(style.data.get("negative", ""), negative, KID_SAFE_NEGATIVE)
+    positive = g.add("CLIPTextEncode", "positive", clip=clip, text=positive_text)
+    negative_node = g.add("CLIPTextEncode", "negative", clip=clip, text=negative_text)
+    latent = g.add("EmptyLatentImage", width=width, height=height, batch_size=1)
+    sampled = g.add(
+        "KSampler",
+        model=model,
+        positive=[positive, 0],
+        negative=[negative_node, 0],
+        latent_image=[latent, 0],
+        seed=seed,
+        steps=settings["steps"],
+        cfg=settings["cfg"],
+        sampler_name=settings["sampler"],
+        scheduler=settings["scheduler"],
+        denoise=1.0,
+    )
+    image = g.add("VAEDecode", samples=[sampled, 0], vae=vae)
+    g.add("SaveImage", images=[image, 0], filename_prefix=filename_prefix)
+    return g.nodes

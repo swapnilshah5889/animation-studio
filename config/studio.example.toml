@@ -52,9 +52,9 @@ models_dir = "~/ai-studio/comfyui/models"
 # ComfyUI-Manager is a pip package now (comfyui_manager, started with --enable-manager), so it is
 # not a folder here. Custom node packs chosen in D-017:
 custom_nodes = ["ComfyUI-segment-anything-2", "comfyui_controlnet_aux"]
-# Image-model switcher: presets and files are defined in config/models.toml (committed).
-# The default must be a preset whose files are all commercial-OK (D-019).
-default_image_model = "sdxl-storybook"
+# Style switcher: styles and weight files are defined in config/models.toml (committed).
+# The default must be a style whose files are all commercial-OK (D-019, D-025).
+default_style = "storybook"
 # Other weights this machine needs (file ids from config/models.toml).
 required_files = ["sam2.1-hiera-small", "depth-anything-v2-small"]
 

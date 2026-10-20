@@ -1,8 +1,8 @@
-"""Model manifest (config/models.toml): weight files and the image-model presets of the switcher.
+"""Model manifest (config/models.toml): weight files and the style presets of the switcher.
 
 A *file* is one downloadable weight (URL, sha256, size, destination, license).
-A *preset* is what a user picks in the switcher: a checkpoint plus VAE, style LoRAs, trigger words
-and sampler settings for a normal and a fast (few-step) variant.
+A *style* is what a user picks in the switcher: a checkpoint plus VAE, style LoRAs, prompt
+fragments, a negative prompt and sampler settings for a normal and a fast (few-step) variant.
 """
 
 from __future__ import annotations
@@ -30,6 +30,11 @@ class ModelFile:
     def path(self, models_dir: Path) -> Path:
         return models_dir / self.dest
 
+    @property
+    def comfy_name(self) -> str:
+        """The name ComfyUI uses: the path inside its model folder (checkpoints/, loras/...)."""
+        return self.dest.split("/", 1)[1]
+
     def is_present(self, models_dir: Path) -> bool:
         """Present = exists with the expected size (sha256 is checked at download time)."""
         p = self.path(models_dir)
@@ -37,7 +42,7 @@ class ModelFile:
 
 
 @dataclass(frozen=True)
-class Preset:
+class Style:
     id: str
     data: dict[str, Any]
 
@@ -45,8 +50,12 @@ class Preset:
     def label(self) -> str:
         return self.data["label"]
 
+    def settings(self, fast: bool) -> dict[str, Any]:
+        """Sampler settings (steps, cfg, sampler, scheduler, optional speed `lora`)."""
+        return self.data["fast" if fast else "normal"]
+
     def file_ids(self, fast: bool = True) -> list[str]:
-        """Every file this preset needs (the fast variant's speed LoRA included by default)."""
+        """Every file this style needs (the fast variant's speed LoRA included by default)."""
         ids = [self.data["checkpoint"]]
         if vae := self.data.get("vae"):
             ids.append(vae)
@@ -59,29 +68,29 @@ class Preset:
 @dataclass(frozen=True)
 class Manifest:
     files: dict[str, ModelFile]
-    presets: dict[str, Preset]
+    styles: dict[str, Style]
 
-    def preset_files(self, preset_id: str, fast: bool = True) -> list[ModelFile]:
-        return [self.files[f] for f in self.presets[preset_id].file_ids(fast)]
+    def style_files(self, style_id: str, fast: bool = True) -> list[ModelFile]:
+        return [self.files[f] for f in self.styles[style_id].file_ids(fast)]
 
-    def preset_commercial(self, preset_id: str) -> str:
+    def style_commercial(self, style_id: str) -> str:
         """'yes' only if every file is commercial-OK; otherwise the weakest status."""
-        statuses = {f.commercial for f in self.preset_files(preset_id)}
+        statuses = {f.commercial for f in self.style_files(style_id)}
         for status in ("no", "unclear"):
             if status in statuses:
                 return status
         return "yes"
 
     def expand(self, ids: list[str]) -> list[ModelFile]:
-        """Resolve a mix of preset ids and file ids to unique files, in order."""
+        """Resolve a mix of style ids and file ids to unique files, in order."""
         out: dict[str, ModelFile] = {}
         for item in ids:
-            if item in self.presets:
-                out.update({f.id: f for f in self.preset_files(item)})
+            if item in self.styles:
+                out.update({f.id: f for f in self.style_files(item)})
             elif item in self.files:
                 out[item] = self.files[item]
             else:
-                raise KeyError(f"unknown model or preset: {item}")
+                raise KeyError(f"unknown style or model file: {item}")
         return list(out.values())
 
 
@@ -89,12 +98,12 @@ def load_manifest(path: Path = MANIFEST) -> Manifest:
     with path.open("rb") as fh:
         data = tomllib.load(fh)
     files = {k: ModelFile(id=k, **v) for k, v in data.get("files", {}).items()}
-    presets = {k: Preset(id=k, data=v) for k, v in data.get("image_models", {}).items()}
-    manifest = Manifest(files, presets)
-    for preset in presets.values():  # fail fast on typos in the manifest
-        missing = [f for f in preset.file_ids() if f not in files]
+    styles = {k: Style(id=k, data=v) for k, v in data.get("styles", {}).items()}
+    manifest = Manifest(files, styles)
+    for style in styles.values():  # fail fast on typos in the manifest
+        missing = [f for f in style.file_ids() if f not in files]
         if missing:
-            raise ValueError(f"preset {preset.id} references unknown files: {missing}")
+            raise ValueError(f"style {style.id} references unknown files: {missing}")
     return manifest
 
 
