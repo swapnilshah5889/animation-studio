@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from studio_core.sif.bones import Bone, BoneLink, bones_xml
 from studio_core.sif.units import Space
 from studio_core.sif.values import Animated, Color, Transform, Vec, num, value_xml
 
@@ -27,6 +28,7 @@ class Layer:
     desc: str  # the layer's name; Switch layers select children by it
     TYPE = ""
     VERSION = ""
+    render = True  # False → exclude_from_rendering (kept for the GUI, ignored by the renderer)
 
     def params(self) -> dict[str, object]:
         raise NotImplementedError
@@ -36,7 +38,7 @@ class Layer:
             "layer",
             type=self.TYPE,
             active="true",
-            exclude_from_rendering="false",
+            exclude_from_rendering="false" if self.render else "true",
             version=self.VERSION,
             desc=self.desc,
         )
@@ -112,7 +114,7 @@ class Group(Layer):
 
     children: list[Layer] = field(default_factory=list)
     origin: Vec | Animated = field(default_factory=lambda: Vec(0, 0))  # the pivot, local units
-    transform: Transform = field(default_factory=Transform)
+    transform: Transform | BoneLink = field(default_factory=Transform)
     TYPE = "group"
     VERSION = "0.3"
 
@@ -132,6 +134,31 @@ class Switch(Group):
         return {**super().params(), "layer_name": self.active}
 
 
+@dataclass(frozen=True)
+class _BoneList:
+    bones: tuple[Bone, ...]
+
+    def to_xml(self) -> ET.Element:
+        el = ET.Element("static_list", type="bone_object")
+        for bone in self.bones:
+            ET.SubElement(ET.SubElement(el, "entry"), "bone", type="bone_object", guid=bone.guid)
+        return el
+
+
+@dataclass
+class SkeletonLayer(Layer):
+    """Shows bones as draggable handles in the Synfig Studio GUI. Not rendered (the CLI does
+    not need it); written so a generated rig stays editable by hand."""
+
+    bones: list[Bone] = field(default_factory=list)
+    TYPE = "skeleton"
+    VERSION = "0.1"
+    render = False
+
+    def params(self) -> dict[str, object]:
+        return {"name": self.desc, "bones": _BoneList(tuple(self.bones))}
+
+
 @dataclass
 class Canvas:
     """A whole .sif document."""
@@ -144,6 +171,7 @@ class Canvas:
     bgcolor: Color = field(default_factory=lambda: Color(0.5, 0.5, 0.5))
     name: str = "Animation Studio scene"
     layers: list[Layer] = field(default_factory=list)
+    bones: list[Bone] = field(default_factory=list)  # all skeletons; root canvas only
 
     @property
     def space(self) -> Space:
@@ -168,6 +196,8 @@ class Canvas:
             bgcolor=f"{num(bg.r)} {num(bg.g)} {num(bg.b)} {num(bg.a)}",
         )
         ET.SubElement(root, "name").text = self.name
+        if self.bones:  # must precede every layer that refers to a bone
+            root.append(bones_xml(self.bones))
         for layer in self.layers:
             root.append(layer.to_xml())
         return root

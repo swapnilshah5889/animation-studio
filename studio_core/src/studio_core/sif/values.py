@@ -97,6 +97,8 @@ class Transform:
 
 def value_xml(value: object) -> ET.Element:
     """Build the XML element for one value (static or animated)."""
+    if hasattr(value, "to_xml"):  # composite helpers defined elsewhere (e.g. bones.BoneLink)
+        return value.to_xml()
     if isinstance(value, Animated):
         el = ET.Element("animated", type=value.kind)
         for wp in value.waypoints:

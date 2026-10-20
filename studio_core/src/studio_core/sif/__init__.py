@@ -9,7 +9,17 @@
 Format notes: docs/learning/synfig-format.md. Rendering: studio_core.sif.render.
 """
 
-from studio_core.sif.layers import Canvas, Circle, Group, ImportLayer, Layer, Rectangle, Switch
+from studio_core.sif.bones import Bone, BoneLink
+from studio_core.sif.layers import (
+    Canvas,
+    Circle,
+    Group,
+    ImportLayer,
+    Layer,
+    Rectangle,
+    SkeletonLayer,
+    Switch,
+)
 from studio_core.sif.units import Space, frame_time, frames
 from studio_core.sif.values import (
     Angle,
@@ -25,6 +35,8 @@ from studio_core.sif.values import (
 __all__ = [
     "Angle",
     "Animated",
+    "Bone",
+    "BoneLink",
     "Canvas",
     "Circle",
     "Color",
@@ -33,6 +45,7 @@ __all__ = [
     "Interp",
     "Layer",
     "Rectangle",
+    "SkeletonLayer",
     "Space",
     "Switch",
     "Transform",
