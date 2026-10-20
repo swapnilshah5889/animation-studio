@@ -1,7 +1,7 @@
 # Step 1: Learn Synfig by hand + document its format
 
-> **Status: draft for owner review.** Written at the end of Step 0. Nothing here starts until the
-> owner approves it (and may change it).
+> **Status: approved by the owner on 2026-10-20 ("yes begin").** Owner tasks 1.0–1.1 have a
+> step-by-step guide: [`STEP-1-owner-guide.md`](STEP-1-owner-guide.md).
 
 **Goal:** understand exactly what we will automate. The owner builds a short cut-out scene by hand
 in Synfig Studio. The agent reverse-documents the resulting `.sif` XML (our own files) and then

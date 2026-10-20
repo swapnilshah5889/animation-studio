@@ -1,0 +1,87 @@
+{
+  "background": {
+    "file": "background.png",
+    "size": [
+      2880,
+      1080
+    ],
+    "pivot": null
+  },
+  "torso": {
+    "file": "torso.png",
+    "size": [
+      200,
+      280
+    ],
+    "pivot": [
+      100,
+      260
+    ]
+  },
+  "head": {
+    "file": "head.png",
+    "size": [
+      220,
+      300
+    ],
+    "pivot": [
+      110,
+      285
+    ]
+  },
+  "upper_arm": {
+    "file": "upper_arm.png",
+    "size": [
+      56,
+      150
+    ],
+    "pivot": [
+      28,
+      20
+    ]
+  },
+  "forearm": {
+    "file": "forearm.png",
+    "size": [
+      52,
+      150
+    ],
+    "pivot": [
+      26,
+      18
+    ]
+  },
+  "mouth_A": {
+    "file": "mouth_A.png",
+    "size": [
+      90,
+      50
+    ],
+    "pivot": [
+      45,
+      25
+    ]
+  },
+  "mouth_E": {
+    "file": "mouth_E.png",
+    "size": [
+      90,
+      50
+    ],
+    "pivot": [
+      45,
+      25
+    ]
+  },
+  "mouth_X": {
+    "file": "mouth_X.png",
+    "size": [
+      90,
+      50
+    ],
+    "pivot": [
+      45,
+      25
+    ]
+  }
+}
