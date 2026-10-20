@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Skeleton Deformation: ONE image (limb.png) bent across an elbow joint by a 2-bone chain.
+  The layer holds (rest bone, pose bone) pairs; it warps everything BELOW it in the same canvas
+  through a grid mesh (point1/point2 = grid bounds in rest space, x/y_subdivisions = grid density).
+  Bone width/tipwidth (of the REST bone) = influence radius; pixels outside every bone capsule vanish.
+-->
+<canvas version="1.2" width="640" height="360" xres="2834.645669" yres="2834.645669"
+        view-box="-8.0 4.5 8.0 -4.5" antialias="1" fps="24" begin-time="0f" end-time="47f"
+        bgcolor="0.5 0.5 0.5 1.0">
+  <name>skeleton deformation limb</name>
+  <bones>
+    <bone_root type="bone_object" guid="000000000000000000000000000D0000"/>
+    <bone type="bone_object" guid="000000000000000000000000000D0001">
+      <name><string>rest_upper</string></name>
+      <parent><bone_valuenode type="bone_object" guid="000000000000000000000000000D0000"/></parent>
+      <origin><vector><x>-3.0</x><y>0.0</y></vector></origin>
+      <angle><angle value="0.0"/></angle>
+      <scalelx><real value="1.0"/></scalelx>
+      <width><real value="0.6"/></width>
+      <scalex><real value="1.0"/></scalex>
+      <tipwidth><real value="0.6"/></tipwidth>
+      <bone_depth><real value="0.0"/></bone_depth>
+      <length><real value="3.0"/></length>
+    </bone>
+    <bone type="bone_object" guid="000000000000000000000000000D0002">
+      <name><string>rest_lower</string></name>
+      <parent><bone_valuenode type="bone_object" guid="000000000000000000000000000D0001"/></parent>
+      <origin><vector><x>3.0</x><y>0.0</y></vector></origin>
+      <angle><angle value="0.0"/></angle>
+      <scalelx><real value="1.0"/></scalelx>
+      <width><real value="0.6"/></width>
+      <scalex><real value="1.0"/></scalex>
+      <tipwidth><real value="0.6"/></tipwidth>
+      <bone_depth><real value="0.0"/></bone_depth>
+      <length><real value="3.0"/></length>
+    </bone>
+    <bone type="bone_object" guid="000000000000000000000000000D0011">
+      <name><string>pose_upper</string></name>
+      <parent><bone_valuenode type="bone_object" guid="000000000000000000000000000D0000"/></parent>
+      <origin><vector><x>-3.0</x><y>0.0</y></vector></origin>
+      <angle><animated type="angle"><waypoint time="0f" before="linear" after="linear"><angle value="0"/></waypoint><waypoint time="12f" before="linear" after="linear"><angle value="20"/></waypoint><waypoint time="24f" before="linear" after="linear"><angle value="-20"/></waypoint><waypoint time="47f" before="linear" after="linear"><angle value="0"/></waypoint></animated></angle>
+      <scalelx><real value="1.0"/></scalelx>
+      <width><real value="0.6"/></width>
+      <scalex><real value="1.0"/></scalex>
+      <tipwidth><real value="0.6"/></tipwidth>
+      <bone_depth><real value="0.0"/></bone_depth>
+      <length><real value="3.0"/></length>
+    </bone>
+    <bone type="bone_object" guid="000000000000000000000000000D0012">
+      <name><string>pose_lower</string></name>
+      <parent><bone_valuenode type="bone_object" guid="000000000000000000000000000D0011"/></parent>
+      <origin><vector><x>3.0</x><y>0.0</y></vector></origin>
+      <angle><animated type="angle"><waypoint time="0f" before="linear" after="linear"><angle value="0"/></waypoint><waypoint time="12f" before="linear" after="linear"><angle value="60"/></waypoint><waypoint time="24f" before="linear" after="linear"><angle value="-70"/></waypoint><waypoint time="47f" before="linear" after="linear"><angle value="0"/></waypoint></animated></angle>
+      <scalelx><real value="1.0"/></scalelx>
+      <width><real value="0.6"/></width>
+      <scalex><real value="1.0"/></scalex>
+      <tipwidth><real value="0.6"/></tipwidth>
+      <bone_depth><real value="0.0"/></bone_depth>
+      <length><real value="3.0"/></length>
+    </bone>
+  </bones>
+
+  <layer type="rectangle" active="true" version="0.2" desc="bg">
+    <param name="color"><color><r>0.92</r><g>0.92</g><b>0.85</b><a>1.0</a></color></param>
+    <param name="point1"><vector><x>-9.0</x><y>5.0</y></vector></param>
+    <param name="point2"><vector><x>9.0</x><y>-5.0</y></vector></param>
+  </layer>
+
+  <layer type="group" active="true" version="0.3" desc="limb">
+    <param name="origin"><vector><x>0.0</x><y>0.0</y></vector></param>
+    <param name="transformation">
+      <composite type="transformation">
+        <offset><vector><x>0.0</x><y>0.0</y></vector></offset>
+        <angle><angle value="0.0"/></angle>
+        <skew_angle><angle value="0.0"/></skew_angle>
+        <scale><vector><x>1.0</x><y>1.0</y></vector></scale>
+      </composite>
+    </param>
+    <param name="canvas">
+      <canvas>
+        <layer type="import" active="true" version="0.1" desc="limb.png">
+          <param name="tl"><vector><x>-3.0</x><y>0.4</y></vector></param>
+          <param name="br"><vector><x>3.0</x><y>-0.4</y></vector></param>
+          <param name="filename"><string>limb.png</string></param>
+        </layer>
+        <layer type="skeleton_deformation" active="true" version="0.2" desc="deform">
+          <param name="bones">
+            <static_list type="pair_bone_object_bone_object">
+          <entry>
+            <composite type="pair_bone_object_bone_object">
+              <first><bone type="bone_object" guid="000000000000000000000000000D0001"/></first>
+              <second><bone type="bone_object" guid="000000000000000000000000000D0011"/></second>
+            </composite>
+          </entry>
+          <entry>
+            <composite type="pair_bone_object_bone_object">
+              <first><bone type="bone_object" guid="000000000000000000000000000D0002"/></first>
+              <second><bone type="bone_object" guid="000000000000000000000000000D0012"/></second>
+            </composite>
+          </entry>
+            </static_list>
+          </param>
+          <param name="point1"><vector><x>-4.0</x><y>1.0</y></vector></param>
+          <param name="point2"><vector><x>4.0</x><y>-1.0</y></vector></param>
+          <param name="x_subdivisions"><integer value="48"/></param>
+          <param name="y_subdivisions"><integer value="12"/></param>
+        </layer>
+      </canvas>
+    </param>
+  </layer>
+
+  <layer type="skeleton" active="true" exclude_from_rendering="true" version="0.1" desc="pose skeleton (editor only)">
+    <param name="amount"><real value="0.5"/></param>
+    <param name="name"><string>skeleton</string></param>
+    <param name="bones">
+      <static_list type="bone_object">
+        <entry><bone type="bone_object" guid="000000000000000000000000000D0011"/></entry>
+        <entry><bone type="bone_object" guid="000000000000000000000000000D0012"/></entry>
+      </static_list>
+    </param>
+  </layer>
+</canvas>

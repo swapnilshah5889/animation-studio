@@ -17,9 +17,9 @@ The owner approved the Step 1 brief ("yes begin").
 |---|---|---|
 | 1.0 Install Synfig Studio GUI | Owner | **To do**: [owner guide](steps/STEP-1-owner-guide.md) |
 | 1.1 Hand-made scene, rigged with groups and with bones | Owner | **To do**: placeholder parts ready in `tests/fixtures/handmade/parts/` |
-| 1.2 `docs/learning/synfig-format.md` | Agent | **Mostly done**: canvas, units, layers, measured group transform, measured interpolation curves, switch layers, CLI quirks. Bones section waits for research; "what the GUI writes" waits for the owner's files. |
+| 1.2 `docs/learning/synfig-format.md` | Agent | **Mostly done**: canvas, units, layers, measured group transform, measured interpolation curves, switch layers, **bones and Skeleton Deformation** (from the v1.5.5 source, verified by render tests in `tests/fixtures/sif_examples/`), CLI quirks. Only "what the GUI writes" waits for your files. |
 | 1.3 `studio_core/sif/` builder | Agent | **Done**: units, typed values and waypoints, import/group/switch/rectangle/circle layers, deterministic XML, render and encode helpers, Rhubarb cues → mouth waypoints. |
-| 1.4 Tests | Agent | **Done**: 42 tests, including a real Synfig render that checks the pivot rotation and switch timing in pixels (`-m render`). |
+| 1.4 Tests | Agent | **Done**: 44 tests, including real Synfig renders that check the pivot rotation, switch timing, and a bone rig against forward kinematics in pixels (`-m render`). |
 | 1.5 Demo → MP4 | Agent | **Done and verified**: `uv run scripts/sif_demo.py` builds a waving, nodding, lip-syncing bunny over a panning background, renders 168 frames at 1080p and muxes the Step 0 voice line. About 13 s. |
 | 1.6 Docs: rig decision, Step 2 brief | Agent | After the owner's scenes (checkpoint 2) |
 
@@ -36,7 +36,11 @@ The owner approved the Step 1 brief ("yes begin").
   recommend the rig technique (DECISIONS), and draft the Step 2 brief.
 
 **Open questions for the owner**
-- None new. Checkpoint 2 (groups vs bones) comes after your scenes.
+- **Checkpoint 2 (rig technique):** the agent's evidence-based recommendation is **bones for
+  characters, nested groups for scene-level transforms**. Bones give draw order independent of the
+  hierarchy (far arm behind the body) and image bending; render speed is the same. See
+  "Rig technique" in `docs/learning/synfig-format.md`. Confirm or overrule after building your
+  two scenes; the decision then goes into DECISIONS.md and the Step 2 brief.
 
 ---
 

@@ -5,8 +5,8 @@ writing files and rendering them with the Synfig 1.5.5 CLI. Every claim below wa
 render; the evidence is in `tests/test_sif_*.py`, `tests/fixtures/smoke/smoke.sif` and the Step 1
 demo (`scripts/sif_demo.py`).
 
-> Status: first version written before the owner's hand-made scenes exist (Step 1 task 1.1).
-> A "What the GUI writes" section is added once `tests/fixtures/handmade/scene_*.sif` arrive.
+> Status: written before the owner's hand-made scenes exist (Step 1 task 1.1). A "What the GUI
+> writes" section is added once `tests/fixtures/handmade/scene_*.sif` arrive.
 
 ## Files
 
@@ -148,8 +148,105 @@ cues keep the later one; repeats collapse.
 
 ## Bones (Skeleton layer)
 
-_To be completed from the bone research and the owner's `scene_bones.sif` (Step 1 checkpoint 2:
-nested groups vs bones)._
+Researched in the Synfig v1.5.5 source (`valuenode_bone.cpp`, `valuenode_bonelink.cpp`,
+`loadcanvas.cpp`, `layer_skeleton.cpp`, `layer_skeletondeformation.cpp` on
+[github.com/synfig/synfig](https://github.com/synfig/synfig/tree/v1.5.5)) and verified by
+rendering. Working examples: `tests/fixtures/sif_examples/bones_arm_minimal.sif` and
+`deform_limb.sif`. `tests/test_sif_examples.py` renders them and checks the forearm tip against a
+forward-kinematics prediction, within 1.5 px.
+
+**Structure.** Bones live in a `<bones>` section of the **root** canvas (an inline canvas raises
+"Inline canvas cannot have a `<bones>` section"). It must come **before** any layer that refers
+to a bone; otherwise there are parse errors and the CLI aborts. A global `bone_root` is the
+parent of top-level bones:
+
+```xml
+<bones>
+  <bone_root type="bone_object" guid="00000000000000000000000000000B00"/>
+  <bone type="bone_object" guid="00000000000000000000000000000B01">
+    <name><string>upper_arm</string></name>
+    <parent><bone_valuenode type="bone_object" guid="00000000000000000000000000000B00"/></parent>
+    <origin><vector><x>-3</x><y>1</y></vector></origin>   <!-- in the parent's space -->
+    <angle><animated type="angle">...waypoints...</animated></angle>  <!-- relative to parent -->
+    <scalex><real value="1"/></scalex>
+    <length><real value="3"/></length>
+  </bone>
+  <!-- child bone: parent = B01, origin (3, 0) = the parent's tip -->
+</bones>
+```
+
+- **Required links:** `name`, `parent`, `origin`, `angle`, `scalex`, `length`. **Optional:**
+  `scalelx`, `width`, `tipwidth`, `bone_depth` (omitting them renders identically).
+- **Two kinds of reference:** `<bone_valuenode type="bone_object" guid=.../>` is a handle to a
+  bone (used for `parent` and in `bone_link`). `<bone type="bone_object" guid=.../>` is the bone
+  value (used in skeleton lists and deformation pairs). Mixing them up gives "wrong type for
+  Parent".
+- **GUIDs:** any 32 hex digits, unique within the file. A generator can derive them
+  deterministically (e.g. a hash of character + bone name).
+- **Bone math:** world = parent · translate(origin) · rotate(angle) · scale(scalex, 1). `scalex`
+  scales the children too; `scalelx` scales only this bone. `length`/`width`/`tipwidth` only
+  shape the bone's drawing and its deformation influence.
+
+**Linking art to a bone.** Put each part in a group and replace the group's `transformation`
+with a `bone_link`. Draw the art in **bone-local space**: pivot at (0, 0), +x along the bone.
+
+```xml
+<param name="transformation">
+  <bone_link type="transformation">
+    <bone><bone_valuenode type="bone_object" guid="...B01"/></bone>
+    <base_value><composite type="transformation">...identity...</composite></base_value>
+    <translate><bool value="true"/></translate> <rotate><bool value="true"/></rotate>
+    <skew><bool value="true"/></skew> <scale_x><bool value="true"/></scale_x>
+    <scale_y><bool value="true"/></scale_y>
+  </bone_link>
+</param>
+```
+
+All seven children and the `type` attribute are mandatory. The GUI's "Link to Bone" stores a
+non-identity `base_value` (the inverse of the bone's pose at link time), so art can stay in world
+coordinates; a generator can keep `base_value` the identity instead.
+
+**Skeleton layer** (`type="skeleton"`): draws the bones as editable handles in the GUI. The CLI
+does not need it; with `exclude_from_rendering="true"` it renders byte-identically to a file
+without it.
+
+**Skeleton Deformation** (`type="skeleton_deformation"`): bends the layers below it with pairs of
+(rest bone, pose bone) over a grid (`point1`/`point2`, `x_subdivisions`/`y_subdivisions`). It
+needs separate rest and pose bone chains. Pixels outside the rest bones' width disappear.
+`deform_limb.sif` bends one striped limb smoothly at an elbow.
+
+**Bone gotchas (all reproduced):**
+- A missing `bone_root` or an unknown GUID gives "Unexpected element <bone_valuenode>".
+- Linking an import layer's `tl`/`br` corners to bones stretches and even mirrors the image
+  (corners move, but the image stays axis-aligned). Link the group's transformation instead.
+- GUI-style `length = 1` with the visible length in `scalelx` stretches linked art.
+- A missing PNG is only a warning: the part renders blank and the exit code is 0. Validate files
+  before rendering.
+- Synfig 1.5.5 has no inverse kinematics (IK) node; IK, if needed, is solved in Python.
+
+## Rig technique: nested groups vs bones (Step 1, checkpoint 2)
+
+Both were verified to render identical poses (pixel-identical at the rest pose, PSNR above
+100 dB elsewhere) at the same speed (25 arms, 48 frames, 1080p: 3.04 s vs 3.05 s).
+
+| | Nested groups | Bones |
+|---|---|---|
+| Hierarchy | nesting in the file | GUID parent references in one `<bones>` block |
+| Draw order | a child always draws inside its parent's group | **independent of the hierarchy** (far arm behind the torso, hand in front of a prop) |
+| Bending one image | not possible | **Skeleton Deformation** |
+| Stretch one segment | scales its children too | `scalelx` stretches only that bone |
+| Generator complexity | lowest: no IDs, ~1x XML | GUIDs + ordering rules, ~1.6–1.9x XML |
+| Editable in the GUI as a rig | groups only | bone handles a person can drag |
+| IK | none | none |
+
+**Agent's recommendation, pending the owner's scenes:** **bones for characters** (one
+`<bones>` block per character, deterministic GUIDs, a flat group per part with a `bone_link`,
+art in bone-local space, the skeleton layer kept but excluded from rendering), and **nested
+groups for scene-level transforms** (character placement, camera, props, parallax). The
+deciding reasons: cut-out puppets need draw order independent of the hierarchy (the far arm
+behind the body), and deformation for bendy limbs. The extra XML is generator code, which is
+unit-testable. Also add a validator before every render (bones first, all links present, every
+GUID resolves, every image exists), because the CLI fails silently or aborts on these mistakes.
 
 ## Gotchas
 

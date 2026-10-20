@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<canvas version="1.2" width="640" height="360" view-box="-8 4.5 8 -4.5" fps="24" begin-time="0f" end-time="47f">
+  <bones>
+    <bone_root type="bone_object" guid="00000000000000000000000000000B00"/>
+    <bone type="bone_object" guid="00000000000000000000000000000B01">
+      <name><string>upper_arm</string></name>
+      <parent><bone_valuenode type="bone_object" guid="00000000000000000000000000000B00"/></parent>
+      <origin><vector><x>-3</x><y>1</y></vector></origin>
+      <angle><animated type="angle">
+        <waypoint time="0f" before="linear" after="linear"><angle value="-20"/></waypoint>
+        <waypoint time="12f" before="linear" after="linear"><angle value="10"/></waypoint>
+        <waypoint time="24f" before="linear" after="linear"><angle value="-60"/></waypoint>
+        <waypoint time="47f" before="linear" after="linear"><angle value="-20"/></waypoint>
+      </animated></angle>
+      <scalex><real value="1"/></scalex>
+      <length><real value="3"/></length>
+    </bone>
+    <bone type="bone_object" guid="00000000000000000000000000000B02">
+      <name><string>forearm</string></name>
+      <parent><bone_valuenode type="bone_object" guid="00000000000000000000000000000B01"/></parent>
+      <origin><vector><x>3</x><y>0</y></vector></origin>
+      <angle><animated type="angle">
+        <waypoint time="0f" before="linear" after="linear"><angle value="0"/></waypoint>
+        <waypoint time="12f" before="linear" after="linear"><angle value="70"/></waypoint>
+        <waypoint time="24f" before="linear" after="linear"><angle value="-40"/></waypoint>
+        <waypoint time="47f" before="linear" after="linear"><angle value="0"/></waypoint>
+      </animated></angle>
+      <scalex><real value="1"/></scalex>
+      <length><real value="2.5"/></length>
+    </bone>
+  </bones>
+  <layer type="rectangle" version="0.2">
+    <param name="color"><color><r>0.92</r><g>0.92</g><b>0.85</b><a>1</a></color></param>
+    <param name="point1"><vector><x>-9</x><y>5</y></vector></param>
+    <param name="point2"><vector><x>9</x><y>-5</y></vector></param>
+  </layer>
+  <layer type="group" version="0.3" desc="upper_arm_part">
+    <param name="origin"><vector><x>0</x><y>0</y></vector></param>
+    <param name="transformation">
+      <bone_link type="transformation">
+        <bone><bone_valuenode type="bone_object" guid="00000000000000000000000000000B01"/></bone>
+        <base_value><composite type="transformation">
+          <offset><vector><x>0</x><y>0</y></vector></offset><angle><angle value="0"/></angle>
+          <skew_angle><angle value="0"/></skew_angle><scale><vector><x>1</x><y>1</y></vector></scale>
+        </composite></base_value>
+        <translate><bool value="true"/></translate><rotate><bool value="true"/></rotate>
+        <skew><bool value="true"/></skew><scale_x><bool value="true"/></scale_x><scale_y><bool value="true"/></scale_y>
+      </bone_link>
+    </param>
+    <param name="canvas"><canvas>
+      <layer type="import" version="0.1">
+        <param name="tl"><vector><x>-0.3</x><y>0.4</y></vector></param>
+        <param name="br"><vector><x>3.3</x><y>-0.4</y></vector></param>
+        <param name="filename"><string>upper.png</string></param>
+      </layer>
+    </canvas></param>
+  </layer>
+  <layer type="group" version="0.3" desc="forearm_part">
+    <param name="origin"><vector><x>0</x><y>0</y></vector></param>
+    <param name="transformation">
+      <bone_link type="transformation">
+        <bone><bone_valuenode type="bone_object" guid="00000000000000000000000000000B02"/></bone>
+        <base_value><composite type="transformation">
+          <offset><vector><x>0</x><y>0</y></vector></offset><angle><angle value="0"/></angle>
+          <skew_angle><angle value="0"/></skew_angle><scale><vector><x>1</x><y>1</y></vector></scale>
+        </composite></base_value>
+        <translate><bool value="true"/></translate><rotate><bool value="true"/></rotate>
+        <skew><bool value="true"/></skew><scale_x><bool value="true"/></scale_x><scale_y><bool value="true"/></scale_y>
+      </bone_link>
+    </param>
+    <param name="canvas"><canvas>
+      <layer type="import" version="0.1">
+        <param name="tl"><vector><x>-0.3</x><y>0.3</y></vector></param>
+        <param name="br"><vector><x>2.8</x><y>-0.3</y></vector></param>
+        <param name="filename"><string>forearm.png</string></param>
+      </layer>
+    </canvas></param>
+  </layer>
+  <layer type="skeleton" exclude_from_rendering="true" version="0.1">
+    <param name="bones"><static_list type="bone_object">
+      <entry><bone type="bone_object" guid="00000000000000000000000000000B01"/></entry>
+      <entry><bone type="bone_object" guid="00000000000000000000000000000B02"/></entry>
+    </static_list></param>
+  </layer>
+</canvas>
