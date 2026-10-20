@@ -42,7 +42,8 @@ brief** (`docs/steps/STEP-1-synfig.md`).
   uses 16 of its own steps.
 - **Docs:** DECISIONS D-014..D-024; learning notes on Apple Silicon inference, model licenses and
   tool calling; Step 1 brief drafted.
-- **Commits:** small commits on `main`, **local only, not pushed** (see open question 1).
+- **Commits:** small commits on `main`, pushed to `origin/main` by the parent session through
+  `d693aee` (open question 1).
 
 **Problems found (documented, not hidden)**
 - **ACE-Step 1.5 overuses memory:** ~30 GB process footprint (float32 on MPS, plus a second MLX copy
@@ -68,10 +69,10 @@ brief** (`docs/steps/STEP-1-synfig.md`).
 - Agent, after approval: Step 1 tasks 1.2–1.6.
 
 **Open questions for the owner**
-1. **Push?** CLAUDE.md's Git section now says to push after each verified task. But the version
-   loaded when this session started said "never push unless the owner asks", and the session
-   brief said "never push". So nothing is pushed yet, and you were asked directly. Say yes and
-   all commits go to `origin main` (the `github-5889` alias, no force-push).
+1. **Push (resolved):** on your instruction "keep everything committed in this repo", the parent
+   session pushed all Step 0 and style commits to `origin/main` (through `d693aee`). CLAUDE.md now
+   says to commit and push after each verified task (`github-5889` alias, never force-push). If you
+   want this session to push its own commits too, just confirm once here.
 2. **Default style:** `storybook` stays the default. Pick another for a film with
    `Film.create(..., style)`; it locks once characters exist. `dreamshaper-lightning` is
    commercial-unclear and should not be used for published films.
