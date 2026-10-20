@@ -1,0 +1,129 @@
+# Model manifest: every downloadable weight file, plus the image-model presets the switcher offers.
+# Committed (same on every machine). Which preset is the default is per-machine:
+# config/studio.toml [comfyui] default_image_model. Human-readable registry: docs/MODELS.md.
+#
+#   uv run scripts/fetch_models.py --list            # what exists, what is downloaded
+#   uv run scripts/fetch_models.py sdxl-storybook    # download a preset (all its files)
+#   uv run scripts/fetch_models.py sam2.1-hiera-small depth-anything-v2-small
+#
+# Rules (D-012, D-019): check the license before adding a file; commercial = "yes" | "no" |
+# "unclear". Only presets whose every file is commercial = "yes" may be the default.
+# `dest` is relative to [comfyui] models_dir.
+
+# --------------------------------------------------------------------------- files
+
+[files."sdxl-base-1.0"]
+url = "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
+sha256 = "31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b"
+size = 6938078334
+dest = "checkpoints/sd_xl_base_1.0.safetensors"
+license = "CreativeML OpenRAIL++-M"
+commercial = "yes"
+
+[files.storybook-redmond-v2]
+url = "https://huggingface.co/artificialguybr/StoryBookRedmond-V2/resolve/main/StorybookRedmondV2-KidsBook-KidsRedmAF.safetensors"
+sha256 = "f44c375d5ff086c57241548e83f8a13a29b3ffd73b6893fa1582a22971b1bd8a"
+size = 170540028
+dest = "loras/StorybookRedmondV2-KidsBook-KidsRedmAF.safetensors"
+license = "CreativeML OpenRAIL-M"
+commercial = "yes"
+
+[files.cutecartoon-redmond-v2]
+url = "https://huggingface.co/artificialguybr/CuteCartoonRedmond-V2/resolve/main/CuteCartoonRedmond-CuteCartoon-CuteCartoonAF.safetensors"
+sha256 = "a0d1360609bfc7bdb19e1180fd36f762d9e8765bf7accabff36f627c5414d7b9"
+size = 170540036
+dest = "loras/CuteCartoonRedmond-CuteCartoon-CuteCartoonAF.safetensors"
+license = "CreativeML OpenRAIL-M"
+commercial = "yes"
+
+[files.sdxl-lightning-8step-lora]
+url = "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_8step_lora.safetensors"
+sha256 = "5aa30d94cdf7950a8b53a693682650ee061eddb128c5435a8f88defea73b2ac6"
+size = 393854592
+dest = "loras/sdxl_lightning_8step_lora.safetensors"
+license = "CreativeML OpenRAIL++-M"
+commercial = "yes"
+
+[files.sdxl-vae-fp16-fix]
+url = "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors"
+sha256 = "235745af8d86bf4a4c1b5b4f529868b37019a10f7c0b2e79ad0abca3a22bc6e1"
+size = 334641162
+dest = "vae/sdxl_vae_fp16_fix.safetensors"
+license = "MIT"
+commercial = "yes"
+
+[files.dreamshaper-xl-lightning-sfw]
+url = "https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning-SFW.safetensors"
+sha256 = "832e7bb2302c3cd67c818ca4fe9dcbedf696d3070dab5463127263ec4db9899f"
+size = 6939220250
+dest = "checkpoints/DreamShaperXL_Lightning-SFW.safetensors"
+license = "OpenRAIL++ per HF card; lineage undocumented"
+commercial = "unclear"
+
+[files."animagine-xl-4.0-opt"]
+url = "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0-opt.safetensors"
+sha256 = "6327eca98bfb6538dd7a4edce22484a1bbc57a8cff6b11d075d40da1afb847ac"
+size = 6938350040
+dest = "checkpoints/animagine-xl-4.0-opt.safetensors"
+license = "CreativeML OpenRAIL++-M"
+commercial = "yes"
+
+[files."sam2.1-hiera-small"]
+# Safetensors conversion of Meta's SAM 2.1 (Apache-2.0); the location kijai's SAM 2 node expects.
+url = "https://huggingface.co/Kijai/sam2-safetensors/resolve/main/sam2.1_hiera_small.safetensors"
+sha256 = "43f9470dfbc28217c9dc7e3e2941e05b05901457ca17b96809170ee2db11c69b"
+size = 184303872
+dest = "sam2/sam2.1_hiera_small.safetensors"
+license = "Apache-2.0"
+commercial = "yes"
+
+[files.depth-anything-v2-small]
+# Only the Small size is Apache-2.0; Base/Large are CC-BY-NC-4.0 (never add them here).
+url = "https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth"
+sha256 = "715fade13be8f229f8a70cc02066f656f2423a59effd0579197bbf57860e1378"
+size = 99218434
+dest = "annotators/depth-anything/Depth-Anything-V2-Small/depth_anything_v2_vits.pth"
+license = "Apache-2.0"
+commercial = "yes"
+
+# --------------------------------------------------------------------------- image-model presets
+# The switcher: comfy_mcp (Step 4) takes a preset id; workflows get these settings injected.
+# `fast` = the few-step variant with a speed LoRA (or a model that is few-step already).
+
+[image_models.sdxl-storybook]
+label = "SDXL Base 1.0 + StoryBook flat kids'-book LoRA"
+checkpoint = "sdxl-base-1.0"
+vae = "sdxl-vae-fp16-fix"
+loras = [{ file = "storybook-redmond-v2", strength = 0.9 }]
+trigger = "KidsRedmAF, Kids Book"
+normal = { steps = 25, cfg = 6.0, sampler = "dpmpp_2m", scheduler = "karras" }
+fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
+notes = "Default (D-019). Cleanest license chain; good base for our own LoRAs later."
+
+[image_models.sdxl-cutecartoon]
+label = "SDXL Base 1.0 + CuteCartoon LoRA"
+checkpoint = "sdxl-base-1.0"
+vae = "sdxl-vae-fp16-fix"
+loras = [{ file = "cutecartoon-redmond-v2", strength = 0.9 }]
+trigger = "CuteCartoonAF, Cute Cartoon"
+normal = { steps = 25, cfg = 6.0, sampler = "dpmpp_2m", scheduler = "karras" }
+fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
+notes = "Alternative style on the same base; only the 170 MB LoRA to download."
+
+[image_models.dreamshaper-xl-lightning-sfw]
+label = "DreamShaper XL Lightning (SFW)"
+checkpoint = "dreamshaper-xl-lightning-sfw"
+loras = []
+trigger = ""
+normal = { steps = 6, cfg = 2.0, sampler = "dpmpp_sde", scheduler = "karras" }
+fast = { steps = 4, cfg = 2.0, sampler = "dpmpp_sde", scheduler = "karras" }
+notes = "Commercial use unverified: never the default. Leans painterly/3D."
+
+[image_models.animagine-xl-4]
+label = "Animagine XL 4.0 (anime tier, later)"
+checkpoint = "animagine-xl-4.0-opt"
+loras = []
+trigger = "safe"
+normal = { steps = 28, cfg = 5.0, sampler = "euler_ancestral", scheduler = "normal" }
+fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
+notes = "Anime proportions; for the future anime tier. Always include the 'safe' tag; never artist tags."

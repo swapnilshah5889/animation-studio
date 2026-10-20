@@ -1,0 +1,35 @@
+# Workspace root. Our own light-weight packages are workspace members and share one venv (.venv).
+# Heavy ML stacks (ComfyUI, ACE-Step, TTS) get their own isolated environments instead
+# (see config/studio.toml [envs] and DECISIONS D-016), so their pins can't conflict with ours.
+[project]
+name = "animation-studio"
+version = "0.0.0"
+description = "Fully local, AI-native 2D animation studio (workspace root)"
+requires-python = "==3.12.*"
+dependencies = ["studio-core"]
+
+[dependency-groups]
+dev = ["ruff>=0.13", "pytest>=8.4"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["studio_core"]
+
+[tool.uv.sources]
+studio-core = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["envs/*/.venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["studio_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,10 @@
+[project]
+name = "studio-core"
+version = "0.0.0"
+description = "Shared library: .sif builder, rig model, motion library, timing utils, image helpers"
+requires-python = "==3.12.*"
+dependencies = ["vtracer>=0.6", "pillow>=11"]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"

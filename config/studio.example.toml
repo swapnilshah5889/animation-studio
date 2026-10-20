@@ -1,0 +1,79 @@
+# Per-machine configuration for Animation Studio.
+#
+# Copy this file to config/studio.toml (git-ignored) and adjust paths for your machine.
+# Code reads binary paths, ports and model names from here and never hard-codes them.
+# A leading "~" is expanded to the home directory.
+#
+# This example matches the owner's Mac (Apple M4, 24 GB). The Windows render node gets its own
+# copy in Step 5.
+
+[machine]
+name = "mac-m4"
+role = "ai-mac"                       # Temporal task-queue capability later: ai-mac | render-win
+
+[paths]
+studio_root = "~/ai-studio"           # large files live here, outside the repo
+models = "~/ai-studio/models"         # shared weights not managed by ComfyUI or Ollama
+tools = "~/ai-studio/tools"           # standalone binaries
+sfx_library = "~/ai-studio/sfx-library"
+qdrant_data = "~/ai-studio/qdrant-data"
+films = "films"                       # relative to the repo root
+
+[tools]
+# Command-line tools. Absolute paths, so code never depends on $PATH.
+ffmpeg = "/opt/homebrew/bin/ffmpeg"
+ffprobe = "/opt/homebrew/bin/ffprobe"
+synfig = "/opt/homebrew/bin/synfig"   # Homebrew `synfig` formula (see DECISIONS D-014)
+melt = "/opt/homebrew/bin/melt"       # Homebrew `mlt` formula
+rhubarb = "~/ai-studio/tools/rhubarb/rhubarb"
+docker = "/usr/local/bin/docker"
+ollama = "/opt/homebrew/bin/ollama"
+
+[apps]
+# GUI apps. Only checked for presence and version; the pipeline never drives them directly.
+synfig_studio = "/Applications/SynfigStudio.app"
+kdenlive = "/Applications/kdenlive.app"
+krita = "/Applications/Krita.app"
+
+[services]
+ollama_url = "http://127.0.0.1:11434"
+comfyui_url = "http://127.0.0.1:8188"
+qdrant_url = "http://127.0.0.1:6333"
+
+[ollama]
+# Two director candidates are benchmarked in Step 0; the winner is recorded in DECISIONS.md.
+director_models = ["qwen3:14b", "gpt-oss:20b"]
+vision_model = "qwen3-vl:8b"             # D-018
+
+[comfyui]
+root = "~/ai-studio/comfyui"
+python = "~/ai-studio/comfyui/.venv/bin/python"
+models_dir = "~/ai-studio/comfyui/models"
+# ComfyUI-Manager is a pip package now (comfyui_manager, started with --enable-manager), so it is
+# not a folder here. Custom node packs chosen in D-017:
+custom_nodes = ["ComfyUI-segment-anything-2", "comfyui_controlnet_aux"]
+# Image-model switcher: presets and files are defined in config/models.toml (committed).
+# The default must be a preset whose files are all commercial-OK (D-019).
+default_image_model = "sdxl-storybook"
+# Other weights this machine needs (file ids from config/models.toml).
+required_files = ["sam2.1-hiera-small", "depth-anything-v2-small"]
+
+[envs]
+# Isolated Python environments for heavy ML stacks (one venv each, never shared).
+# Each entry: the interpreter, and the import that proves the env works.
+studio_core = { python = ".venv/bin/python", import = "vtracer" }
+comfyui = { python = "~/ai-studio/comfyui/.venv/bin/python", import = "comfyui_manager" }
+kokoro = { python = "envs/kokoro/.venv/bin/python", import = "kokoro" }
+ace_step = { python = "~/ai-studio/ace-step/.venv/bin/python", import = "acestep" }  # ACE-Step 1.5 checkout
+
+[models]
+# Weights outside ComfyUI and Ollama (directories), checked by the doctor.
+kokoro-82m = "~/ai-studio/models/kokoro-82m"
+"ace-step-1.5" = "~/ai-studio/models/ace-step-1.5"
+
+[audio]
+kokoro_voice = "af_heart"
+
+[doctor]
+# Checks that may be MISSING on purpose (reported as DEFER), with the reason.
+deferred = { synfig_studio = "owner installs the GUI at Step 1 (D-014)" }
