@@ -1,5 +1,10 @@
 # Step 1: owner's guide (tasks 1.0 and 1.1)
 
+> **Optional since 2026-10-20 (D-026).** The owner chose not to build the scenes by hand; the agent
+> covered the same ground with GUI-saved example rigs and generated scenes. Synfig Studio is
+> installed. A quick way to explore a rig by hand: open
+> `films/step1-demo/shots/s01_sh01_bones/scene.sif` (after `uv run scripts/sif_demo.py`).
+
 Your hands-on part of Step 1: install Synfig Studio, then build one short cut-out scene by hand,
 **twice** (once rigged with nested groups, once with bones). About 1–2 hours. The agent turns your
 files into documentation and a Python generator, so the more "normal" your usage, the better.

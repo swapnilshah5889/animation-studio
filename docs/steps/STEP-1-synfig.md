@@ -105,10 +105,16 @@ Step 0). It then renders PNGs with the CLI, encodes with ffmpeg, and checks the 
 
 ## Done when
 
-- [ ] The owner's hand-made scene (both rig variants) is committed as a fixture and renders with the CLI
-- [ ] `docs/learning/synfig-format.md` covers every element in the 1.2 list, each with a rendered example
-- [ ] The rig technique is decided and recorded in DECISIONS.md
-- [ ] `studio_core/sif/` builds a scene from scratch; unit, golden-file and render tests pass
-- [ ] `uv run scripts/sif_demo.py` produces a correct MP4: a waving puppet, a moving background, a
-      mouth switching on cue
-- [ ] PROGRESS.md updated, Step 2 brief drafted, work committed in small commits
+Updated 2026-10-20 after D-026 (the owner chose not to build the scenes by hand):
+
+- [x] ~~The owner's hand-made scene (both rig variants) is committed as a fixture and renders with
+      the CLI~~ **Replaced (D-026):** GUI-saved official example rigs were surveyed, and the same
+      scene is generated in both rig variants and rendered (`scripts/sif_demo.py`)
+- [x] `docs/learning/synfig-format.md` covers every element in the 1.2 list, each with a rendered
+      example (render tests in `tests/test_sif_*.py`, fixtures in `tests/fixtures/sif_examples/`)
+- [ ] The rig technique is decided and recorded in DECISIONS.md: **waiting for the owner**
+      (recommendation: bones for characters, groups for scene layout)
+- [x] `studio_core/sif/` builds a scene from scratch; unit, golden-file and render tests pass (48)
+- [x] `uv run scripts/sif_demo.py` produces a correct MP4: a waving puppet, a moving background, a
+      mouth switching on cue (both rig variants, renders match)
+- [ ] PROGRESS.md updated, Step 2 brief drafted (after the rig decision), work committed

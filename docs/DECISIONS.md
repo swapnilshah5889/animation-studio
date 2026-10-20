@@ -231,3 +231,18 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Why:** Characters are generated once and reused (D-007), so a style switch after that would
   break consistency. Recording `style_commercial` lets a publishing check refuse films made with
   unclear or non-commercial models.
+
+### D-026: Step 1 hand-built scenes replaced by GUI-saved examples and generated rigs
+- **Context:** Step 1 planned for the owner to build a short scene by hand in Synfig Studio, twice
+  (groups and bones), so we could see what the GUI writes and compare rig techniques. On
+  2026-10-20 the owner asked the agent to do it instead. The agent cannot operate native GUI
+  apps: GUI scripting would need an Accessibility permission (a security setting) and Synfig's
+  toolkit exposes little to it. Dissecting the app binaries is unnecessary, because Synfig is open
+  source and its v1.5.5 source was already the reference for the format.
+- **Decision:** Replace the hand-built files with (1) Synfig's own GUI-saved example rigs from
+  its documentation, surveyed for "what the GUI writes", and (2) the same scene generated in both
+  rig techniques by `scripts/sif_demo.py`, rendered and compared pixel by pixel.
+- **Consequences:** The owner skipped the hands-on Synfig session. The owner guide
+  (`docs/steps/STEP-1-owner-guide.md`) stays as an optional exercise, and opening a generated
+  `scene.sif` in Synfig Studio is the easiest way to see a rig. "Generated files open in the GUI"
+  is inferred (they are a subset of what the GUI writes) but **not yet checked by hand**.

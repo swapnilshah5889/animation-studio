@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 1 (Synfig by hand + .sif generator), in progress. Agent tasks 1.3–1.5 done;
-owner tasks 1.0–1.1 next (`docs/steps/STEP-1-owner-guide.md`).
+**Current step:** Step 1 (Synfig + .sif generator), nearly done: waiting for the owner's rig-technique
+decision (checkpoint 2), then the Step 2 brief.
 
 ---
 
@@ -15,12 +15,12 @@ The owner approved the Step 1 brief ("yes begin").
 
 | Task | Who | Status |
 |---|---|---|
-| 1.0 Install Synfig Studio GUI | Owner | **To do**: [owner guide](steps/STEP-1-owner-guide.md) |
-| 1.1 Hand-made scene, rigged with groups and with bones | Owner | **To do**: placeholder parts ready in `tests/fixtures/handmade/parts/` |
-| 1.2 `docs/learning/synfig-format.md` | Agent | **Mostly done**: canvas, units, layers, measured group transform, measured interpolation curves, switch layers, **bones and Skeleton Deformation** (from the v1.5.5 source, verified by render tests in `tests/fixtures/sif_examples/`), CLI quirks. Only "what the GUI writes" waits for your files. |
-| 1.3 `studio_core/sif/` builder | Agent | **Done**: units, typed values and waypoints, import/group/switch/rectangle/circle layers, deterministic XML, render and encode helpers, Rhubarb cues → mouth waypoints. |
-| 1.4 Tests | Agent | **Done**: 44 tests, including real Synfig renders that check the pivot rotation, switch timing, and a bone rig against forward kinematics in pixels (`-m render`). |
-| 1.5 Demo → MP4 | Agent | **Done and verified**: `uv run scripts/sif_demo.py` builds a waving, nodding, lip-syncing bunny over a panning background, renders 168 frames at 1080p and muxes the Step 0 voice line. About 13 s. |
+| 1.0 Install Synfig Studio GUI | Owner | **Done**: installed 2026-10-20, opens (doctor OK) |
+| 1.1 Hand-made scene, rigged with groups and with bones | Owner | **Replaced (D-026)**: the owner asked the agent to do it; GUI-saved official example rigs were surveyed and the scene was generated in both rig variants |
+| 1.2 `docs/learning/synfig-format.md` | Agent | **Done**: canvas, units, layers, measured group transform and interpolation curves, switch layers, bones and Skeleton Deformation (verified by render tests), what the GUI writes vs what the CLI needs, gotchas. |
+| 1.3 `studio_core/sif/` builder | Agent | **Done**: units, typed values and waypoints, import/group/switch/rectangle/circle layers, **bones, bone links and skeleton layer**, deterministic XML, render and encode helpers, Rhubarb cues → mouth waypoints. |
+| 1.4 Tests | Agent | **Done**: 48 tests, including real Synfig renders that check the pivot rotation, switch timing, and bone rigs (hand-written and builder-made) against forward kinematics in pixels (`-m render`). |
+| 1.5 Demo → MP4 | Agent | **Done and verified**: `uv run scripts/sif_demo.py` builds a waving, nodding, lip-syncing bunny over a panning background, **rigged with groups and with bones**; both render 168 frames at 1080p with the voice line, and match (worst PSNR 97 dB). About 22 s for both. |
 | 1.6 Docs: rig decision, Step 2 brief | Agent | After the owner's scenes (checkpoint 2) |
 
 **Verified facts worth knowing** (details in `docs/learning/synfig-format.md`)
@@ -31,16 +31,15 @@ The owner approved the Step 1 brief ("yes begin").
 - Switch `layer_name` changes are frame-exact; `end-time` is inclusive; times written as frames.
 
 **Next**
-- Owner: tasks 1.0 and 1.1 (about 1–2 hours, guide linked above).
-- Agent: finish the bones section; then, from the owner's scenes, add "what the GUI writes",
-  recommend the rig technique (DECISIONS), and draft the Step 2 brief.
+- Owner: confirm the rig technique (checkpoint 2, below).
+- Agent: record it in DECISIONS.md, then draft the Step 2 brief (`synfig_mcp`) for review.
 
 **Open questions for the owner**
 - **Checkpoint 2 (rig technique):** the agent's evidence-based recommendation is **bones for
   characters, nested groups for scene-level transforms**. Bones give draw order independent of the
-  hierarchy (far arm behind the body) and image bending; render speed is the same. See
-  "Rig technique" in `docs/learning/synfig-format.md`. Confirm or overrule after building your
-  two scenes; the decision then goes into DECISIONS.md and the Step 2 brief.
+  hierarchy (far arm behind the body) and image bending; render speed and output are the same
+  (the demo renders both). Cost: ~1.4–1.9x the XML and GUID bookkeeping, all in tested code.
+  See "Rig technique" in `docs/learning/synfig-format.md`.
 
 ---
 

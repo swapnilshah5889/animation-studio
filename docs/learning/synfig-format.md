@@ -5,8 +5,8 @@ writing files and rendering them with the Synfig 1.5.5 CLI. Every claim below wa
 render; the evidence is in `tests/test_sif_*.py`, `tests/fixtures/smoke/smoke.sif` and the Step 1
 demo (`scripts/sif_demo.py`).
 
-> Status: written before the owner's hand-made scenes exist (Step 1 task 1.1). A "What the GUI
-> writes" section is added once `tests/fixtures/handmade/scene_*.sif` arrive.
+> Status: complete for Step 1. The owner chose not to build the scenes by hand (2026-10-20, D-026),
+> so "What the GUI writes" comes from GUI-saved official Synfig example rigs instead.
 
 ## Files
 
@@ -239,7 +239,11 @@ Both were verified to render identical poses (pixel-identical at the rest pose, 
 | Editable in the GUI as a rig | groups only | bone handles a person can drag |
 | IK | none | none |
 
-**Agent's recommendation, pending the owner's scenes:** **bones for characters** (one
+**Same puppet, both ways** (`uv run scripts/sif_demo.py`): the waving, lip-syncing bunny rigged with
+nested groups and with bones renders the same animation (worst PSNR 97 dB over every 12th
+frame, i.e. rounding only). The XML is 20 KB vs 27 KB.
+
+**Agent's recommendation (owner checkpoint 2):** **bones for characters** (one
 `<bones>` block per character, deterministic GUIDs, a flat group per part with a `bone_link`,
 art in bone-local space, the skeleton layer kept but excluded from rendering), and **nested
 groups for scene-level transforms** (character placement, camera, props, parallax). The
@@ -247,6 +251,31 @@ deciding reasons: cut-out puppets need draw order independent of the hierarchy (
 behind the body), and deformation for bendy limbs. The extra XML is generator code, which is
 unit-testable. Also add a validator before every render (bones first, all links present, every
 GUID resolves, every image exists), because the CLI fails silently or aborts on these mistakes.
+
+## What the GUI writes vs what the CLI needs
+
+Surveyed from rigs saved by Synfig Studio and published with Synfig's documentation
+(`rigarm.sif`, `skeleton-puppet.sif`, `freechar.sif`, from the bones cut-out tutorial in
+[synfig-docs](https://github.com/synfig/synfig-docs)). All render with our 1.5.5 CLI, even though
+they are format version `1.0`. We write `1.2`; both load.
+
+| The GUI writes | Needed by the CLI? | Our generator |
+|---|---|---|
+| `<meta>` tags (grid, guides, onion skin, background checker) | No: editor state | omits |
+| `<keyframe>` markers | No: GUI navigation | omits (could add for hand-editing) |
+| `<defs>` exported values, `guid` on shared values | Only when values are shared/linked | omits; no sharing yet |
+| every group param, even at its default (`z_range*`, `children_lock`, `outline_grow`, `time_offset`, ...) | No: defaults apply | writes only what it sets |
+| `fps="24.000"`, `end-time="5s"` or `"27s 2f"` (seconds, or seconds + frames) | either form works | writes whole frames (`167f`) |
+| waypoint times in seconds (`5.75s`) | either form works | writes frames (exact) |
+| `clamped` interpolation everywhere (the default) | no | chooses per motion |
+| bones with all 10 links, `length = 1` and the visible length in `scalelx` | 6 links required | writes the 6 required links, real `length`, `scalex = 1` |
+| `bone_link` with a non-identity `base_value` (the inverse of the bone pose at link time) | `base_value` required | uses `base` only to turn art into the bone frame |
+| a `skeleton` layer with `exclude_from_rendering="true"` | no | writes it, so a generated rig stays editable in the GUI |
+| a canvas at 60 px/unit (`view-box="-16 9 16 -9"` for 1920×1080) | any view-box | 120 px/unit by default (configurable) |
+
+Practical consequence: a generated file is a strict subset of what the GUI writes, so it opens in
+Synfig Studio (for hand fixes, per D-008) and the GUI will add its own extras when it saves it.
+CLI gotcha seen here: `--time 0` without a unit warns "No unit provided"; always write `0f`.
 
 ## Gotchas
 
