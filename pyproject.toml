@@ -33,3 +33,4 @@ known-first-party = ["studio_core"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["render: runs the real Synfig CLI (a few seconds); skip with -m 'not render'"]
