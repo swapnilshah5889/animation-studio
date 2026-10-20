@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Step 0 engine smoke test: a tiny hand-written Synfig scene (Synfig 1.4+ file format).
+  2 s at 24 fps, 1280x720. 1 unit = 80 px, so the view is 16 x 9 units centred on (0, 0).
+  Layers are listed bottom-first: later layers draw on top.
+
+  - sky        rectangle
+  - hills      group whose offset is animated: a moving background (parallax-style pan)
+  - puppet     group: a torso image (import layer) and an arm group that waves by rotating
+               around its shoulder pivot (origin = pivot, angle animated with waypoints)
+  The PNG parts (torso.png, arm.png) are generated next to this file by scripts/smoke_engines.py.
+-->
+<canvas version="1.2" width="1280" height="720" xres="2834.645669" yres="2834.645669"
+        view-box="-8.0 4.5 8.0 -4.5" antialias="1" fps="24" begin-time="0f" end-time="2s"
+        bgcolor="0.5 0.5 0.5 1.0">
+  <name>Step 0 smoke test</name>
+
+  <layer type="rectangle" active="true" version="0.2" desc="sky">
+    <param name="color"><color><r>0.55</r><g>0.80</g><b>0.98</b><a>1.0</a></color></param>
+    <param name="point1"><vector><x>-9.0</x><y>5.0</y></vector></param>
+    <param name="point2"><vector><x>9.0</x><y>-5.0</y></vector></param>
+  </layer>
+
+  <layer type="group" active="true" version="0.3" desc="hills">
+    <param name="origin"><vector><x>0.0</x><y>0.0</y></vector></param>
+    <param name="transformation">
+      <composite type="transformation">
+        <offset>
+          <animated type="vector">
+            <waypoint time="0s" before="linear" after="linear"><vector><x>0.0</x><y>0.0</y></vector></waypoint>
+            <waypoint time="2s" before="linear" after="linear"><vector><x>-3.0</x><y>0.0</y></vector></waypoint>
+          </animated>
+        </offset>
+        <angle><angle value="0.0"/></angle>
+        <skew_angle><angle value="0.0"/></skew_angle>
+        <scale><vector><x>1.0</x><y>1.0</y></vector></scale>
+      </composite>
+    </param>
+    <param name="canvas">
+      <canvas>
+        <layer type="circle" active="true" version="0.2" desc="hill 1">
+          <param name="color"><color><r>0.35</r><g>0.70</g><b>0.30</b><a>1.0</a></color></param>
+          <param name="radius"><real value="4.0"/></param>
+          <param name="origin"><vector><x>-5.0</x><y>-6.0</y></vector></param>
+        </layer>
+        <layer type="circle" active="true" version="0.2" desc="hill 2">
+          <param name="color"><color><r>0.30</r><g>0.62</g><b>0.27</b><a>1.0</a></color></param>
+          <param name="radius"><real value="5.0"/></param>
+          <param name="origin"><vector><x>3.0</x><y>-7.0</y></vector></param>
+        </layer>
+        <layer type="circle" active="true" version="0.2" desc="hill 3">
+          <param name="color"><color><r>0.35</r><g>0.70</g><b>0.30</b><a>1.0</a></color></param>
+          <param name="radius"><real value="4.5"/></param>
+          <param name="origin"><vector><x>10.0</x><y>-6.5</y></vector></param>
+        </layer>
+      </canvas>
+    </param>
+  </layer>
+
+  <layer type="group" active="true" version="0.3" desc="puppet">
+    <param name="origin"><vector><x>0.0</x><y>0.0</y></vector></param>
+    <param name="transformation">
+      <composite type="transformation">
+        <offset><vector><x>0.0</x><y>-0.5</y></vector></offset>
+        <angle><angle value="0.0"/></angle>
+        <skew_angle><angle value="0.0"/></skew_angle>
+        <scale><vector><x>1.0</x><y>1.0</y></vector></scale>
+      </composite>
+    </param>
+    <param name="canvas">
+      <canvas>
+        <layer type="import" active="true" version="0.1" desc="torso">
+          <param name="tl"><vector><x>-1.0</x><y>1.5</y></vector></param>
+          <param name="br"><vector><x>1.0</x><y>-1.5</y></vector></param>
+          <param name="filename"><string>torso.png</string></param>
+        </layer>
+        <!-- Interpolation names in the file format: halt (= ease in/out), linear, clamped, constant,
+             auto (= TCB). "ease" is rejected by the parser.
+             Arm: pivot (origin) at the shoulder, offset puts the pivot back at the shoulder,
+             so animating the angle rotates the arm around the shoulder. -->
+        <layer type="group" active="true" version="0.3" desc="right arm">
+          <param name="origin"><vector><x>1.1</x><y>1.2</y></vector></param>
+          <param name="transformation">
+            <composite type="transformation">
+              <offset><vector><x>1.1</x><y>1.2</y></vector></offset>
+              <angle>
+                <animated type="angle">
+                  <waypoint time="0s" before="halt" after="halt"><angle value="0.0"/></waypoint>
+                  <waypoint time="12f" before="halt" after="halt"><angle value="150.0"/></waypoint>
+                  <waypoint time="2s" before="halt" after="halt"><angle value="0.0"/></waypoint>
+                </animated>
+              </angle>
+              <skew_angle><angle value="0.0"/></skew_angle>
+              <scale><vector><x>1.0</x><y>1.0</y></vector></scale>
+            </composite>
+          </param>
+          <param name="canvas">
+            <canvas>
+              <layer type="import" active="true" version="0.1" desc="arm">
+                <param name="tl"><vector><x>0.85</x><y>1.3</y></vector></param>
+                <param name="br"><vector><x>1.35</x><y>-0.7</y></vector></param>
+                <param name="filename"><string>arm.png</string></param>
+              </layer>
+            </canvas>
+          </param>
+        </layer>
+      </canvas>
+    </param>
+  </layer>
+</canvas>
