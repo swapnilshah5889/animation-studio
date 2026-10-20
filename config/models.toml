@@ -141,5 +141,5 @@ prompt_prefix = "no humans, chibi, cute"
 prompt_suffix = "safe, masterpiece, high score, great score, absurdres"
 negative = "nsfw, lowres, bad anatomy, bad hands, text, error, worst quality, low quality, jpeg artifacts, signature, watermark"
 normal = { steps = 28, cfg = 5.0, sampler = "euler_ancestral", scheduler = "normal" }
-fast = { lora = "sdxl-lightning-8step-lora", steps = 8, cfg = 1.0, sampler = "euler", scheduler = "sgm_uniform" }
-notes = "Owner's option C, for the later anime tier. Danbooru-trained: 'safe' tag always, never artist tags."
+fast = { steps = 16, cfg = 5.0, sampler = "euler_ancestral", scheduler = "normal" }
+notes = "Owner's option C, for the later anime tier. Danbooru-trained: 'safe' tag always, never artist tags. The Lightning LoRA degrades this model (noisy output, benchmarks.md): fast = fewer normal steps instead."

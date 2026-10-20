@@ -5,6 +5,7 @@ One subcommand per pipeline stage:
     uv run scripts/benchmark.py llm        # director LLMs: load, tok/s, memory, unload time
     uv run scripts/benchmark.py vision     # vision QA model: seconds per frame check
     uv run scripts/benchmark.py sdxl       # SDXL 1024x1024: normal steps vs speed LoRA
+    uv run scripts/benchmark.py styles     # every downloaded style: character + background + grid
     uv run scripts/benchmark.py segment    # SAM 2 and depth: seconds per image (ComfyUI API)
     uv run scripts/benchmark.py tts        # Kokoro real-time factor
     uv run scripts/benchmark.py music      # ACE-Step: seconds per 30 s of music
@@ -33,8 +34,10 @@ from pathlib import Path
 from typing import Any
 
 from studio_core.comfy import Comfy
+from studio_core.comfy_graphs import txt2img
 from studio_core.config import REPO_ROOT, StudioConfig, expand_path, load_config
 from studio_core.memwatch import GB, MemoryWatch
+from studio_core.models import comfy_models_dir, load_manifest
 from studio_core.ollama import Ollama, Timings
 
 BENCH_MD = REPO_ROOT / "docs" / "benchmarks.md"
@@ -275,6 +278,113 @@ def bench_sdxl(cfg: StudioConfig, args: argparse.Namespace) -> None:
     headers = ["Variant", "Steps", "CFG", "First (cold) s", "Best s", "Avg s", "Memory"]
     notes = [f"1024x1024, batch 1, {args.runs} warm runs after one cold run, ComfyUI HTTP API."]
     report("SDXL text-to-image", table(headers, rows), notes, args.dry_run)
+
+
+STYLE_SUBJECTS = {
+    "character": (
+        "a cheerful little rabbit character for a preschool cartoon, full body, front view, "
+        "standing in a neutral pose with arms held slightly away from the body, plain white "
+        "background",
+        (1024, 1024),
+    ),
+    "background": (
+        "a sunny meadow with soft rolling hills, a few round trees and flowers, a winding path, "
+        "wide establishing shot, no characters, background for a children's cartoon",
+        (1344, 768),
+    ),
+}
+
+
+def make_grid(rows: list[tuple[str, list[tuple[str, Path]]]], out: Path) -> Path:
+    """Label + thumbnails per row, so the owner can compare styles at a glance."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    thumb_h, label_w, pad = 300, 260, 12
+    font = ImageFont.load_default(size=20)
+    cells = [[(cap, Image.open(path).convert("RGB")) for cap, path in cols] for _, cols in rows]
+    widths = [sum(int(im.width * thumb_h / im.height) + pad for _, im in row) for row in cells]
+    grid = Image.new(
+        "RGB", (label_w + max(widths) + pad, len(rows) * (thumb_h + 40) + pad), "white"
+    )
+    draw = ImageDraw.Draw(grid)
+    for r, ((label, _), row) in enumerate(zip(rows, cells, strict=True)):
+        y = pad + r * (thumb_h + 40)
+        draw.multiline_text((pad, y + 10), label, fill="black", font=font, spacing=6)
+        x = label_w
+        for caption, im in row:
+            w = int(im.width * thumb_h / im.height)
+            grid.paste(im.resize((w, thumb_h)), (x, y))
+            draw.text((x, y + thumb_h + 6), caption, fill="black", font=font)
+            x += w + pad
+    grid.save(out)
+    return out
+
+
+def bench_styles(cfg: StudioConfig, args: argparse.Namespace) -> None:
+    comfy = Comfy(cfg.get("services", "comfyui_url"))
+    manifest = load_manifest()
+    models_dir = comfy_models_dir(cfg)
+    style_ids = args.styles or [
+        st
+        for st in manifest.styles
+        if all(f.is_present(models_dir) for f in manifest.style_files(st))
+    ]
+    out = Path.home() / "ai-studio" / "scratch" / "style-compare"
+    out.mkdir(parents=True, exist_ok=True)
+    unload_everything(Ollama(cfg.get("services", "ollama_url")))
+
+    rows, grid_rows = [], []
+    with MemoryWatch() as mem:
+        for style_id in style_ids:
+            comfy.free_memory()  # each style starts cold, like a real switch
+            style = manifest.styles[style_id]
+            runs = [("character", True), ("character", False), ("background", False)]
+            times, images = {}, []
+            for subject, fast in runs:
+                prompt, (w, h) = STYLE_SUBJECTS[subject]
+                variant = "fast" if fast else "normal"
+                wf = txt2img(
+                    manifest,
+                    style_id,
+                    prompt,
+                    fast=fast,
+                    seed=args.seed,
+                    width=w,
+                    height=h,
+                    filename_prefix=f"{style_id}_{subject}_{variant}",
+                )
+                paths, seconds = comfy.run(wf, out)
+                steps = style.settings(fast)["steps"]
+                times[(subject, variant)] = f"{seconds:.0f} ({steps} st)"
+                images.append((f"{subject}, {variant} ({steps} steps, {seconds:.0f}s)", paths[0]))
+            commercial = manifest.style_commercial(style_id)
+            rows.append(
+                [
+                    style_id,
+                    commercial,
+                    times[("character", "fast")],
+                    times[("character", "normal")],
+                    times[("background", "normal")],
+                ]
+            )
+            grid_rows.append((f"{style_id}\ncommercial: {commercial}", images))
+    comfy.free_memory()
+    grid = make_grid(grid_rows, out / "grid.png")
+    headers = [
+        "Style",
+        "Commercial",
+        "Character fast s (first incl. load)",
+        "Character normal s",
+        "Background normal s (1344x768)",
+    ]
+    notes = [
+        f"Same seed ({args.seed}) and prompts for every style; the style adds its own trigger "
+        "words and negative prompt (config/models.toml). Each style starts cold (model load is in "
+        "its first column).",
+        f"Image grid (not committed, generated media): `{grid}`",
+        f"Memory across the run: {mem.summary()}",
+    ]
+    report("Style comparison (switcher)", table(headers, rows), notes, args.dry_run)
 
 
 def bench_segment(cfg: StudioConfig, args: argparse.Namespace) -> None:
@@ -586,6 +696,9 @@ def main() -> int:
     p.add_argument("--model")
     p.add_argument("--image", required=True)
     add("sdxl", bench_sdxl, runs=2)
+    p = add("styles", bench_styles, runs=1)
+    p.add_argument("--styles", nargs="*")
+    p.add_argument("--seed", type=int, default=42)
     p = add("segment", bench_segment)
     p.add_argument("--image", required=True)
     add("tts", bench_tts, runs=3)

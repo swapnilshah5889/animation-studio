@@ -246,3 +246,28 @@ _Measured 2026-10-19 20:30._
 
 - SDXL extra load = first image minus a warm image (speed-LoRA workflow).
 - Memory across the whole sequence: peak used 19.7 GB, min free 29%, swap +0.00 GB
+
+### Style comparison (switcher)
+
+_Measured 2026-10-19 20:54._
+
+| Style | Commercial | Character fast s (first incl. load) | Character normal s | Background normal s (1344x768) |
+|---|---|---|---|---|
+| storybook | yes | 40 (8 st) | 138 (25 st) | 137 (25 st) |
+| dreamshaper-lightning | unclear | 48 (4 st) | 61 (6 st) | 60 (6 st) |
+| animagine | yes | 37 (8 st) | 150 (28 st) | 147 (28 st) |
+
+- Same seed (42) and prompts for every style; the style adds its own trigger words and negative prompt (config/models.toml). Each style starts cold (model load is in its first column).
+- Image grid (not committed, generated media): `/Users/uchiha/ai-studio/scratch/style-compare/grid.png`
+- Memory across the run: peak used 21.1 GB, min free 18%, swap +2.73 GB
+- **Looks (from the grid):**
+  - `storybook` gives a flat kids'-book character and vivid painted backgrounds; the fast
+    8-step version is close to the normal one.
+  - `dreamshaper-lightning` gives a polished, softly shaded semi-3D look and is the fastest at
+    full quality (~60 s), but its license is unclear.
+  - `animagine` gives a very simple chibi character (easy to cut into puppet parts) and soft anime
+    backgrounds. **Its fast variant (SDXL-Lightning LoRA on Animagine) degrades into a noisy,
+    textured image**, so don't use Lightning with this style. Fixed in `config/models.toml`: its
+    fast variant is now 16 of its own steps (verified clean, 91 s including model load).
+- Timings here are cleaner than the earlier "SDXL text-to-image" section (138 s vs 222 s for 25
+  steps): less memory pressure during this run.
