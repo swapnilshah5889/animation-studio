@@ -213,7 +213,7 @@ def check_apps(cfg: dict[str, Any]) -> list[Result]:
         version = str(info.get("CFBundleShortVersionString", ""))
         # Gatekeeper assessment is read-only: it never changes security settings.
         code, _ = run(["spctl", "--assess", "--type", "execute", str(app)])
-        gatekeeper = "gatekeeper ok" if code == 0 else "gatekeeper: needs owner approval"
+        gatekeeper = "gatekeeper ok" if code == 0 else "unsigned: spctl rejects it, owner approved"
         results.append(Result("apps", name, OK, version, f"{app} ({gatekeeper})"))
     return results
 
