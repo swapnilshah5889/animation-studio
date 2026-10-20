@@ -1,0 +1,17 @@
+# Isolated environment for Kokoro-82M text-to-speech (Step 0 smoke test and benchmark; audio_mcp in
+# Step 3). Kept out of the uv workspace on purpose: heavy ML stacks pin their own torch versions.
+#   cd envs/kokoro && uv sync
+[project]
+name = "kokoro-env"
+version = "0.0.0"
+requires-python = "==3.12.*"
+dependencies = [
+    "kokoro>=0.9.4",
+    "misaki[en]>=0.9.4",
+    "soundfile>=0.13",
+    # misaki needs a spaCy English model; pin the wheel so nothing downloads at run time.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
+
+[tool.uv]
+package = false
