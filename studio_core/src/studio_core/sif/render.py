@@ -83,7 +83,8 @@ def encode_mp4(
         str(frames_dir / "frame*.png"),
     ]
     if audio:
-        cmd += ["-i", str(audio), "-c:a", "aac", "-shortest"]
+        # Pad the audio with silence and stop at the video's end, so the shot keeps its length.
+        cmd += ["-i", str(audio), "-af", "apad", "-c:a", "aac", "-shortest"]
     cmd += ["-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(mp4)]
     _run(cmd)
     return mp4
