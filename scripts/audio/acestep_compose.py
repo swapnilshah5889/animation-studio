@@ -57,6 +57,11 @@ def main() -> int:
     parser.add_argument("--steps", type=int, default=8, help="turbo model: 8")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--format", default="wav", choices=["wav", "flac", "mp3"])
+    parser.add_argument(
+        "--no-mlx-dit",
+        action="store_true",
+        help="run the DiT in PyTorch/MPS only (the MLX path keeps a second copy of the weights)",
+    )
     args = parser.parse_args()
 
     ensure_model()
@@ -67,7 +72,10 @@ def main() -> int:
     start = time.perf_counter()
     dit = AceStepHandler()
     status, ok = dit.initialize_service(
-        project_root=str(ACE_ROOT), config_path="acestep-v15-turbo", device=args.device
+        project_root=str(ACE_ROOT),
+        config_path="acestep-v15-turbo",
+        device=args.device,
+        use_mlx_dit=not args.no_mlx_dit,
     )
     if not ok:
         print(json.dumps({"error": f"initialize_service failed: {status}"}))
@@ -110,7 +118,8 @@ def main() -> int:
                 "duration_s": args.duration,
                 "files": files,
                 "notes": [
-                    f"turbo DiT, {args.steps} steps, no LM, seed {args.seed}",
+                    f"turbo DiT ({'PyTorch/MPS' if args.no_mlx_dit else 'MLX'}), {args.steps} "
+                    f"steps, LM off, seed {args.seed}",
                     f"caption: {args.caption}",
                 ],
             }
