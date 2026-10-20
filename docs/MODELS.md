@@ -21,15 +21,11 @@ Background on license families: [`learning/model-licenses.md`](learning/model-li
 | ACE-Step 1.5: turbo DiT, VAE, Qwen3-Embedding-0.6B text encoder, 5Hz LM 1.7B (installed, unused) | Music (D-020) | [ACE-Step/Ace-Step1.5](https://huggingface.co/ACE-Step/Ace-Step1.5) | MIT (Qwen3-Embedding: Apache-2.0) | Yes | 10.1 GB | `~/ai-studio/models/ace-step-1.5/` | 2026-10-19 |
 | spaCy `en_core_web_sm` 3.8.0 | English tokenizer/tagger used by Kokoro's G2P (misaki) | [explosion/spacy-models](https://github.com/explosion/spacy-models) | MIT | Yes | 12 MB | `envs/kokoro/.venv` (pinned wheel) | 2026-10-19 |
 | Rhubarb's PocketSphinx models | Speech recognition inside Rhubarb Lip Sync | Bundled with [Rhubarb 1.14.0](https://github.com/DanielSWolf/rhubarb-lip-sync/releases/tag/v1.14.0) | BSD-style (CMU Sphinx); Rhubarb itself MIT | Yes | 82 MB | `~/ai-studio/tools/rhubarb/res/` | 2026-10-19 |
+| DreamShaper XL Lightning SFW | Style `dreamshaper-lightning` (owner's option B) | [Lykon/dreamshaper-xl-lightning](https://huggingface.co/Lykon/dreamshaper-xl-lightning) | Card: OpenRAIL++; lineage undocumented (tags include `turbo`, `lcm`; SDXL-Turbo derivatives fall under Stability's revenue-capped community license) | **UNCLEAR: never the default, not for published films until resolved** | 6.9 GB | `.../models/checkpoints/` | 2026-10-19 |
+| Animagine XL 4.0 Opt | Style `animagine` (owner's option C, anime look) | [cagliostrolab/animagine-xl-4.0](https://huggingface.co/cagliostrolab/animagine-xl-4.0) | CreativeML OpenRAIL++-M, unmodified (card: commercial use permitted). Note: trained on Danbooru images; can produce NSFW, so the `safe` tag and kid-safe negatives are always applied | Yes (with the OpenRAIL use restrictions) | 6.9 GB | `.../models/checkpoints/` | 2026-10-19 |
+| CuteCartoonRedmond-V2 LoRA | Style `cutecartoon` (bonus look on SDXL Base) | [artificialguybr/CuteCartoonRedmond-V2](https://huggingface.co/artificialguybr/CuteCartoonRedmond-V2) | CreativeML OpenRAIL-M; training data undocumented | Yes | 171 MB | `.../models/loras/` | 2026-10-19 |
 
-**Listed in the switcher but not downloaded** (`config/models.toml`; fetch with
-`uv run scripts/fetch_models.py <preset>`):
-
-| Model | Why it is listed | License | Commercial OK |
-|---|---|---|---|
-| CuteCartoonRedmond-V2 LoRA (171 MB) | Alternative flat style on the same SDXL base | CreativeML OpenRAIL-M | Yes |
-| DreamShaper XL Lightning SFW (6.9 GB) | Fast all-rounder for comparison | OpenRAIL++ per its card; lineage undocumented | **Unclear: never the default** |
-| Animagine XL 4.0 Opt (6.9 GB) | Future anime tier | CreativeML OpenRAIL++-M | Yes |
+Styles (the switcher, D-025) combine these files; see `uv run scripts/fetch_models.py --list`.
 
 **Considered and rejected:** DMD2 speed LoRA (CC-BY-NC), Flash-SDXL (CC-BY-NC-ND), Hyper-SD (license
 now unclear), Depth Anything V2 Base/Large (CC-BY-NC), community checkpoints with no stated license

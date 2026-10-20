@@ -28,11 +28,21 @@ brief** (`docs/steps/STEP-1-synfig.md`).
   Provisional director pick: qwen3:14b with thinking off for tool calls (D-024).
 - **Benchmarks:** every stage in `docs/benchmarks.md`, with a summary table and a rough 30–40 min
   estimate for a 60 s film on the Mac alone.
-- **Image-model switcher** (owner request): `config/models.toml` lists files and presets with
-  license flags; `scripts/fetch_models.py` downloads presets with sha256 checks (D-019).
+- **Style switcher** (owner request, D-019 → D-025): all three candidates downloaded and
+  license-checked. Styles in `config/models.toml`:
+  - `storybook` (A, **default**, commercial yes)
+  - `dreamshaper-lightning` (B, commercial **unclear**)
+  - `animagine` (C, commercial yes, `safe` tag always)
+  - `cutecartoon` (bonus)
+  `studio_core.comfy_graphs.txt2img(style, ...)` builds the ComfyUI workflow from a style.
+  `studio_core.film` locks a film's style once it has characters (`StyleLockedError`); tested.
+  Side-by-side samples (character fast/normal + background per style) with timings are in
+  benchmarks.md; the image grid is at `~/ai-studio/scratch/style-compare/grid.png` (not
+  committed: generated media). Animagine breaks with the Lightning LoRA, so its fast variant
+  uses 16 of its own steps.
 - **Docs:** DECISIONS D-014..D-024; learning notes on Apple Silicon inference, model licenses and
   tool calling; Step 1 brief drafted.
-- **Commits:** small commits on `main`, **local only, not pushed**.
+- **Commits:** small commits on `main`, **local only, not pushed** (see open question 1).
 
 **Problems found (documented, not hidden)**
 - **ACE-Step 1.5 overuses memory:** ~30 GB process footprint (float32 on MPS, plus a second MLX copy
@@ -58,13 +68,18 @@ brief** (`docs/steps/STEP-1-synfig.md`).
 - Agent, after approval: Step 1 tasks 1.2–1.6.
 
 **Open questions for the owner**
-1. **Push?** This file's previous "Next" line said "commit and push after each verified task", but
-   CLAUDE.md says never push unless asked, so nothing is pushed. Say the word and it gets pushed.
-2. **Step 1 rig technique** (nested groups vs Synfig bones) is decided after you build the scene;
+1. **Push?** CLAUDE.md's Git section now says to push after each verified task. But the version
+   loaded when this session started said "never push unless the owner asks", and the session
+   brief said "never push". So nothing is pushed yet, and you were asked directly. Say yes and
+   all commits go to `origin main` (the `github-5889` alias, no force-push).
+2. **Default style:** `storybook` stays the default. Pick another for a film with
+   `Film.create(..., style)`; it locks once characters exist. `dreamshaper-lightning` is
+   commercial-unclear and should not be used for published films.
+3. **Step 1 rig technique** (nested groups vs Synfig bones) is decided after you build the scene;
    the brief asks you to rig it both ways.
-3. **Disk:** the thinking variant `qwen3-vl:8b` (6.2 GB) is kept for comparison; delete it with
+4. **Disk:** the thinking variant `qwen3-vl:8b` (6.2 GB) is kept for comparison; delete it with
    `ollama rm qwen3-vl:8b` if you prefer.
-4. **Montage app:** it uses Ollama continuously. Fine for normal work, but stop it during
+5. **Montage app:** it uses Ollama continuously. Fine for normal work, but stop it during
    benchmarks and long pipeline runs (24 GB holds one big model at a time).
 
 **How to re-check this machine**

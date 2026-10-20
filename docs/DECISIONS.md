@@ -126,7 +126,7 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   custom nodes. Evaluate them in Step 4 against the packs above.
 - **Rejected:** `kijai/ComfyUI-DepthAnythingV2` (no LICENSE file, fp16 fails on Apple Silicon).
 
-### D-019: Image models are switchable; default preset "sdxl-storybook"
+### D-019: Image models are switchable; default preset "sdxl-storybook" (renamed: styles, D-025)
 - **Context:** The owner wants users to be able to pick the image model (2026-10-19). No
   dedicated flat-cartoon SDXL checkpoint had a clean license, an SFW gallery and no studio or
   artist names. This network's DNS (a family filter) also blocks Civitai, so only Hugging Face
@@ -201,3 +201,33 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Design rule confirmed:** validate every tool call in code and send the validation error back
   as the tool result. gpt-oss recovered from one of its two bad calls that way.
 - **Owner:** Step 5 is owner-led (CLAUDE.md); this is input, not the final choice.
+
+### D-025: Switchable style presets, locked per film
+- **Context:** The owner wants to switch image models from inside the app (relayed 2026-10-19):
+  all three candidates downloaded, A as default, styles as a parameter, and no switching
+  mid-film.
+- **Decision:**
+  - **Registry:** `config/models.toml` `[styles.<id>]`: checkpoint, VAE, style LoRAs and weights,
+    sampler settings for `normal` and `fast`, prompt prefix/suffix, negative prompt. The license
+    flag is derived from the files it uses.
+  - **Why one file, not `config/styles/<name>.toml`:** styles share weight files (SDXL Base, the
+    Lightning LoRA), and one manifest defines each file (URL, sha256, license) exactly once. Split
+    it later if the list grows.
+  - **Styles installed:**
+    - `storybook` (A, **default**, commercial yes)
+    - `dreamshaper-lightning` (B, commercial **unclear**)
+    - `animagine` (C, commercial yes; `safe` tag always)
+    - `cutecartoon` (bonus LoRA on SDXL Base, commercial yes)
+  - **Workflows take the style as a parameter:** `studio_core.comfy_graphs.txt2img(manifest,
+    style, prompt, fast=...)` builds the ComfyUI graph. No checkpoint is hard-coded. Kid-safety
+    terms are always appended to the negative prompt. `comfy_mcp` tools take a `style` argument
+    (Step 4); the app gets a dropdown later.
+  - **Locked per film:** `studio_core.film.Film` stores `style` and `style_commercial` in
+    `film.json`. Once the film has any character (in `film.json` or a `characters/<id>/`
+    folder), changing the style raises `StyleLockedError`. A series-level lock comes with series
+    support (Step 6).
+  - **Default must be commercial-OK:** the doctor fails if the default style uses a file whose
+    `commercial` is not "yes".
+- **Why:** Characters are generated once and reused (D-007), so a style switch after that would
+  break consistency. Recording `style_commercial` lets a publishing check refuse films made with
+  unclear or non-commercial models.
