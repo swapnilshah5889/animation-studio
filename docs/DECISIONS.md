@@ -101,10 +101,14 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   definitions we write live in the repo (`envs/<name>/`) so they are reproducible.
 - **Why:** Research found hard conflicts (e.g. Chatterbox pins `torch==2.6.0` and `numpy<2`).
 
-### D-018: Vision QA model: qwen3-vl:8b
-- **Decision:** Use `qwen3-vl:8b` (6.2 GB, Apache-2.0) instead of `qwen2.5vl:7b`.
+### D-018: Vision QA model: qwen3-vl:8b-instruct
+- **Decision:** Use Qwen3-VL 8B (6.2 GB, Apache-2.0) instead of `qwen2.5vl:7b`, specifically the
+  **`qwen3-vl:8b-instruct`** tag.
 - **Why:** Same Qwen-VL family and size class as planned, newer, 256K context, tool calling. Works on
-  Ollama 0.40.x.
+  Ollama 0.40.x. The default `qwen3-vl:8b` tag is the *thinking* variant: it writes ~550 tokens of
+  reasoning per frame even with `think: false`, which costs 29–32 s per frame check. The instruct
+  variant answers directly in 5–7 s with the same JSON structure (benchmarks.md, "Vision QA").
+  The thinking tag stays installed for a quality comparison in Step 5.
 
 ### D-017: ComfyUI v0.42.1, Manager as pip package, SAM 2 and depth node packs
 - **Decision:** ComfyUI pinned to tag **v0.42.1** in `~/ai-studio/comfyui` with its own uv venv
@@ -146,8 +150,19 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Decision:** Use **ACE-Step 1.5** (code and weights **MIT**, actively maintained, Apple Silicon
   via MPS + MLX) instead of v1 (Apache-2.0, inactive since early 2026). Checkout in
   `~/ai-studio/ace-step` with its own uv env. Weights in `~/ai-studio/models/ace-step-1.5`
-  (`ACESTEP_CHECKPOINTS_DIR`): turbo DiT, VAE and text encoder (6.3 GB). The optional 1.7B
-  "thinking" language model (3.8 GB) is skipped: our director writes the music brief itself.
+  (`ACESTEP_CHECKPOINTS_DIR`): turbo DiT, VAE, text encoder, plus the 1.7B "thinking" language
+  model (10.1 GB in all). We run with thinking and all chain-of-thought rewrites **off**: our
+  director writes the music brief itself.
+- **Deviation from the plan:** the LM was meant to be skipped (3.8 GB), but ACE-Step 1.5's
+  `initialize_service` refuses to start without the full main bundle and downloads it itself.
+  Patching the library around that check would be brittle, so the LM is installed but unused.
+  Evaluate "thinking" mode for quality later.
+- **Measured problem (benchmarks.md):** ACE-Step 1.5 runs in float32 on MPS and its default MLX
+  path keeps a second copy of the DiT, so one 30 s cue peaks at ~30 GB footprint and pushes the
+  Mac into swap. The PyTorch/MPS DiT (`--no-mlx-dit`) was 2.5x faster in our single run (17 s vs
+  43 s) but still swapped. **Step 3 must fix memory before music runs inside the pipeline**: try
+  half precision, `PYTORCH_MPS_HIGH_WATERMARK_RATIO`, or ComfyUI's native ACE-Step 1.5 nodes
+  (ComfyUI handles fp16/bf16 and unloading itself), and keep music on its own between stages.
 - **Noted alternative:** ComfyUI core has native ACE-Step 1.5 nodes; music could later run
   through `comfy_mcp` instead of a separate env.
 
@@ -155,8 +170,10 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Decision:** `kokoro` 0.9.4 in `envs/kokoro`, weights in `~/ai-studio/models/kokoro-82m`,
   loaded from local files with `HF_HUB_OFFLINE=1` after the first download. The spaCy model is
   pinned as a wheel so nothing downloads at run time. Default voice `af_heart`, 24 kHz mono.
-- **Why:** It is the reference implementation, and it was measured at a real-time factor of
-  ~0.23 on MPS, which is already fast enough. `mlx-audio` is a possible speed-up later.
+- **Device: CPU by default** (`[audio] kokoro_device = "cpu"`). Measured RTF ~0.10 on both CPU and
+  MPS; CPU loads faster, uses 1.5 GB instead of 2.4 GB, and leaves the GPU free.
+- **Why:** It is the reference implementation and already ~10x faster than real time.
+  `mlx-audio` is a possible speed-up later.
 
 ### D-022: Rhubarb runs under Rosetta 2 for now (owner approved 2026-10-19)
 - **Context:** Rhubarb 1.14.0's macOS binary is x86_64-only and unsigned. Rosetta 2 was already
@@ -167,3 +184,20 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 ### D-023: Ollama runs as a Homebrew service (owner approved 2026-10-19)
 - **Decision:** `brew services start ollama`, so the server runs at login instead of inside some
   terminal session. Models stay in Ollama's default store (`~/.ollama/models`).
+
+### D-024: Director candidate after Step 0: qwen3:14b (provisional; Step 5 confirms)
+- **Evidence (`scripts/check_tool_calling.py`, 5 trials each, see benchmarks.md):**
+  - **qwen3:14b:** valid call, uses the result and avoids needless calls in 5/5 trials, both with
+    thinking on (~68 s per trial) and **off (~7.5 s per trial)**.
+  - **gpt-oss:20b:** valid on the first try in only 3/5 trials and 4/5 after one retry. It invents
+    enum values (`unit: "C"`, `"metric"`). It is also slower (~87 s per trial) and 13.8 GB, close
+    to the Mac's GPU memory limit.
+- **Speed (benchmarks.md):** gpt-oss:20b generates 26 tok/s vs qwen3:14b's 11 tok/s (it is a
+  mixture-of-experts model: only ~3.6B parameters are active per token). Reliability matters more
+  for a director than raw speed, and qwen3 with thinking off is already fast per call.
+- **Recommendation:** qwen3:14b as the director, **thinking off for routine tool calls**, and on
+  only for planning stages (story, shot list) if quality needs it. Keep gpt-oss:20b installed for
+  the Step 5/6 comparison on real director tasks; this check is deliberately tiny.
+- **Design rule confirmed:** validate every tool call in code and send the validation error back
+  as the tool result. gpt-oss recovered from one of its two bad calls that way.
+- **Owner:** Step 5 is owner-led (CLAUDE.md); this is input, not the final choice.

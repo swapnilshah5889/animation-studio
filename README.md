@@ -7,7 +7,8 @@ characters, plans shots, and drives open-source animation apps (Synfig, ComfyUI,
 through **MCP servers** to produce a finished film. Everything runs on your own machines, with no paid
 APIs and no API keys.
 
-> Status: **Step 0 (environment setup)**. See `docs/PROGRESS.md`.
+> Status: **Step 0 done (environment setup + benchmarks), Step 1 brief awaiting owner review.**
+> See `docs/PROGRESS.md`. Check this machine with `uv run scripts/doctor.py`.
 
 ## Why it's built this way
 

@@ -126,12 +126,17 @@ Also note memory pressure during the heaviest stages.
 
 ## Done when
 
-- [ ] `uv run scripts/doctor.py` is all green
-- [ ] Director candidates both pass the tool-calling check (or the failure is documented)
-- [ ] A text-to-image, a SAM 2 and a depth workflow each run through the ComfyUI **HTTP API** from a script
-- [ ] Kokoro voices a line, Rhubarb produces mouth cues for it, and ACE-Step produces 30 s of music
-- [ ] Synfig CLI and `melt` each render an MP4
-- [ ] Qdrant is running via `infra/docker-compose.yml`
-- [ ] `docs/benchmarks.md` is filled in, and `MODELS.md` lists every model with its license
-- [ ] PROGRESS.md is updated and the Step 1 brief is written
-- [ ] Work committed in small commits (once the git repo exists)
+Verified 2026-10-19 (details in `docs/PROGRESS.md` and `docs/benchmarks.md`):
+
+- [x] `uv run scripts/doctor.py` is all green: 38 OK + 1 DEFER (Synfig Studio GUI, which the owner
+      installs at Step 1, D-014), exit code 0
+- [x] Director candidates both pass the tool-calling check (or the failure is documented):
+      qwen3:14b 5/5; gpt-oss:20b 3/5 first try, 4/5 after a retry (documented, D-024)
+- [x] A text-to-image, a SAM 2 and a depth workflow each run through the ComfyUI **HTTP API** from a
+      script (`scripts/comfy_smoke.py`)
+- [x] Kokoro voices a line, Rhubarb produces mouth cues for it, and ACE-Step produces 30 s of music
+- [x] Synfig CLI and `melt` each render an MP4 (`scripts/smoke_engines.py`)
+- [x] Qdrant is running via `infra/docker-compose.yml`
+- [x] `docs/benchmarks.md` is filled in, and `MODELS.md` lists every model with its license
+- [x] PROGRESS.md is updated and the Step 1 brief is written (`docs/steps/STEP-1-synfig.md`, draft)
+- [x] Work committed in small commits (local only; nothing pushed)
