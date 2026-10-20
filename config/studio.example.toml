@@ -79,3 +79,5 @@ kokoro_device = "cpu"   # as fast as MPS for this 82M model, less memory, GPU st
 [doctor]
 # Checks that may be MISSING on purpose (reported as DEFER), with the reason.
 deferred = { synfig_studio = "owner installs the GUI at Step 1 (D-014)" }
+# Services started only when a stage needs them (an idle ComfyUI still holds memory).
+on_demand = ["comfyui"]

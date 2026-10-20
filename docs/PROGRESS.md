@@ -9,7 +9,7 @@ brief** (`docs/steps/STEP-1-synfig.md`).
 
 ## 2026-10-19 (evening): Step 0 complete: environment set up, verified and benchmarked
 
-**Done and verified** (`uv run scripts/doctor.py` → `ALL GREEN: 38 OK, 1 DEFER`, exit 0)
+**Done and verified** (`uv run scripts/doctor.py` → `ALL GREEN`, exit 0: 38 OK + 1 DEFER with ComfyUI running; with it stopped, ComfyUI shows as an on-demand DEFER)
 - **Tools:** uv 0.13.1, Python 3.12.15 (uv-managed), Synfig 1.5.5 CLI (Homebrew formula, native
   arm64, D-014), MLT `melt` 7.42.0, Rhubarb 1.14.0 (x86_64 under Rosetta, D-022), Kdenlive 26.08 and
   Krita 5.3.4 (notarized, Gatekeeper accepts them), ffmpeg 9.0.2. vtracer vectorized a test frame.

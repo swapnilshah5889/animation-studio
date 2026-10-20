@@ -8,6 +8,7 @@ paths in config/studio.toml, and prints one line per check:
     FAIL     installed but broken (command errors, import fails, wrong architecture...)
     OFF      service installed but not running (start it, then re-run)
     DEFER    missing on purpose, by an owner decision listed in [doctor] deferred
+             (an on-demand service from [doctor] on_demand that is not running is also fine)
 
 Run from the repo root:
 
@@ -448,9 +449,12 @@ def main() -> int:
     cfg, config_path = load_config(args.config.resolve())
     results = [r for check in CHECKS for r in check(cfg)]
     deferred = cfg.get("doctor", {}).get("deferred", {})
+    on_demand = cfg.get("doctor", {}).get("on_demand", [])
     for r in results:
         if r.name in deferred and r.status == MISSING:
             r.status, r.detail = DEFER, f"{deferred[r.name]} [{r.detail}]"
+        elif r.section == "services" and r.name in on_demand and r.status == OFF:
+            r.status, r.detail = DEFER, f"on demand, not running: {r.detail}"
 
     if args.json:
         print(json.dumps([asdict(r) for r in results], indent=2))
