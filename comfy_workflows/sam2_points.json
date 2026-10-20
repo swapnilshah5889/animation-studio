@@ -1,0 +1,58 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "input.png"
+    }
+  },
+  "2": {
+    "class_type": "DownloadAndLoadSAM2Model",
+    "_meta": {
+      "title": "SAM 2.1 small, fp32 on MPS (D-017)"
+    },
+    "inputs": {
+      "model": "sam2.1_hiera_small.safetensors",
+      "segmentor": "single_image",
+      "device": "mps",
+      "precision": "fp32"
+    }
+  },
+  "3": {
+    "class_type": "Sam2Segmentation",
+    "_meta": {
+      "title": "point prompts in pixel coords (JSON)"
+    },
+    "inputs": {
+      "sam2_model": [
+        "2",
+        0
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "keep_model_loaded": false,
+      "coordinates_positive": "[{\"x\": 512, \"y\": 512}]",
+      "individual_objects": false
+    }
+  },
+  "4": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "3",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ],
+      "filename_prefix": "sam2_mask"
+    }
+  }
+}

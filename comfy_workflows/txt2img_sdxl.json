@@ -1,0 +1,123 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "checkpoint (preset)"
+    },
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "style LoRA (preset)"
+    },
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "StorybookRedmondV2-KidsBook-KidsRedmAF.safetensors",
+      "strength_model": 0.9,
+      "strength_clip": 0.9
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "fp16-safe SDXL VAE"
+    },
+    "inputs": {
+      "vae_name": "sdxl_vae_fp16_fix.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "positive"
+    },
+    "inputs": {
+      "clip": [
+        "2",
+        1
+      ],
+      "text": "KidsRedmAF, Kids Book, a cheerful little rabbit character for a preschool cartoon, full body, front view, standing in a neutral pose with arms held slightly away from the body, flat colors, simple shapes, clean outlines, plain white background"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "negative"
+    },
+    "inputs": {
+      "clip": [
+        "2",
+        1
+      ],
+      "text": "photo, realistic, 3d render, text, watermark, signature, scary, dark, blurry, extra limbs, cropped"
+    }
+  },
+  "6": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "7": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 25,
+      "cfg": 6.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "7",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "txt2img_sdxl"
+    }
+  }
+}

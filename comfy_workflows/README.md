@@ -1,0 +1,16 @@
+# ComfyUI workflows (API format)
+
+Workflows the pipeline submits to ComfyUI's HTTP API (`POST /prompt`). "API format" is the flat
+`{node_id: {class_type, inputs}}` JSON (not the UI's graph format). To edit one visually, load it
+in the ComfyUI UI, change it, then export again with "Export (API)".
+
+| File | What it does | Used by |
+|---|---|---|
+| `txt2img_sdxl.json` | SDXL + style LoRA + fp16-fix VAE, 25 steps, 1024x1024 | `scripts/comfy_smoke.py`, benchmarks |
+| `txt2img_sdxl_lightning.json` | Same, plus the SDXL-Lightning 8-step LoRA (CFG 1) | smoke test, benchmarks |
+| `sam2_points.json` | SAM 2.1 small, segment from positive point prompts, save the mask | smoke test, benchmarks |
+| `depth_anything_v2.json` | Depth Anything V2 **Small** relative depth map | smoke test, benchmarks |
+
+The values stored here are the defaults of the `sdxl-storybook` preset (`config/models.toml`).
+Code overrides checkpoint, LoRAs, sampler settings, prompts, seed and input image per request
+(the image-model switcher, D-019), so these files hold structure, not fixed choices.
