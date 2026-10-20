@@ -1,0 +1,27 @@
+# Local services for Animation Studio. Services only: ML models never run in Docker
+# (Docker on macOS has no GPU access, see DECISIONS D-010).
+#
+#   docker compose -f infra/docker-compose.yml up -d      # start
+#   docker compose -f infra/docker-compose.yml down       # stop (data is kept)
+#
+# Temporal and MinIO join this file in Step 5/6.
+name: animation-studio
+
+services:
+  qdrant:
+    # Vector database for sound-effect search (CLAP embeddings, Step 3) and later RAG.
+    image: qdrant/qdrant:v1.19.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333" # REST + web dashboard (http://127.0.0.1:6333/dashboard)
+      - "127.0.0.1:6334:6334" # gRPC
+    volumes:
+      - ${HOME}/ai-studio/qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__TELEMETRY_DISABLED: "true" # fully local: no usage pings
+    healthcheck:
+      # The image has no curl/wget; bash's /dev/tcp is enough to prove the port answers.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333 && printf 'GET /readyz HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q 'ready' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
