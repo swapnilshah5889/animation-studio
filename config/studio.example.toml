@@ -43,7 +43,7 @@ qdrant_url = "http://127.0.0.1:6333"
 [ollama]
 # Two director candidates are benchmarked in Step 0; the winner is recorded in DECISIONS.md.
 director_models = ["qwen3:14b", "gpt-oss:20b"]
-vision_model = "qwen3-vl:8b"             # D-018
+vision_model = "qwen3-vl:8b-instruct"    # non-thinking variant, ~5x faster per frame (D-018)
 
 [comfyui]
 root = "~/ai-studio/comfyui"
@@ -62,7 +62,8 @@ required_files = ["sam2.1-hiera-small", "depth-anything-v2-small"]
 # Isolated Python environments for heavy ML stacks (one venv each, never shared).
 # Each entry: the interpreter, and the import that proves the env works.
 studio_core = { python = ".venv/bin/python", import = "vtracer" }
-comfyui = { python = "~/ai-studio/comfyui/.venv/bin/python", import = "comfyui_manager" }
+# comfyui_manager imports ComfyUI's own "comfy" package, so probe it from the ComfyUI folder.
+comfyui = { python = "~/ai-studio/comfyui/.venv/bin/python", import = "comfyui_manager", cwd = "~/ai-studio/comfyui" }
 kokoro = { python = "envs/kokoro/.venv/bin/python", import = "kokoro" }
 ace_step = { python = "~/ai-studio/ace-step/.venv/bin/python", import = "acestep" }  # ACE-Step 1.5 checkout
 
@@ -73,6 +74,7 @@ kokoro-82m = "~/ai-studio/models/kokoro-82m"
 
 [audio]
 kokoro_voice = "af_heart"
+kokoro_device = "cpu"   # as fast as MPS for this 82M model, less memory, GPU stays free (D-021)
 
 [doctor]
 # Checks that may be MISSING on purpose (reported as DEFER), with the reason.

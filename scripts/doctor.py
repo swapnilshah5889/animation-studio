@@ -68,10 +68,10 @@ def expand(path: str) -> Path:
     return p if p.is_absolute() else REPO_ROOT / p
 
 
-def run(cmd: list[str], timeout: float = 30) -> tuple[int, str]:
+def run(cmd: list[str], timeout: float = 30, cwd: Path | None = None) -> tuple[int, str]:
     """Run a command, return (exit code, combined stdout+stderr). Never raises."""
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd)
     except FileNotFoundError:
         return 127, f"not found: {cmd[0]}"
     except subprocess.TimeoutExpired:
@@ -283,7 +283,9 @@ def check_ollama_models(cfg: dict[str, Any]) -> list[Result]:
     return results
 
 
-def check_python_env(section: str, name: str, python: Path, module: str) -> Result:
+def check_python_env(
+    section: str, name: str, python: Path, module: str, cwd: Path | None = None
+) -> Result:
     if not python.exists():
         return Result(section, name, MISSING, "", str(python))
     # Prefer the module's __version__, else the installed distribution's version.
@@ -297,7 +299,7 @@ def check_python_env(section: str, name: str, python: Path, module: str) -> Resu
         "    except md.PackageNotFoundError: v = '?'\n"
         "print('DOCTOR', platform.python_version(), v)"
     )
-    code, out = run([str(python), "-c", probe], timeout=120)
+    code, out = run([str(python), "-c", probe], timeout=120, cwd=cwd)
     if code != 0:
         last = out.splitlines()[-1] if out else f"exit {code}"
         return Result(section, name, FAIL, "", f"import {module} failed: {last}")
@@ -312,7 +314,13 @@ def check_python_env(section: str, name: str, python: Path, module: str) -> Resu
 
 def check_envs(cfg: dict[str, Any]) -> list[Result]:
     return [
-        check_python_env("python envs", name, expand(env["python"]), env["import"])
+        check_python_env(
+            "python envs",
+            name,
+            expand(env["python"]),
+            env["import"],
+            expand(env["cwd"]) if "cwd" in env else None,
+        )
         for name, env in cfg.get("envs", {}).items()
     ]
 
