@@ -179,17 +179,24 @@ def build_character(
     *,
     file_prefix: str,
     offsets: dict[str, float | Animated] | None = None,
-    extra_layers: dict[str, list[Layer]] | None = None,
+    attachments: dict[str, list[Layer]] | None = None,
 ) -> BuiltCharacter:
     """Bones + linked parts for one view. `offsets` animate bones (Animated values hold Angle
-    offsets from rest). `extra_layers` adds layers right after a part (e.g. the face over the
-    head) that follow that part's bone. Part paths become `file_prefix/<file>` (relative to the
-    .sif)."""
+    offsets from rest). `attachments` adds layers drawn in a part's local frame (units, the
+    part's pivot at 0,0, y up, before any rotation), right after that part in the draw order and
+    linked to the same bone: the procedural face rides on the head this way. Part paths become
+    `file_prefix/<file>` (relative to the .sif)."""
     view = rig.view(view_name)
     offsets = offsets or {}
     unknown = sorted(set(offsets) - set(view["bones"]))
     if unknown:
         raise RigError(f"unknown bones {unknown}; rig {rig.id!r} has {sorted(view['bones'])}")
+    attachments = attachments or {}
+    stray = sorted(set(attachments) - set(view["parts"]))
+    if stray:
+        raise RigError(
+            f"attachments for unknown parts {stray}; rig {rig.id!r} has {sorted(view['parts'])}"
+        )
 
     bones: dict[str, Bone] = {}
     for name in _parents_first(view):
@@ -221,11 +228,12 @@ def build_character(
             space,
         )
         base = Transform(angle=Angle(-bone_spec["direction_deg"]))
-        children.append(
-            Group(part_name, transform=BoneLink(bones[part["bone"]], base), children=[image])
-        )
-        for extra in (extra_layers or {}).get(part_name, []):
-            children.append(extra)
+        link = BoneLink(bones[part["bone"]], base)
+        children.append(Group(part_name, transform=link, children=[image]))
+        if attachments.get(part_name):
+            children.append(
+                Group(f"{part_name} attachments", transform=link, children=attachments[part_name])
+            )
     ordered = list(bones.values())
     children.append(SkeletonLayer(f"{rig.id} skeleton", bones=ordered))
     return BuiltCharacter(Group(f"{rig.id}-rig", children=children), ordered, bones)

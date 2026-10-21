@@ -131,7 +131,7 @@ def rig_json() -> dict:
         "part": "head",
         "eyes": {"left_px": [141, 196], "right_px": [79, 196], "size_px": 30},
         "brows": {"left_px": [141, 164], "right_px": [79, 164], "width_px": 34},
-        "mouth": {"at_px": [110, 246], "width_px": 46},
+        "mouth": {"at_px": [110, 248], "width_px": 60},
         "colors": {
             "line": "#463430",
             "eye_white": "#ffffff",

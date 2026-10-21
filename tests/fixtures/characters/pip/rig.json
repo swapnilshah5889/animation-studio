@@ -333,9 +333,9 @@
         "mouth": {
           "at_px": [
             110,
-            246
+            248
           ],
-          "width_px": 46
+          "width_px": 60
         },
         "colors": {
           "line": "#463430",

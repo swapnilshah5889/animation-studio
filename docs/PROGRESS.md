@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1 (schemas, approved) and 2.2 (rig model +
-validator) done; next 2.3 (vector shapes) and 2.4 (procedural face). Steps 0 and 1 are done.
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.4 done (schemas, rig model + validator,
+vector shapes, procedural face); next 2.5, the motion library (owner checkpoint 3: motion preview).
 
 ---
 
@@ -17,8 +17,8 @@ The owner approved the Step 2 brief as written (D-028).
 |---|---|
 | 2.1 Schemas | **Done, approved by the owner (checkpoint 2, 2026-10-21)**: `schemas/rig`, `shot`, `shotlist`, `film`; `studio_core/schema.py` (schema + semantic checks with fixable messages); `scripts/validate.py`; valid examples in `tests/fixtures/schemas/`; 27 tests of specific mistakes; `film.json` now validated on save. Learning note: `docs/learning/json-schema.md`. |
 | 2.2 Rig model + validator | **Done**: `studio_core/rig.py` (load + validate rig.json, bones from rest directions and joint pixels, flat bone-linked parts in draw order, skeleton layer, FK `world_pose`, `clamp_offset`); `studio_core/sif/validate.py` runs before every render (bones first, links complete, GUIDs resolve, no duplicates, images exist); placeholder **Pip** with a faceless head, both arms and two-segment legs (`tests/fixtures/characters/pip/`, `scripts/make_placeholder_character.py`). A render test lands parts within 1.5 px of FK. Note: `docs/learning/rigging.md`. |
-| 2.3 Vector shapes in the builder | To do |
-| 2.4 Procedural face | To do |
+| 2.3 Vector shapes in the builder | **Done**: `studio_core/sif/shapes.py` (splines with Hermite tangents, smooth/ellipse/arc helpers, region, outline, polygon); render tests measure ellipse and triangle areas within 1%. Found: `bgcolor` doesn't paint renders (transparent → black in MP4), so scenes need a background layer. |
+| 2.4 Procedural face | **Done**: `studio_core/face.py` (eyes with open/half/closed and `blink_track`, brows for 6 expressions, Rhubarb mouths A–H + an expression-aware rest X), attached to the head bone via `build_character(attachments=...)`; render test: the face turns with the head (±1.5 px); preview sheet `scripts/preview_face.py`. |
 | 2.5 Motion library (owner checkpoint 3) | To do |
 | 2.6 Parallax + camera | To do |
 | 2.7 `synfig_mcp` server | To do |

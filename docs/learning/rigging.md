@@ -65,3 +65,28 @@ in Python if a motion needs it.
 - Measuring rendered parts: overlapping parts and the canvas edge both hide pixels and bias a
   centroid. That is why the FK test renders twice with the measured part on top, on a large
   canvas.
+
+## The procedural face (task 2.4)
+
+Eyes, brows and mouths are vector shapes drawn in code (`studio_core/face.py`), not pixels in the
+head image (D-007). They are placed from the rig's `face` anchors and attached to the head bone
+(`build_character(attachments=...)`), so they turn with the head: a render test rotates the head
+20° and the mouth's pixels rotate about the neck to within 1.5 px.
+
+| Switch | States | Driven by |
+|---|---|---|
+| `eye_l`, `eye_r` | open, half, closed | `blink_track(frames)`: half → closed → half → open over 4 frames |
+| `brows` | neutral, happy, sad, surprised, grumpy, worried | the expression track |
+| `mouth` | A–H, X (Rhubarb's set) | `mouth_track(cues)` from Rhubarb |
+| `mouth/X` (rest) | one rest mouth per expression | the expression track again |
+
+Why switches: each state is a fixed drawing, and a switch changes on an exact frame. That is
+right for lip-sync (mouth shapes snap, as in traditional animation) and for blinks. Expressions
+snap too in v1. A brief in-between could be added later by animating brow spline points.
+
+Preview every combination with `uv run scripts/preview_face.py` (written to
+`~/ai-studio/scratch/face-preview/face_preview.png`).
+
+Gotcha learned while testing: when measuring a colour in a render, antialiased edges of *other*
+art can come close to it (dark line art over pink ≈ dark red). Use a tight tolerance or a
+bounding box, or the centroid drifts.
