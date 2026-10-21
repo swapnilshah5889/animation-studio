@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://animation-studio.local/schemas/shot.schema.json",
   "title": "Shot spec",
-  "description": "One shot of a film: the source of truth that synfig_mcp turns into scene.sif (D-028). Lives at films/<film>/shots/<id>/shot.json and as an item of the shot list. Times are seconds from the start of the shot. Positions are fractions of the frame: [0, 0] top-left, [1, 1] bottom-right. Rules JSON Schema cannot express (events inside the shot, characters in dialogue present in the shot) are checked by studio_core.schema.check_shot.",
+  "description": "One shot of a film: the source of truth that an engine backend compiles into its own scene file and renders (D-028, D-030). Lives at films/<film>/shots/<id>/shot.json and as an item of the shot list. Times are seconds from the start of the shot. Positions are fractions of the frame: [0, 0] top-left, [1, 1] bottom-right. Rules JSON Schema cannot express (events inside the shot, characters in dialogue present in the shot) are checked by studio_core.schema.check_shot.",
   "type": "object",
   "required": ["id", "duration_s", "background", "characters"],
   "additionalProperties": false,

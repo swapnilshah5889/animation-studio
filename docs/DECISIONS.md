@@ -316,6 +316,10 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Shot audio:** `render_shot` mixes the shot's dialogue lines at their start times
   (`shots/<id>/dialogue.wav`, mono 24 kHz, no volume normalization) into `shot.mp4`. Sound effects
   and music wait for Step 3.
-- **D-030 audit for these additions:** no engine-specific fields. `scene.py` and `shot.py` are
-  Synfig backend code, like `sif/`, `rig.build_character` and the face layers; moving all of it
-  under `studio_core/engines/synfig/` is proposed as task 2.6b (PROGRESS).
+- **D-030 audit (all schemas, 2026-10-21):** no engine-specific fields in `rig`, `shot`,
+  `shotlist`, `film` or `background`: every field is pixels, degrees, seconds, frame fractions or a
+  named preset. Two descriptions named Synfig internals (the bone GUID namespace, "turns into
+  scene.sif") and were reworded. `scene.py`, `shot.py`, `sif/`, `rig.build_character` and the face
+  layers are Synfig backend code; they move under `studio_core/engines/synfig/` behind the backend
+  interface in ROADMAP Step 6. Until then, callers such as the MCP server use only engine-neutral
+  entry points (a film folder, a shot id, a shot spec).

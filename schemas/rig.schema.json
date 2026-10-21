@@ -18,7 +18,7 @@
     },
     "id": {
       "$ref": "#/$defs/id",
-      "description": "Character id, e.g. 'pip'. Also the bone GUID namespace."
+      "description": "Character id, e.g. 'pip'."
     },
     "name": {
       "type": "string",

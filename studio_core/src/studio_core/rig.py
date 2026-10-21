@@ -252,7 +252,7 @@ def build_character(
             origin=origin,
             angle=_offset_value(spec["direction_deg"] - parent_dir, offsets.get(name)),
             length=space.length(spec.get("length_px", 1.0)),
-            namespace=rig.id,
+            namespace=rig.id,  # .sif bone GUIDs derive from the rig id + bone name
         )
 
     children: list[Layer] = []

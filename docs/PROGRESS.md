@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.6 done. Next: the owner decides on 2.6b
-(move the Synfig backend under `studio_core/engines/synfig/`, D-030), then 2.7 (the MCP server).
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.6 done, D-030 schema audit done. Next: 2.7
+(the MCP server).
 
 ---
 
@@ -41,18 +41,18 @@ Update this at the end of every working session. Newest entry at the top.
 - Sound effects and music are not mixed into `shot.mp4` yet (Step 3).
 - Placement is fixed per shot. Walking across the frame needs a moving placement and side-view art.
 
-**D-030 landed during this task**
-- `scene.py` and `shot.py` are Synfig-specific, like `sif/`, `rig.build_character` and the face
-  layers. The motion library's tracks also use Synfig value types.
-- Proposed **task 2.6b**, before the MCP server:
-  - Move the Synfig backend into `studio_core/engines/synfig/`.
-  - Give the motion tracks engine-neutral types.
-  - This way 2.7 builds on a backend interface from the start.
-- Schema audit for 2.6's additions: no engine-specific fields.
+**D-030 (landed during this task)**
+- **Schema audit done:** none of the five schemas has an engine-specific field. Two descriptions
+  named Synfig internals and were reworded (D-033).
+- `scene.py`, `shot.py`, `sif/`, `rig.build_character` and the face layers are Synfig-specific, and
+  the motion tracks use Synfig value types. ROADMAP Step 6 already schedules moving them under
+  `studio_core/engines/synfig/` behind a backend interface, with no behavior change. So there's no
+  extra Step 2 task. 2.7 keeps the MCP tools engine-neutral: they edit shot specs and call
+  `render_shot(film, shot_id)`, never `.sif` details.
 
 **Next**
-- Owner: approve 2.6b, or go straight to 2.7.
-- Agent: 2.6b if approved, then 2.7 (`synfig_mcp` server).
+- Agent: 2.7 (`synfig_mcp` server).
+- Owner (optional): say so if you'd rather do the `engines/` move before 2.7 instead of in Step 6.
 
 ## 2026-10-21: Step 2 started: task 2.1 schemas done, waiting for owner review
 
