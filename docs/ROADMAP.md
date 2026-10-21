@@ -11,7 +11,8 @@ part-time work. Each step has a "done when". Don't move on until it's met and ve
 | 3 | `audio_mcp`: voices, lip-sync, music, sound effects, mix | Agent | to be written |
 | 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | to be written |
 | 5 | Director agent + `edit_mcp` + `qa_mcp`: first full film | **Owner + agent** | to be written |
-| 6 | Evals, Temporal, second machine, LoRAs, fine-tuning | Owner + agent | to be written |
+| 6 | OpenToonz backend + render containers (D-030–D-032) | Agent (owner reviews) | to be written |
+| 7 | Evals, Temporal, LoRAs, fine-tuning, longer films, future tiers | Owner + agent | to be written |
 
 At the end of each step, write the brief for the next one (`docs/steps/STEP-<n>-<name>.md`) and have
 the owner review it before starting.
@@ -91,14 +92,40 @@ cleanup allowed but tracked).
 **Done when:** one prompt produces a **60-second children's film** (2 characters, 2 backgrounds,
 dialogue, music, sound effects) that the owner can open and polish in Kdenlive.
 
-## Step 6: Level up (pick in any order)
+## Step 6: OpenToonz backend + render containers
+The strategic engine (D-031) behind the engine-neutral scene model (D-030), packaged for server-side
+rendering (D-032). Starting point: the spike scripts in `scripts/spikes/` and `docs/spikes/opentoonz.md`.
+
+- **Backend interface** in `studio_core/engines/`: `compile(film, shot) → engine project` and
+  `render(project, frame range) → frames`. Refactor the Synfig code behind it first, with no behavior
+  change and all existing tests passing.
+- **OpenToonz backend:** generate `.tnz` from our schemas:
+  - character parts become levels
+  - rig bones become a pegbar hierarchy (Plastic skeletons later)
+  - motion channels become keyframes
+  - background depth layers become multiplane columns at camera Z depths
+  - camera moves, and compositing effects where the shot asks for them
+- **Plastic meshes that follow each part's outline.** The spike showed rectangular meshes bend
+  stiffly, and skeleton points on mesh edges are ignored.
+- **Render container:** a Linux image with a pinned OpenToonz built from source, Xvfb and `tcomposer`.
+  Add a Synfig image too. Both run on the Mac (Docker) and Windows (WSL2), and later in the cloud.
+  Inputs and outputs go through MinIO/S3.
+- **Conformance tests:** the same shots through both backends, comparing pose positions and timing
+  within tolerance. Add golden-file tests for `.tnz` output.
+
+**Done when:** the Step 5 film re-renders through OpenToonz from the same film folder, with **no
+changes to the director or the schemas**, inside the render container, and passes the conformance
+tests.
+
+## Step 7: Level up (pick in any order)
 - **Evals:** character consistency (embedding similarity), palette adherence (exact), lip-sync timing
   error, a vision judge for shot-vs-spec, and a safety classifier. Run them on every change.
-- **Temporal:** durable stages, retries, task queues by capability (`ai-mac`, `render-win`), MinIO.
+- **Temporal:** durable stages, retries, task queues by capability (`ai` workers, plus a pool of
+  render containers, of which the Windows laptop is one), MinIO.
 - **LoRAs:** character LoRAs for new poses and views. Style LoRAs.
 - **Fine-tune the director:** LoRA supervised fine-tuning of a small LLM to write valid shot lists, then
   **GRPO with a verifiable reward** (the shot list validates, renders without errors, and passes QA
   checks).
 - **Longer films:** 3–7 minute episodes that reuse characters and backgrounds across a series.
-- **Future tiers:** limited animation (Tier 2) and full animation (Tier 3) for anime style. See
-  ARCHITECTURE.
+- **Future tiers:** limited animation (Tier 2) and full animation (Tier 3) for anime style, on the
+  OpenToonz backend. See ARCHITECTURE.

@@ -144,7 +144,7 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   DreamShaper XL Lightning stays listed as `unclear`; DMD2 and Flash-SDXL (non-commercial) are not
   listed at all.
 - **Why:** Cleanest license chain, and SDXL Base is the best foundation for our own style and
-  character LoRAs in Step 6.
+  character LoRAs in Step 7.
 
 ### D-020: Music: ACE-Step 1.5 (turbo), without its language model
 - **Decision:** Use **ACE-Step 1.5** (code and weights **MIT**, actively maintained, Apple Silicon
@@ -225,7 +225,7 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   - **Locked per film:** `studio_core.film.Film` stores `style` and `style_commercial` in
     `film.json`. Once the film has any character (in `film.json` or a `characters/<id>/`
     folder), changing the style raises `StyleLockedError`. A series-level lock comes with series
-    support (Step 6).
+    support (Step 7).
   - **Default must be commercial-OK:** the doctor fails if the default style uses a file whose
     `commercial` is not "yes".
 - **Why:** Characters are generated once and reused (D-007), so a style switch after that would
@@ -295,6 +295,75 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   the frame wait for side or three-quarter art (Step 4) plus scene placement moves (task 2.6).
 - **Determinism:** "random" choices (blink intervals) come from a hash of the character and the
   start frame, so renders and tests are repeatable.
+
+### D-030: Engine-neutral scene model (owner, 2026-10-21)
+- **Context:** The OpenToonz spike (`docs/spikes/opentoonz.md`) showed a second engine is viable, and a
+  hosted product would also need a browser preview. Neither engine runs in a browser.
+- **Decision:** **Our schemas are the product's source of truth**, and engines are interchangeable
+  backends ("compilers"). That covers film, shotlist, shot and rig, plus the motion library's
+  channels: bone angles, joint shifts and eye states (D-029). A backend translates the scene model into
+  its own project files (`.sif`, `.tnz`, ...) and renders them. A future web previewer (e.g. PixiJS) is
+  just another backend.
+  - **No engine-specific fields** in the schemas, the director's tool vocabulary, or `film.json`.
+    Engine details live only in backend modules (e.g. `studio_core/engines/synfig/`, later
+    `studio_core/engines/opentoonz/`).
+  - MCP tool names and arguments stay engine-neutral. The server picks a backend. `synfig_mcp` may be
+    renamed (e.g. `animation_mcp`) when the second backend lands.
+- **Why:** Switch engines per tier or per customer without touching the director, assets or evals.
+  Avoid lock-in if an engine stalls or changes format. Make browser editing possible.
+- **Consequences:**
+  - Audit the existing schemas for Synfig-specific fields during Step 2, and move any into the Synfig
+    backend.
+  - When the second backend arrives (ROADMAP Step 6), add conformance tests: the same shot through
+    each backend should match on pose positions and timing, within tolerance.
+
+### D-031: OpenToonz is the strategic engine; Synfig ships the first film (owner, 2026-10-21)
+- **Decision:**
+  - Synfig remains the engine for Steps 2–5, up to the first 60-second film.
+  - Right after that, build an **OpenToonz backend** (ROADMAP Step 6) behind the engine-neutral model
+    (D-030). Aim for it to carry every tier: children's cut-out, then anime limited animation.
+- **Why (product view, not the owner's Mac):**
+  - **License:** OpenToonz's own code is **BSD-3-Clause**. We can modify it, fork it, bundle it, and
+    build and sign our own binaries, with no copyleft obligations. Its bundled third-party libraries
+    keep their own licenses. Synfig is GPL-3.
+  - **One engine for all tiers:** Plastic mesh deformation, a real multiplane camera (Z-depth
+    parallax), compositing effects, and professional frame-by-frame tools.
+  - **Built for render farms:** headless `tcomposer` plus a built-in farm system.
+  - **Professional interoperability:** used in real anime production, so exporting a `.tnz` for
+    hand polish is a feature for studios and serious creators.
+  - **Active project:** ~7.8k GitHub stars, commits weekly. Tahoma2D is a fork using the same file
+    format.
+- **Evidence (spike, 2026-10-21):**
+  - Python generated a `.tnz` from scratch: levels on twos, a pegbar hierarchy, eased keys, measured
+    multiplane parallax, and an animated blur effect.
+  - Plastic mesh deformation authored from code rendered.
+  - Render speed: ~0.04 s per 1080p frame with 10 cores.
+- **Risks and mitigations:**
+  - **Undocumented `.tnz` format:** pin the engine version in the render image, and add golden-file
+    tests.
+  - **ToonzScript can't animate:** generate `.tnz` directly.
+  - **The official macOS build is Intel-only and unsigned:** irrelevant for server rendering (D-032).
+    For any desktop distribution, build our own signed arm64 binaries (BSD allows it) or use Tahoma2D.
+  - Synfig work so far is not wasted: it is the first backend and the conformance reference.
+
+### D-032: Final rendering runs server-side in containers (owner, 2026-10-21)
+- **Decision:** Engine rendering and compositing run in **stateless Linux render containers** on CPU
+  nodes:
+  - OpenToonz `tcomposer` under a virtual display (Xvfb)
+  - the Synfig CLI (already headless)
+  - MLT / ffmpeg for assembly
+
+  GPUs are only for AI asset generation. The same containers run on the owner's machines (Docker on
+  the Mac, WSL2 on Windows) for development and self-hosting.
+- **Why:** This is how a product scales. Rendering is CPU-bound and cheap, and containers pin engine
+  versions. It also removes the dependence on any desktop build (signing, Rosetta, Gatekeeper).
+- **Consequences:**
+  - Render workers read inputs from object storage (MinIO/S3) and write outputs back. They keep no
+    local state.
+  - Temporal's render queue becomes a pool of render containers, and `render-win` is just one of them.
+  - **D-001 (fully local) is unchanged for now.** Whether the product is a hosted web app, a desktop
+    app, or both is an open owner decision. This decision only fixes *how* rendering is packaged and
+    where it can run.
 
 ### D-033: Scene layout and shot assembly conventions (task 2.6)
 - **Feet, not hips:** a shot spec character's `position` is **the point between its feet** (the

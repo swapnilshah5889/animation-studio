@@ -54,6 +54,30 @@ Update this at the end of every working session. Newest entry at the top.
 - Agent: 2.7 (`synfig_mcp` server).
 - Owner (optional): say so if you'd rather do the `engines/` move before 2.7 instead of in Step 6.
 
+## 2026-10-21: Engine strategy decided (planning session)
+
+**Done**
+- OpenToonz spike finished: `docs/spikes/opentoonz.md` and three scripts in `scripts/spikes/`.
+  Python-generated `.tnz` scenes render headless, and Plastic works from code. The Tahoma2D
+  evaluation was stopped at the owner's request (notes are in the report's appendix). Spike
+  leftovers were moved to the Trash. `~/Applications/OpenToonz.app` and
+  `~/ai-studio/tools/opentoonz-stuff` were kept.
+- The owner approved three decisions:
+  - **D-030:** engine-neutral scene model, with engines as backends
+  - **D-031:** OpenToonz is the strategic engine, and Synfig ships the first film
+  - **D-032:** final rendering runs server-side in stateless containers
+- ROADMAP: a new **Step 6, OpenToonz backend + render containers**. The old Step 6 (level up) is now
+  Step 7, and its references were renumbered.
+- ARCHITECTURE and the CLAUDE.md conventions were updated to match. D-001 (fully local) is unchanged.
+
+**Impact on the current step**
+- Step 2: audit the schemas for Synfig-specific fields and move any into the Synfig backend (D-030).
+  Keep MCP tool names and arguments engine-neutral.
+
+**Open question for the owner**
+- Product delivery: hosted web app, desktop app, or both. This decides D-001's future and whether
+  the web-preview backend is needed.
+
 ## 2026-10-21: Step 2 started: task 2.1 schemas done, waiting for owner review
 
 The owner approved the Step 2 brief as written (D-028).

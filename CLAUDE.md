@@ -90,4 +90,8 @@ Read these before doing anything, in this order:
 - **Rules live in code, not in the LLM.** Timing math, frame counts and file layout are deterministic
   and unit-tested. The LLM decides *what* happens, and code decides *how* it is executed.
 - Prefer small, composable tools over one giant "do everything" tool.
+- **Keep the scene model engine-neutral (D-030).** No Synfig- or OpenToonz-specific fields in the
+  schemas, `film.json`, or MCP tool names and arguments. Engine details belong in
+  `studio_core/engines/<engine>/`. Synfig ships the first film, and OpenToonz is the strategic engine
+  (D-031). Final rendering is designed for stateless server-side containers (D-032).
 - Scripts go in `scripts/` and must be safe to re-run (idempotent).

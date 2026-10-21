@@ -42,6 +42,28 @@ Every stage can be resumed, inspected, or fixed by hand in the real app, then pi
 5. **Vectorize flat art.** Character parts are converted from raster to vector (vtracer) where it
    looks good, so the art stays crisp at any resolution.
 6. **Rules in code, judgment in the LLM.** Timing, frame math and layout are deterministic, tested code.
+7. **Engine-neutral scene model (D-030).** Our schemas are the source of truth, and animation engines
+   are swappable backends (below).
+
+## Engine-neutral scene model and backends (D-030, D-031, D-032)
+
+```
+Director (LLM) → our schemas: film / shotlist / shot / rig + motion channels   ← the product's core
+                      ├─ Synfig backend     → .sif  → synfig CLI     (first film, Steps 2–5)
+                      ├─ OpenToonz backend  → .tnz  → tcomposer      (strategic engine, Step 6)
+                      └─ web preview        → PixiJS in the browser  (only if the product is hosted)
+```
+
+- **No engine-specific fields** in the schemas, `film.json`, or the director's tool vocabulary. Engine
+  details live in `studio_core/engines/<engine>/`.
+- **Synfig ships the first film.** It is already working and becomes the conformance reference.
+- **OpenToonz is the strategic engine:** BSD-3 license, one engine for children's cut-out *and* anime
+  tiers (Plastic mesh deformation, a real multiplane camera, compositing effects), a built-in render
+  farm, and professional interoperability. Evidence: `docs/spikes/opentoonz.md`.
+- **Final rendering is server-side:** stateless Linux render containers on CPU nodes (OpenToonz
+  `tcomposer` under Xvfb, the Synfig CLI, MLT/ffmpeg). GPUs are only for AI asset generation. The
+  same containers run on the owner's machines for development and self-hosting.
+- **Open owner decision:** hosted web app vs desktop app vs both. D-001 (fully local) stands until then.
 
 ## MCP servers
 
@@ -50,7 +72,7 @@ starting point: refine them while building, and record changes in DECISIONS.md.
 
 | Server | Wraps | Example tools | Integration level |
 |---|---|---|---|
-| `synfig_mcp` | **Synfig Studio** (2D cut-out, bones, tweening) | `create_scene`, `build_rig`, `pose_at`, `apply_motion`, `apply_lipsync`, `add_parallax_background`, `camera_move`, `render_preview_frame`, `render_shot` | Generate and edit `.sif` XML, render with the `synfig` CLI |
+| `synfig_mcp` (may become `animation_mcp` once there are two backends, D-030) | **Synfig Studio** now, **OpenToonz** from Step 6 | `create_scene`, `build_rig`, `pose_at`, `apply_motion`, `apply_lipsync`, `add_parallax_background`, `camera_move`, `render_preview_frame`, `render_shot`. Names and arguments stay engine-neutral. | Synfig: generate `.sif`, render with the `synfig` CLI. OpenToonz: generate `.tnz`, render with `tcomposer`. |
 | `comfy_mcp` | **ComfyUI** (image generation, SAM 2, depth) | `generate_character_sheet`, `cut_into_parts`, `generate_background`, `split_depth_layers`, `inpaint` | ComfyUI HTTP API plus saved workflows in `comfy_workflows/` |
 | `audio_mcp` | **Kokoro / Chatterbox** (TTS), **Rhubarb** (lip-sync), **ACE-Step** (music), CC0 sound library | `speak`, `lipsync`, `compose`, `find_sfx`, `mix` | Python and CLI. Sound effect search uses audio embeddings (CLAP) in Qdrant. |
 | `edit_mcp` | **Kdenlive / MLT** | `assemble`, `add_titles`, `export` | Generate MLT XML and render with `melt`. The owner can open the project in Kdenlive. |
@@ -62,7 +84,8 @@ LLM can act on what's open in the GUI. (3) Modify app source, only as a last res
 
 **License note:** Synfig, Krita, Kdenlive and ComfyUI are GPL. Wrapping them via files, CLIs and APIs
 keeps our code separate. If we ever distribute *modified* versions of them, GPL requires publishing
-those changes.
+those changes. OpenToonz's own code is **BSD-3-Clause** (its bundled third-party libraries keep their
+own licenses), so we can modify it and ship our own builds freely (D-031).
 
 ## Film project folder (source of truth)
 
@@ -149,6 +172,10 @@ films/<film-slug>/
 
 Mac memory rule: one large model loaded at a time. The pipeline must unload explicitly between stages.
 
+These are **development and self-hosting machines**. In the product, final rendering runs in stateless
+Linux render containers on CPU nodes, with GPUs only for AI asset generation (D-032). From Step 6 the
+same containers run locally too: Docker on the Mac (rendering needs no GPU) and WSL2 on Windows.
+
 ## Initial model and tool picks (verify licenses, record in MODELS.md)
 
 | Role | Pick | Notes |
@@ -163,12 +190,14 @@ Mac memory rule: one large model loaded at a time. The pipeline must unload expl
 | Music | ACE-Step | Apache-2.0. Verify Apple Silicon support. |
 | Sound effects | CC0 libraries + CLAP embeddings in Qdrant | Check the CLAP model license |
 | Vectorizing | vtracer | MIT |
-| Animation engine | Synfig Studio | GPL-3 |
+| Animation engine | Synfig Studio (first film), **OpenToonz** (strategic, from Step 6) | GPL-3 / BSD-3 (D-031) |
 | Edit and assembly | Kdenlive / MLT, ffmpeg | GPL / LGPL |
 
 ## Future tiers (not in v1)
 
-Later, for anime-style films, each shot is assigned one tier by the director:
+Later, for anime-style films, each shot is assigned one tier by the director. Tiers 1–2 run on the
+OpenToonz backend (multiplane camera, Plastic mesh deformation, effects). Tier 3 uses OpenToonz as
+the compositor around AI-generated motion.
 
 - **Tier 1, puppet rig:** v1. Dialogue and children's content.
 - **Tier 2, limited animation:** strong keyframes plus camera moves, parallax, mesh deformation
@@ -189,7 +218,7 @@ animation-studio/
   mcp/         synfig_mcp/  comfy_mcp/  audio_mcp/  edit_mcp/  qa_mcp/  (krita_mcp/ later)
   comfy_workflows/  ComfyUI workflows saved in API format
   director/    agent loop and stage state machine (Step 5)
-  evals/       eval sets and harness (Step 6)
+  evals/       eval sets and harness (Step 7)
   tests/       unit tests + fixtures
   films/       generated film projects (git-ignored)
 ```
