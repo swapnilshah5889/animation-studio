@@ -9,6 +9,7 @@
       "root": "torso",
       "bones": {
         "torso": {
+          "role": "torso",
           "parent": null,
           "direction_deg": 90,
           "length_px": 240,
@@ -19,6 +20,7 @@
           }
         },
         "head": {
+          "role": "head",
           "parent": "torso",
           "direction_deg": 90,
           "length_px": 280,
@@ -36,6 +38,7 @@
           }
         },
         "upper_arm_l": {
+          "role": "upper_arm",
           "parent": "torso",
           "direction_deg": -90,
           "length_px": 112,
@@ -53,6 +56,7 @@
           }
         },
         "forearm_l": {
+          "role": "forearm",
           "parent": "upper_arm_l",
           "direction_deg": -90,
           "length_px": 132,
@@ -70,6 +74,7 @@
           }
         },
         "upper_arm_r": {
+          "role": "upper_arm",
           "parent": "torso",
           "direction_deg": -90,
           "length_px": 112,
@@ -87,6 +92,7 @@
           }
         },
         "forearm_r": {
+          "role": "forearm",
           "parent": "upper_arm_r",
           "direction_deg": -90,
           "length_px": 132,
@@ -104,6 +110,7 @@
           }
         },
         "thigh_l": {
+          "role": "thigh",
           "parent": "torso",
           "direction_deg": -90,
           "length_px": 100,
@@ -121,6 +128,7 @@
           }
         },
         "shin_l": {
+          "role": "shin",
           "parent": "thigh_l",
           "direction_deg": -90,
           "length_px": 130,
@@ -138,6 +146,7 @@
           }
         },
         "thigh_r": {
+          "role": "thigh",
           "parent": "torso",
           "direction_deg": -90,
           "length_px": 100,
@@ -155,6 +164,7 @@
           }
         },
         "shin_r": {
+          "role": "shin",
           "parent": "thigh_r",
           "direction_deg": -90,
           "length_px": 130,

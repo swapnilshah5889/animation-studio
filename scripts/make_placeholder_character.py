@@ -109,6 +109,7 @@ def rig_json() -> dict:
     bones = {}
     for name, (parent, attach, direction, length, side, (lo, hi)) in BONES.items():
         spec = {
+            "role": name.rsplit("_", 1)[0] if name.endswith(("_l", "_r")) else name,
             "parent": parent,
             "direction_deg": direction,
             "length_px": length,

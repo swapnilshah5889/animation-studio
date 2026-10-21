@@ -172,6 +172,31 @@ def _offset_value(base_deg: float, offset: float | Animated | None) -> Angle | A
     )
 
 
+def _origin_value(
+    joint_px: Vec, shift: Animated | None, parent_dir: float, space: Space
+) -> Vec | Animated:
+    """Bone origin in the parent bone's frame (units): the joint, plus an optional animated shift
+    (both in the parent art's pixel frame, y up), turned by -parent_dir."""
+
+    def to_bone_frame(v: Vec) -> Vec:
+        r = rotate(v, -parent_dir)
+        return Vec(space.length(r.x), space.length(r.y))
+
+    if shift is None:
+        return to_bone_frame(joint_px)
+    return Animated(
+        "vector",
+        tuple(
+            Waypoint(
+                w.frame,
+                to_bone_frame(Vec(joint_px.x + w.value.x, joint_px.y + w.value.y)),
+                w.interp,
+            )
+            for w in shift.waypoints
+        ),
+    )
+
+
 def build_character(
     rig: Rig,
     view_name: str | None,
@@ -179,16 +204,20 @@ def build_character(
     *,
     file_prefix: str,
     offsets: dict[str, float | Animated] | None = None,
+    shifts: dict[str, Animated] | None = None,
     attachments: dict[str, list[Layer]] | None = None,
 ) -> BuiltCharacter:
     """Bones + linked parts for one view. `offsets` animate bones (Animated values hold Angle
     offsets from rest). `attachments` adds layers drawn in a part's local frame (units, the
     part's pivot at 0,0, y up, before any rotation), right after that part in the draw order and
-    linked to the same bone: the procedural face rides on the head this way. Part paths become
-    `file_prefix/<file>` (relative to the .sif)."""
+    linked to the same bone: the procedural face rides on the head this way. `shifts` move a
+    bone's joint: Animated Vec values in art pixels (y up) in the parent part's frame; on the root
+    bone they move the whole character. Part paths become `file_prefix/<file>` (relative to the
+    .sif)."""
     view = rig.view(view_name)
     offsets = offsets or {}
-    unknown = sorted(set(offsets) - set(view["bones"]))
+    shifts = shifts or {}
+    unknown = sorted((set(offsets) | set(shifts)) - set(view["bones"]))
     if unknown:
         raise RigError(f"unknown bones {unknown}; rig {rig.id!r} has {sorted(view['bones'])}")
     attachments = attachments or {}
@@ -203,10 +232,8 @@ def build_character(
         spec = view["bones"][name]
         parent = spec["parent"]
         parent_dir = 0.0 if parent is None else view["bones"][parent]["direction_deg"]
-        origin = Vec(0, 0)
-        if parent is not None:
-            v = rotate(joint_vector_px(view, name), -parent_dir)
-            origin = Vec(space.length(v.x), space.length(v.y))
+        joint_px = Vec(0, 0) if parent is None else joint_vector_px(view, name)
+        origin = _origin_value(joint_px, shifts.get(name), parent_dir, space)
         bones[name] = Bone(
             name,
             parent=None if parent is None else bones[parent],

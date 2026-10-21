@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.4 done (schemas, rig model + validator,
-vector shapes, procedural face); next 2.5, the motion library (owner checkpoint 3: motion preview).
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.5 done; **waiting for the owner's motion
+review** (checkpoint 3), then 2.6 (parallax + camera) and 2.7 (the MCP server).
 
 ---
 
@@ -19,7 +19,7 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.2 Rig model + validator | **Done**: `studio_core/rig.py` (load + validate rig.json, bones from rest directions and joint pixels, flat bone-linked parts in draw order, skeleton layer, FK `world_pose`, `clamp_offset`); `studio_core/sif/validate.py` runs before every render (bones first, links complete, GUIDs resolve, no duplicates, images exist); placeholder **Pip** with a faceless head, both arms and two-segment legs (`tests/fixtures/characters/pip/`, `scripts/make_placeholder_character.py`). A render test lands parts within 1.5 px of FK. Note: `docs/learning/rigging.md`. |
 | 2.3 Vector shapes in the builder | **Done**: `studio_core/sif/shapes.py` (splines with Hermite tangents, smooth/ellipse/arc helpers, region, outline, polygon); render tests measure ellipse and triangle areas within 1%. Found: `bgcolor` doesn't paint renders (transparent → black in MP4), so scenes need a background layer. |
 | 2.4 Procedural face | **Done**: `studio_core/face.py` (eyes with open/half/closed and `blink_track`, brows for 6 expressions, Rhubarb mouths A–H + an expression-aware rest X), attached to the head bone via `build_character(attachments=...)`; render test: the face turns with the head (±1.5 px); preview sheet `scripts/preview_face.py`. |
-| 2.5 Motion library (owner checkpoint 3) | To do |
+| 2.5 Motion library (owner checkpoint 3) | **Done, waiting for the owner's review of the motion preview**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
 | 2.6 Parallax + camera | To do |
 | 2.7 `synfig_mcp` server | To do |
 | 2.8 Prove it from the Inspector and Claude Code | To do |

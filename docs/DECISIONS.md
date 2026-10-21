@@ -282,3 +282,16 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
 - **Face:** procedural vector eyes, lids, brows and the 9 Rhubarb mouth shapes (A–H, X) on the
   head bone (D-007).
 - **Installs approved:** `mcp` 2.x, `jsonschema` 4.x, and the MCP Inspector via `npx`.
+
+### D-029: Motion library v1 conventions (task 2.5)
+- **Bone `role` (schema addition):** `rig.schema.json` bones gain an optional `role` (torso, head,
+  upper_arm, forearm, thigh, shin, ...). Together with `side`, motions find limbs on any rig, not
+  only on bones named like Pip's. It is additive and backward compatible; without it, the library
+  falls back to the name minus an `_l`/`_r` suffix.
+- **Channels:** motions write bone angles (offsets from rest), joint **shifts** (pixels; on the
+  root they move the whole character) and eye states. `build_character` gained `shifts`.
+- **Front-view motions** are honest about the view: nod is a head bob, and walk is a march in
+  place (alternating leg lifts) because sideways leg swings read as stumbling. Real walks across
+  the frame wait for side or three-quarter art (Step 4) plus scene placement moves (task 2.6).
+- **Determinism:** "random" choices (blink intervals) come from a hash of the character and the
+  start frame, so renders and tests are repeatable.
