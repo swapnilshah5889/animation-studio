@@ -6,8 +6,7 @@ The model never imports our Python. It sees a list of tools, each with a name, a
 JSON Schema for its arguments, and asks the client to call one. The client sends a JSON-RPC message
 to the server, the server runs the function, and the result comes back into the conversation.
 
-First version, written with task 2.7. Task 2.9 extends it with what the Inspector and Claude Code
-showed.
+Written with tasks 2.7–2.8.
 
 ## The three things a server can offer
 
@@ -63,6 +62,41 @@ One `make_shot(everything)` tool would need the model to write a perfect spec in
 mistake would fail the whole call. Small verbs (`add_character`, `apply_motion`, ...) each change
 one thing, each is checked, and a failure points at exactly one argument. They are also easy to
 log, replay and evaluate later (Step 7 evals).
+
+## The Inspector: a client for humans
+
+The MCP Inspector (`@modelcontextprotocol/inspector`, pinned to 2.9.0) is a client you drive by
+hand. It shows exactly what a model would see:
+- each tool's name, description and input schema (the enums and ranges from our type hints)
+- each call's raw result: `content` (text for the model), `structuredContent` (the JSON that
+  matches the output schema) and `isError`
+
+It reads the same `.mcp.json` as Claude Code:
+
+```bash
+npx -y @modelcontextprotocol/inspector@2.9.0 --config .mcp.json --server synfig_mcp
+```
+
+That opens the web UI (the URL it prints carries a session token). `--cli` mode makes it
+scriptable: `scripts/inspector_check.py` lists the tools and calls every one, including calls
+that must be refused, on a scratch film. Gotcha: Inspector 2.9 asks for Node ≥ 22.19; with this
+machine's Node 22.13 it prints warnings but works.
+
+## Claude Code as the client
+
+`.mcp.json` at the repo root registers the server for anyone who opens the project:
+
+```json
+{"mcpServers": {"synfig_mcp": {"type": "stdio", "command": "uv", "args": ["run", "--quiet", "synfig-mcp"]}}}
+```
+
+- Project servers run code on your machine, so Claude Code asks before starting one:
+  `claude mcp list` shows "Pending approval" until you approve it in an interactive session.
+- In the model's tool list our tools are named `mcp__synfig_mcp__<tool>`.
+- Headless runs can pin exactly what the model gets: `claude -p ... --mcp-config .mcp.json
+  --strict-mcp-config --tools ""` gives a session with *only* our 14 tools and no built-in ones
+  (no shell, no file edits). `scripts/run_first_shot.py` uses this for Step 2's done-when and
+  saves the transcript to `mcp-first-shot.md`.
 
 ## Testing without a model
 

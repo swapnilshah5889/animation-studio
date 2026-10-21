@@ -14,6 +14,7 @@ Media results are file paths inside the film folder, never bytes (CLAUDE.md).
 
 from __future__ import annotations
 
+import inspect
 import json
 import time
 from collections.abc import Iterator
@@ -182,6 +183,15 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         version="0.1.0",
     )
 
+    def tool(name: str | None = None) -> Any:
+        """Register a tool with its docstring cleaned of code indentation (the model reads it)."""
+
+        def register(fn: Any) -> Any:
+            server.add_tool(fn, name=name, description=inspect.cleandoc(fn.__doc__ or ""))
+            return fn
+
+        return register
+
     def open_film(film: str) -> shot_spec.FilmFolder:
         return shot_spec.FilmFolder.open(root, film)
 
@@ -197,7 +207,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     # ----------------------------------------------------------------- reading state
 
-    @server.tool()
+    @tool()
     def describe_film(film: FilmArg) -> FilmDescription:
         """What a film has to work with: characters (with their views and bone names), parallax
         backgrounds, recorded dialogue lines (with text and length), existing shots, and the
@@ -246,7 +256,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 camera_moves=list(CAMERA_MOVES),
             )
 
-    @server.tool()
+    @tool()
     def describe_shot(film: FilmArg, shot_id: ShotArg) -> ShotDescription:
         """The shot's current spec, with errors (block rendering) and warnings, and the paths of
         anything already rendered. Cheap: call it after a few edits to check your work."""
@@ -271,7 +281,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     # ----------------------------------------------------------------- editing a shot
 
-    @server.tool()
+    @tool()
     def create_scene(
         film: FilmArg,
         shot_id: ShotArg,
@@ -299,7 +309,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             )
             return update(f, shot_id, f"created {duration_s}s shot on '{background}'", warnings)
 
-    @server.tool()
+    @tool()
     def add_character(
         film: FilmArg,
         shot_id: ShotArg,
@@ -325,7 +335,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             )
             return update(f, shot_id, f"{character_id} placed at {list(position)}", warnings)
 
-    @server.tool()
+    @tool()
     def apply_motion(
         film: FilmArg,
         shot_id: ShotArg,
@@ -368,7 +378,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             )
             return update(f, shot_id, f"{character_id}: {motion} at {start_s}s", warnings)
 
-    @server.tool()
+    @tool()
     def pose_at(
         film: FilmArg,
         shot_id: ShotArg,
@@ -390,7 +400,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             warnings = shot_spec.add_pose(f, shot_id, character_id, time_s, bone_angles)
             return update(f, shot_id, f"{character_id}: pose at {time_s}s", warnings)
 
-    @server.tool()
+    @tool()
     def set_expression(
         film: FilmArg, shot_id: ShotArg, character_id: CharArg, expr: Expression, start_s: Seconds
     ) -> ShotUpdate:
@@ -401,7 +411,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             warnings = shot_spec.add_expression(f, shot_id, character_id, expr, start_s)
             return update(f, shot_id, f"{character_id}: {expr} from {start_s}s", warnings)
 
-    @server.tool()
+    @tool()
     def apply_lipsync(
         film: FilmArg,
         shot_id: ShotArg,
@@ -423,7 +433,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             warnings = shot_spec.add_dialogue(f, shot_id, character_id, line_id, start_s, text)
             return update(f, shot_id, f"{character_id} says {line_id} at {start_s}s", warnings)
 
-    @server.tool()
+    @tool()
     def add_parallax_background(
         film: FilmArg,
         shot_id: ShotArg,
@@ -436,7 +446,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             warnings = shot_spec.set_background(f, shot_id, background_id)
             return update(f, shot_id, f"background is now '{background_id}'", warnings)
 
-    @server.tool()
+    @tool()
     def camera_move(
         film: FilmArg,
         shot_id: ShotArg,
@@ -458,7 +468,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             )
             return update(f, shot_id, f"camera: {move}", warnings)
 
-    @server.tool()
+    @tool()
     def remove_from_shot(
         film: FilmArg,
         shot_id: ShotArg,
@@ -480,7 +490,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     # ----------------------------------------------------------------- characters
 
-    @server.tool()
+    @tool()
     def build_rig(
         film: FilmArg,
         character_id: CharArg,
@@ -506,7 +516,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     # ----------------------------------------------------------------- rendering
 
-    @server.tool()
+    @tool()
     async def render_preview_frame(
         film: FilmArg,
         shot_id: ShotArg,
@@ -524,7 +534,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             )
             return PreviewResult(image_path=str(png), frame=frame, size=size)
 
-    @server.tool(name="render_shot")
+    @tool(name="render_shot")
     async def render_shot_tool(
         film: FilmArg,
         shot_id: ShotArg,

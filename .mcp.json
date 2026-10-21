@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "synfig_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--quiet", "synfig-mcp"]
+    }
+  }
+}

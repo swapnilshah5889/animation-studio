@@ -423,3 +423,18 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   Synfig works.
 - **SDK:** `mcp` 2.3.0 (MIT). `build_rig` without a rig copies the placeholder puppet from
   `tests/fixtures/characters/pip` until Step 4 generates real ones.
+
+### D-035: How Step 2's server is proven (task 2.8)
+- **One `.mcp.json` for every client.** The repo-root `.mcp.json` starts the server with
+  `uv run --quiet synfig-mcp`. Claude Code and the MCP Inspector both read it, so the Inspector
+  checks the exact launch config the model will use.
+- **Inspector checks are a script:** `scripts/inspector_check.py` drives the Inspector's CLI
+  (pinned to 2.9.0, Apache-2.0/MIT) through all 14 tools plus calls that must be refused, on a
+  scratch film. It's repeatable instead of a one-off click-through.
+- **The done-when run is a script too:** `scripts/run_first_shot.py` runs Claude Code headless
+  (`claude -p`) with only the synfig_mcp tools (`--strict-mcp-config --tools ""`), on a film
+  with assets but no shot. The prompt describes the shot, not the tools. The script saves the
+  transcript to `docs/learning/mcp-first-shot.md` and checks the result against the done-when.
+  Why headless: the transcript is exact and complete, the run can be repeated (later with other
+  models, and with the local director in Step 5), and the model can't fall back on shell or file
+  tools.

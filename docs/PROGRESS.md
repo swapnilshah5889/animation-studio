@@ -2,10 +2,44 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.7 done. Next: 2.8 (prove it from the MCP
-Inspector and from Claude Code as the client).
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.7 done; 2.8 in progress. The done-when run
+(`scripts/run_first_shot.py`) waits for the owner to log the `claude` CLI back in.
 
 ---
+
+## 2026-10-21: Step 2 task 2.8 in progress: the Inspector and Claude Code as clients
+
+**Done**
+- `.mcp.json` (repo root) registers `synfig_mcp` for Claude Code and the Inspector.
+- `scripts/inspector_check.py` drives the MCP Inspector CLI (pinned 2.9.0) through every tool,
+  plus 3 calls that must be refused, on a scratch film `films/inspector-check/`.
+- Tool descriptions are now cleaned of docstring indentation; the Inspector showed the raw
+  indentation reaching the model. A test guards it.
+- `scripts/run_first_shot.py`: the done-when run. It runs Claude Code headless with only our 14
+  tools on a fresh film `films/first-shot/`, saves the transcript to
+  `docs/learning/mcp-first-shot.md`, and checks the result against the done-when.
+- `docs/learning/mcp.md`: sections on the Inspector and Claude Code as the client (D-035).
+
+**Verified**
+- Inspector: `tools/list` shows the 14 tools, and all 18 calls did what was expected (19/19 with
+  the list). Edits, `build_rig`, a preview frame and a 640x360 render worked. The refusals
+  (unknown motion, unknown bone, unknown character) came back as `isError` with fixable
+  messages. The preview PNG was checked by eye: Pip at x=0.4, mid-wave and talking.
+- `claude mcp list` sees the server ("Pending approval": project servers need the owner's OK in
+  an interactive session).
+- Headless `claude -p` with `--mcp-config .mcp.json --strict-mcp-config --tools ""`: the server
+  is `connected` with 14 tools and no built-in tools.
+- The done-when checks pass on the hand-written demo shot and fail on an empty film.
+- 150 tests pass; ruff is clean.
+
+**Blocked**
+- The done-when run needs the `claude` CLI logged in. The test call failed with "OAuth session
+  expired and could not be refreshed". Owner: run `claude` in a terminal and `/login`. Then the
+  agent runs `uv run scripts/run_first_shot.py`.
+
+**Notes**
+- Inspector 2.9 asks for Node ≥ 22.19 (installed: 22.13.1). It works with warnings. Upgrading
+  Node is not in the brief, so it was left alone.
 
 ## 2026-10-21: Step 2 task 2.7 done: the `synfig_mcp` server
 
@@ -127,7 +161,7 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.5 Motion library (owner checkpoint 3) | **Done, approved by the owner (checkpoint 3, 2026-10-21)**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
 | 2.6 Parallax + camera | **Done**: `studio_core/scene.py` (parallax planes, camera presets, backdrop, feet placement), `schemas/background.schema.json` + placeholder meadow, `studio_core/shot.py` (spec → `scene.sif` → `shot.mp4` with dialogue), key poses, demo film `scripts/make_demo_film.py`; render tests for parallax rates, zoom, placement and the full shot (D-033). Note: `docs/learning/parallax-and-camera.md`. |
 | 2.7 `synfig_mcp` server | **Done**: `mcp/synfig_mcp/` (workspace member, `mcp` 2.3.0, stdio, `uv run synfig-mcp`) with 14 tools over the engine-neutral editor `studio_core/shot_spec.py`; 18 tests, including a real client in-process and over stdio, fixable errors and renders (D-034). Note: `docs/learning/mcp.md`. |
-| 2.8 Prove it from the Inspector and Claude Code | To do |
+| 2.8 Prove it from the Inspector and Claude Code | **In progress**: Inspector check done (`scripts/inspector_check.py`, 19/19 as expected); `.mcp.json` added and headless Claude Code connects (14 tools); the done-when run `scripts/run_first_shot.py` is ready but blocked on the CLI login (D-035). |
 | 2.9 Docs, Step 3 brief | To do |
 
 **Verified:** 75 tests pass (`uv run pytest`). The four example files validate; each mistake

@@ -71,6 +71,7 @@ def test_tools_are_listed_with_descriptions_and_enums(tmp_path: Path) -> None:
     assert set(tools) == TOOLS
     for tool in tools.values():
         assert len(tool.description or "") > 40, tool.name
+        assert "\n " not in (tool.description or ""), tool.name  # no code indentation
         assert "synfig" not in json.dumps(tool.input_schema).lower(), tool.name  # D-030
     motion = tools["apply_motion"].input_schema["properties"]["motion"]
     assert set(motion["enum"]) == set(MOTIONS)
