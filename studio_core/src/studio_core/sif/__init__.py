@@ -20,6 +20,16 @@ from studio_core.sif.layers import (
     SkeletonLayer,
     Switch,
 )
+from studio_core.sif.shapes import (
+    Outline,
+    Polygon,
+    Region,
+    Spline,
+    SplinePoint,
+    arc,
+    ellipse,
+    smooth,
+)
 from studio_core.sif.units import Space, frame_time, frames
 from studio_core.sif.values import (
     Angle,
@@ -44,14 +54,22 @@ __all__ = [
     "ImportLayer",
     "Interp",
     "Layer",
+    "Outline",
+    "Polygon",
     "Rectangle",
+    "Region",
     "SkeletonLayer",
     "Space",
+    "Spline",
+    "SplinePoint",
     "Switch",
     "Transform",
     "Vec",
     "Waypoint",
+    "arc",
+    "ellipse",
     "frame_time",
     "frames",
+    "smooth",
     "value_xml",
 ]

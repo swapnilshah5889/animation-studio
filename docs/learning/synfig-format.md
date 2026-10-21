@@ -146,6 +146,38 @@ share a name, the topmost wins. `studio_core.sif.lipsync.mouth_track` turns Rhub
 `mouthCues` into these waypoints. A cue at t seconds shows from frame ceil(t × fps); same-frame
 cues keep the later one; repeats collapse.
 
+## Vector shapes (splines)
+
+`region` (filled), `outline` (stroked) and `polygon` layers draw vector art: the procedural
+face (D-007). Builder: `studio_core/sif/shapes.py`.
+
+```xml
+<param name="bline">
+  <bline type="bline_point" loop="true">          <!-- loop: closed or open -->
+    <entry><composite type="bline_point">
+      <point><vector><x>1</x><y>0</y></vector></point>
+      <width><real value="1"/></width>              <!-- outline width multiplier here -->
+      <origin><real value="0.5"/></origin>
+      <split><bool value="true"/></split>
+      <t1><vector><x>0</x><y>1.657</y></vector></t1>   <!-- tangent arriving -->
+      <t2><vector><x>0</x><y>1.657</y></vector></t2>   <!-- tangent leaving -->
+      <split_radius><bool value="true"/></split_radius>
+      <split_angle><bool value="true"/></split_angle>
+    </composite></entry>
+    ...
+  </bline>
+</param>
+```
+
+- Tangents are **Hermite** tangents in units: the segment p0→p1 is the Bezier with control points
+  p0 + t2/3 and p1 − t1/3. Zero tangents give straight edges and sharp corners.
+- The GUI writes tangents as `radial_composite` (radius + angle); plain `<vector>` tangents are
+  accepted too (verified), and that is what we write.
+- A circle of radius r from 4 points needs tangent length 3 × 0.5523 × r ≈ 1.6568 r. Rendered
+  area is within 1% of πab (`tests/test_sif_shapes.py`).
+- `outline` adds `width` (units), `round_tip[0]`/`round_tip[1]` and `sharp_cusps`; `polygon`
+  takes a `vector_list` (`<dynamic_list type="vector">`).
+
 ## Bones (Skeleton layer)
 
 Researched in the Synfig v1.5.5 source (`valuenode_bone.cpp`, `valuenode_bonelink.cpp`,
@@ -285,3 +317,6 @@ CLI gotcha seen here: `--time 0` without a unit warns "No unit provided"; always
   shifts the content (see the table).
 - Image paths are relative to the `.sif` file, not the working directory.
 - Melt is slow on PNG sequences. Encode shot frames with ffmpeg (Step 0 benchmarks).
+- **`bgcolor` does not paint the render:** PNG frames have a transparent background wherever
+  nothing is drawn, and ffmpeg turns transparency into black in an MP4. Every scene needs a
+  background layer (the scene builder always adds one).
