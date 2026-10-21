@@ -201,11 +201,13 @@ def render_shot(
     *,
     fps: int = DEFAULT_FPS,
     size: tuple[int, int] | None = None,
+    audio: bool = True,
     keep_frames: bool = True,
     cfg: StudioConfig | None = None,
 ) -> RenderedShot:
-    """Build shots/<id>/scene.sif from shot.json, render it and encode shot.mp4 with dialogue.
-    `size` renders smaller than the 1920x1080 design (e.g. (640, 360) for a quick preview)."""
+    """Build shots/<id>/scene.sif from shot.json, render it and encode shot.mp4 with dialogue
+    (unless `audio` is False). `size` renders smaller than the 1920x1080 design (e.g. (640, 360)
+    for a quick preview)."""
     cfg = cfg or load_config()
     shot = load_shot(film_dir, shot_id)
     built = build_shot(film_dir, shot, fps=fps)
@@ -215,9 +217,39 @@ def render_shot(
     rendered = render_frames(sif, frames_dir, size=size, cfg=cfg)
     if len(rendered) != built.n_frames:
         raise RenderError(f"expected {built.n_frames} frames, synfig wrote {len(rendered)}")
-    audio = mix_dialogue(built.dialogue, folder / "dialogue.wav", shot["duration_s"], cfg)
-    mp4 = encode_mp4(frames_dir, folder / "shot.mp4", fps, audio=audio, cfg=cfg)
+    lines = built.dialogue if audio else []
+    mix = mix_dialogue(lines, folder / "dialogue.wav", shot["duration_s"], cfg)
+    mp4 = encode_mp4(frames_dir, folder / "shot.mp4", fps, audio=mix, cfg=cfg)
     if not keep_frames:
         shutil.rmtree(frames_dir)
         rendered = []
     return RenderedShot(sif, rendered, mp4)
+
+
+def render_preview(
+    film_dir: Path,
+    shot_id: str,
+    time_s: float,
+    *,
+    scale: float = 0.5,
+    fps: int = DEFAULT_FPS,
+    cfg: StudioConfig | None = None,
+) -> tuple[Path, int, tuple[int, int]]:
+    """Render the single frame at time_s to shots/<id>/preview.png (also refreshes scene.sif).
+    Returns (png, frame index, size). scale 0.5 = 960x540."""
+    shot = load_shot(film_dir, shot_id)
+    if not 0 <= time_s < shot["duration_s"]:
+        raise ShotError(f"time {time_s}s is outside the {shot['duration_s']}s shot")
+    if not 0.1 <= scale <= 1:
+        raise ShotError(f"scale must be between 0.1 and 1, not {scale}")
+    built = build_shot(film_dir, shot, fps=fps)
+    folder = shot_dir(film_dir, shot_id)
+    sif = built.canvas.save(folder / "scene.sif")
+    frame = min(frames(time_s, fps), built.n_frames - 1)
+    size = (round(DESIGN.width * scale), round(DESIGN.height * scale))
+    scratch = folder / ".preview"
+    out = render_frames(sif, scratch, begin=frame, end=frame, size=size, cfg=cfg)
+    png = folder / "preview.png"
+    shutil.move(out[0], png)
+    shutil.rmtree(scratch)
+    return png, frame, size

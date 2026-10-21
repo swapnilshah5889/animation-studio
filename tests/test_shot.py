@@ -27,6 +27,7 @@ def make_film(root: Path) -> Path:
     (root / "audio" / "dialogue").mkdir(parents=True)
     (root / "audio" / "lipsync").mkdir(parents=True)
     shutil.copy(FIXTURES / "audio" / "pip_line_01.wav", root / "audio" / "dialogue" / "l001.wav")
+    shutil.copy(FIXTURES / "audio" / "pip_line_01.txt", root / "audio" / "dialogue" / "l001.txt")
     shutil.copy(
         FIXTURES / "audio" / "pip_line_01.rhubarb.json", root / "audio" / "lipsync" / "l001.json"
     )

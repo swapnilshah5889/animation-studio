@@ -2,10 +2,44 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.6 done, D-030 schema audit done. Next: 2.7
-(the MCP server).
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.7 done. Next: 2.8 (prove it from the MCP
+Inspector and from Claude Code as the client).
 
 ---
+
+## 2026-10-21: Step 2 task 2.7 done: the `synfig_mcp` server
+
+**Done**
+- `studio_core/shot_spec.py` (engine-neutral): the director's verbs as functions that edit
+  `shots/<id>/shot.json`. Every edit re-checks the whole spec (schema, semantic rules, the film's
+  assets, a dry run of the motion library) and saves nothing if it fails.
+- `mcp/synfig_mcp/` (uv workspace member `synfig-mcp`, `mcp` 2.3.0, stdio). 14 tools:
+  - read: `describe_film`, `describe_shot`
+  - edit: `create_scene`, `add_character`, `apply_motion`, `pose_at`, `set_expression`,
+    `apply_lipsync`, `add_parallax_background`, `camera_move`, `remove_from_shot`
+  - characters: `build_rig`
+  - render: `render_preview_frame`, `render_shot`
+- Differences from the brief's tool table, and why: D-034.
+- `studio_core/shot.py` gained `render_preview` (one frame → `shots/<id>/preview.png`) and an
+  `audio` switch.
+- The demo film now has the line's transcript (`audio/dialogue/l001.txt`).
+- Note: `docs/learning/mcp.md` (a first version; 2.9 extends it).
+
+**Verified**
+- 150 tests pass (`uv run pytest`); ruff is clean. The new MCP tests use the SDK's real client:
+  - all 14 tools are listed with descriptions and enums, and no tool schema names an engine
+  - a 10-second shot is built step by step (motions, expression, lip-sync, a pose, a camera move),
+    and `describe_shot` returns the expected spec with no errors or warnings
+  - refusals come back as `is_error` with fixable messages (unknown film, background, motion,
+    bone; a character not in the shot; an index out of range; a hand-broken spec refused before
+    rendering)
+  - `render_preview_frame` (192x108 PNG) and `render_shot` (24 frames at 640x360) work
+  - the server starts over stdio and lists its tools
+- 12 unit tests for the spec editor.
+
+**Next**
+- 2.8: list and call the tools from the MCP Inspector, then build and render the done-when shot
+  from Claude Code as the client (`.mcp.json`), and save the transcript.
 
 ## 2026-10-21: Step 2 task 2.6 done: placement, parallax, camera and shot assembly
 
@@ -92,7 +126,7 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.4 Procedural face | **Done**: `studio_core/face.py` (eyes with open/half/closed and `blink_track`, brows for 6 expressions, Rhubarb mouths A–H + an expression-aware rest X), attached to the head bone via `build_character(attachments=...)`; render test: the face turns with the head (±1.5 px); preview sheet `scripts/preview_face.py`. |
 | 2.5 Motion library (owner checkpoint 3) | **Done, approved by the owner (checkpoint 3, 2026-10-21)**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
 | 2.6 Parallax + camera | **Done**: `studio_core/scene.py` (parallax planes, camera presets, backdrop, feet placement), `schemas/background.schema.json` + placeholder meadow, `studio_core/shot.py` (spec → `scene.sif` → `shot.mp4` with dialogue), key poses, demo film `scripts/make_demo_film.py`; render tests for parallax rates, zoom, placement and the full shot (D-033). Note: `docs/learning/parallax-and-camera.md`. |
-| 2.7 `synfig_mcp` server | To do |
+| 2.7 `synfig_mcp` server | **Done**: `mcp/synfig_mcp/` (workspace member, `mcp` 2.3.0, stdio, `uv run synfig-mcp`) with 14 tools over the engine-neutral editor `studio_core/shot_spec.py`; 18 tests, including a real client in-process and over stdio, fixable errors and renders (D-034). Note: `docs/learning/mcp.md`. |
 | 2.8 Prove it from the Inspector and Claude Code | To do |
 | 2.9 Docs, Step 3 brief | To do |
 

@@ -5,9 +5,9 @@
     uv run scripts/make_demo_film.py --render --size 640x360   # quick preview
 
 The folder follows the film project layout (docs/ARCHITECTURE.md): Pip's rig and parts, the
-meadow background, dialogue line l001 (its WAV and Rhubarb cues) and the 10-second shot spec
-s01_sh01 (tests/fixtures/schemas/shot_s01_sh01.json). films/ is git-ignored. Safe to re-run:
-the inputs are copied fresh each time; renders are overwritten.
+meadow background, dialogue line l001 (its WAV, transcript and Rhubarb cues) and the 10-second
+shot spec s01_sh01 (tests/fixtures/schemas/shot_s01_sh01.json). films/ is git-ignored. Safe to
+re-run: the inputs are copied fresh each time; renders are overwritten.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ COPIES = {
     FIXTURES / "characters" / "pip": FILM / "characters" / "pip",
     FIXTURES / "backgrounds" / "meadow": FILM / "backgrounds" / "meadow",
     FIXTURES / "audio" / "pip_line_01.wav": FILM / "audio" / "dialogue" / "l001.wav",
+    FIXTURES / "audio" / "pip_line_01.txt": FILM / "audio" / "dialogue" / "l001.txt",
     FIXTURES / "audio" / "pip_line_01.rhubarb.json": FILM / "audio" / "lipsync" / "l001.json",
     FIXTURES / "schemas" / "shot_s01_sh01.json": FILM / "shots" / SHOT / "shot.json",
 }

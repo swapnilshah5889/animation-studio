@@ -392,3 +392,34 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   layers are Synfig backend code; they move under `studio_core/engines/synfig/` behind the backend
   interface in ROADMAP Step 6. Until then, callers such as the MCP server use only engine-neutral
   entry points (a film folder, a shot id, a shot spec).
+
+### D-034: MCP server design (task 2.7)
+- **Two layers.** `studio_core/shot_spec.py` holds the director's verbs as engine-neutral functions
+  that edit `shot.json`. `mcp/synfig_mcp/` is a thin MCP layer over them plus the Synfig renders.
+  The same verbs can later serve another transport, the director loop, or a different backend.
+- **Check the whole spec, refuse, explain.** Every edit re-checks the whole spec: schema, semantic
+  rules, the film's assets (background, rig, view, bone names, line audio and cues) and a dry run
+  of the motion library. A refused edit saves nothing and returns a fixable message
+  (`ToolError` → `is_error`). Softer problems (no blink, a line cut off by the shot end) are
+  warnings on success.
+- **Changes from the brief's tool table:**
+  - `apply_lipsync` takes a recorded `line_id` (plus optional text), not a cues path. The spec
+    refers to lines by id, and each line's audio and cues live at fixed paths.
+  - `add_parallax_background` takes only `background_id`. Parallax factors belong to the
+    background asset (`layers.json`), not to a shot.
+  - `apply_motion` takes `energy`, `side`, `cycles` and `target` as named arguments instead of a
+    `params` object, so the model sees each one, with its range, in the tool schema.
+  - `create_scene` takes `camera_move` and `zoom`; `camera_move` changes timing later.
+  - `render_shot` takes `quality` (`preview` 640x360 or `final` 1920x1080) and `audio`.
+  - **Added** `describe_film` (characters with bone names, backgrounds, recorded lines, motions:
+    everything the model needs before editing) and `remove_from_shot` (undo by index).
+- **Schemas from one source:** tool enums (motions, expressions, camera moves) come from the shot
+  schema and the code constants; a test checks that no tool schema mentions an engine (D-030).
+- **Safety:** `film` is a folder name under config `[paths] films`, and every id is pattern-checked
+  before it becomes a path, so tools can't reach outside the film folder.
+- **Results** are pydantic models (structured output with an output schema). Media results are
+  absolute file paths inside the film folder.
+- **Renders run in a worker thread** (`anyio.to_thread`), so the server keeps answering while
+  Synfig works.
+- **SDK:** `mcp` 2.3.0 (MIT). `build_rig` without a rig copies the placeholder puppet from
+  `tests/fixtures/characters/pip` until Step 4 generates real ones.
