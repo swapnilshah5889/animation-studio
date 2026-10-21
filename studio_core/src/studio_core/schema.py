@@ -1,0 +1,246 @@
+"""Validate film project files: JSON Schema first, then the rules a schema cannot express.
+
+    issues = validate("rig", data)          # [] when valid
+    issues = validate_file(Path("films/x/characters/pip/rig.json"))
+
+Schemas live in schemas/*.schema.json (draft 2020-12). Every issue has a JSON path and a message
+written so that an LLM can fix its own output from it ("characters[0].actions[1].motion: 'wavee'
+is not one of [...]"). Semantic checks only run once the schema passes, so they can trust types.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
+from typing import Any
+
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
+
+from studio_core.config import REPO_ROOT
+
+SCHEMA_DIR = REPO_ROOT / "schemas"
+SCHEMAS = ("rig", "shot", "shotlist", "film")
+FILE_KINDS = {
+    "rig.json": "rig",
+    "shot.json": "shot",
+    "shotlist.json": "shotlist",
+    "film.json": "film",
+}
+
+
+@dataclass(frozen=True)
+class Issue:
+    path: str  # e.g. "views.front.bones.forearm.attach.part"; "" = the document itself
+    message: str
+
+    def __str__(self) -> str:
+        return f"{self.path or '(root)'}: {self.message}"
+
+
+def _json_path(parts: Any) -> str:
+    out = ""
+    for p in parts:
+        out += f"[{p}]" if isinstance(p, int) else (f".{p}" if out else str(p))
+    return out
+
+
+@cache
+def _registry() -> Registry:
+    resources = []
+    for name in SCHEMAS:
+        schema = json.loads((SCHEMA_DIR / f"{name}.schema.json").read_text())
+        resources.append((schema["$id"], Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
+
+
+@cache
+def _validator(name: str) -> Draft202012Validator:
+    schema = json.loads((SCHEMA_DIR / f"{name}.schema.json").read_text())
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, registry=_registry())
+
+
+def schema_issues(name: str, data: Any) -> list[Issue]:
+    errors = sorted(
+        _validator(name).iter_errors(data), key=lambda e: list(map(str, e.absolute_path))
+    )
+    return [Issue(_json_path(e.absolute_path), e.message) for e in errors]
+
+
+# --------------------------------------------------------------------------- rig
+
+
+def _inside(point: list[float], size: list[int]) -> bool:
+    return 0 <= point[0] <= size[0] and 0 <= point[1] <= size[1]
+
+
+def check_rig(data: dict[str, Any]) -> list[Issue]:
+    issues: list[Issue] = []
+    if data["default_view"] not in data["views"]:
+        issues.append(Issue("default_view", f"view {data['default_view']!r} is not in views"))
+    for view_name, view in data["views"].items():
+        at = f"views.{view_name}"
+        bones, parts = view["bones"], view["parts"]
+
+        roots = [b for b, spec in bones.items() if spec["parent"] is None]
+        if roots != [view["root"]]:
+            issues.append(
+                Issue(
+                    f"{at}.root",
+                    f"exactly one bone must have parent null and be "
+                    f"the root {view['root']!r}; bones with parent null: {roots}",
+                )
+            )
+        for name, spec in bones.items():
+            parent = spec["parent"]
+            if parent is not None and parent not in bones:
+                issues.append(Issue(f"{at}.bones.{name}.parent", f"unknown bone {parent!r}"))
+            if parent is not None and "attach" not in spec:
+                issues.append(Issue(f"{at}.bones.{name}", "non-root bones need `attach`"))
+            if "attach" in spec:
+                part = spec["attach"]["part"]
+                if part not in parts:
+                    issues.append(Issue(f"{at}.bones.{name}.attach.part", f"unknown part {part!r}"))
+                elif parts[part]["bone"] != parent:
+                    issues.append(
+                        Issue(
+                            f"{at}.bones.{name}.attach.part",
+                            f"{part!r} is carried by bone {parts[part]['bone']!r}, but a joint "
+                            f"must attach to a part of the parent bone {parent!r}",
+                        )
+                    )
+                elif not _inside(spec["attach"]["at_px"], parts[part]["size_px"]):
+                    issues.append(
+                        Issue(
+                            f"{at}.bones.{name}.attach.at_px",
+                            f"outside the {part!r} image {parts[part]['size_px']}",
+                        )
+                    )
+        # Cycles: walk up from every bone; more steps than bones means a loop.
+        for name in bones:
+            seen, current = set(), name
+            while current is not None and current in bones:
+                if current in seen:
+                    issues.append(Issue(f"{at}.bones.{name}.parent", "bone hierarchy has a cycle"))
+                    break
+                seen.add(current)
+                current = bones[current]["parent"]
+
+        for name, part in parts.items():
+            if part["bone"] not in bones:
+                issues.append(Issue(f"{at}.parts.{name}.bone", f"unknown bone {part['bone']!r}"))
+            if not _inside(part["pivot_px"], part["size_px"]):
+                issues.append(Issue(f"{at}.parts.{name}.pivot_px", "outside the image"))
+        missing = sorted(set(parts) - set(view["draw_order"]))
+        extra = sorted(set(view["draw_order"]) - set(parts))
+        if missing or extra:
+            issues.append(
+                Issue(
+                    f"{at}.draw_order",
+                    f"must list every part once; missing {missing}, unknown {extra}",
+                )
+            )
+
+        face = view.get("face")
+        if face:
+            if face["part"] not in parts:
+                issues.append(Issue(f"{at}.face.part", f"unknown part {face['part']!r}"))
+            else:
+                size = parts[face["part"]]["size_px"]
+                anchors = {
+                    "eyes.left_px": face["eyes"]["left_px"],
+                    "eyes.right_px": face["eyes"]["right_px"],
+                    "mouth.at_px": face["mouth"]["at_px"],
+                }
+                if "brows" in face:
+                    anchors["brows.left_px"] = face["brows"]["left_px"]
+                    anchors["brows.right_px"] = face["brows"]["right_px"]
+                for key, point in anchors.items():
+                    if not _inside(point, size):
+                        issues.append(Issue(f"{at}.face.{key}", f"outside the face part {size}"))
+    return issues
+
+
+# --------------------------------------------------------------------------- shots
+
+
+def check_shot(shot: dict[str, Any], at: str = "") -> list[Issue]:
+    issues: list[Issue] = []
+    end = shot["duration_s"]
+    pre = f"{at}." if at else ""
+
+    def after_end(path: str, t: float, label: str) -> None:
+        if t >= end:
+            issues.append(Issue(f"{pre}{path}", f"{label} at {t}s is not inside the {end}s shot"))
+
+    camera = shot.get("camera")
+    if camera and camera.get("start_s", 0) + camera.get("duration_s", 0) > end + 1e-9:
+        issues.append(Issue(f"{pre}camera", f"camera move runs past the end of the {end}s shot"))
+
+    ids = [c["id"] for c in shot["characters"]]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        issues.append(Issue(f"{pre}characters", f"character {dup!r} appears twice"))
+    for ci, char in enumerate(shot["characters"]):
+        for ai, action in enumerate(char.get("actions", [])):
+            path = f"characters[{ci}].actions[{ai}]"
+            after_end(f"{path}.start_s", action["start_s"], action["motion"])
+            if "duration_s" in action and action["start_s"] + action["duration_s"] > end + 1e-9:
+                issues.append(
+                    Issue(
+                        f"{pre}{path}.duration_s",
+                        f"{action['motion']} runs past the end of the {end}s shot",
+                    )
+                )
+        for ei, expr in enumerate(char.get("expressions", [])):
+            after_end(f"characters[{ci}].expressions[{ei}].start_s", expr["start_s"], expr["expr"])
+        for pi, pose in enumerate(char.get("poses", [])):
+            after_end(f"characters[{ci}].poses[{pi}].time_s", pose["time_s"], "pose")
+    for li, line in enumerate(shot.get("dialogue", [])):
+        after_end(f"dialogue[{li}].start_s", line["start_s"], f"line {line['line_id']}")
+        if line["character"] not in ids:
+            issues.append(
+                Issue(
+                    f"{pre}dialogue[{li}].character",
+                    f"{line['character']!r} speaks but is not in this shot ({ids})",
+                )
+            )
+    for si, sfx in enumerate(shot.get("sfx", [])):
+        after_end(f"sfx[{si}].start_s", sfx["start_s"], f"sound '{sfx['query']}'")
+    return issues
+
+
+def check_shotlist(data: dict[str, Any]) -> list[Issue]:
+    issues: list[Issue] = []
+    ids = [s["id"] for s in data["shots"]]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        issues.append(Issue("shots", f"shot id {dup!r} is used twice"))
+    for i, shot in enumerate(data["shots"]):
+        issues += check_shot(shot, at=f"shots[{i}]")
+    return issues
+
+
+SEMANTIC = {"rig": check_rig, "shot": check_shot, "shotlist": check_shotlist}
+
+
+def validate(name: str, data: Any) -> list[Issue]:
+    """Schema issues; if there are none, the semantic issues. [] means valid."""
+    if name not in SCHEMAS:
+        raise ValueError(f"unknown schema {name!r}; known: {SCHEMAS}")
+    issues = schema_issues(name, data)
+    if issues or name not in SEMANTIC:
+        return issues
+    return SEMANTIC[name](data)
+
+
+def validate_file(path: Path, name: str | None = None) -> list[Issue]:
+    name = name or FILE_KINDS.get(path.name)
+    if name is None:
+        raise ValueError(f"can't tell the schema for {path.name}; pass name= (one of {SCHEMAS})")
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return [Issue("", f"not valid JSON: {exc}")]
+    return validate(name, data)

@@ -2,8 +2,37 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): brief drafted, **waiting for owner approval**
-(`docs/steps/STEP-2-synfig-mcp.md`). Steps 0 and 1 are done.
+**Current step:** Step 2 (`synfig_mcp`): task 2.1 (schemas) done, **waiting for the owner's schema
+review** (checkpoint 2). Steps 0 and 1 are done.
+
+---
+
+## 2026-10-21: Step 2 started: task 2.1 schemas done, waiting for owner review
+
+The owner approved the Step 2 brief as written (D-028).
+
+**Step 2 task list**
+
+| Task | Status |
+|---|---|
+| 2.1 Schemas | **Done, waiting for owner review (checkpoint 2)**: `schemas/rig`, `shot`, `shotlist`, `film`; `studio_core/schema.py` (schema + semantic checks with fixable messages); `scripts/validate.py`; valid examples in `tests/fixtures/schemas/`; 27 tests of specific mistakes; `film.json` now validated on save. Learning note: `docs/learning/json-schema.md`. |
+| 2.2 Rig model + validator | Next, after the schema review |
+| 2.3 Vector shapes in the builder | To do |
+| 2.4 Procedural face | To do |
+| 2.5 Motion library (owner checkpoint 3) | To do |
+| 2.6 Parallax + camera | To do |
+| 2.7 `synfig_mcp` server | To do |
+| 2.8 Prove it from the Inspector and Claude Code | To do |
+| 2.9 Docs, Step 3 brief | To do |
+
+**Verified:** 75 tests pass (`uv run pytest`). The four example files validate; each mistake
+case is reported at the right path.
+
+**Open questions for the owner (checkpoint 2: schema review)**
+- Are the motion list (9), expressions (6), camera presets (5), the 4-characters-per-shot and
+  60 s-per-shot limits, and fps options {12, 24, 25, 30} right for v1?
+- Rig convention: rest pose = the art as drawn, `direction_deg` per bone, joints attached at a
+  pixel of the parent's part, and draw order separate from the hierarchy. OK?
 
 ---
 

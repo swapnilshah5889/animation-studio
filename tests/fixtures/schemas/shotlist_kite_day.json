@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "film": "kite-day",
+  "fps": 24,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "shots": [
+    {
+      "id": "s01_sh01",
+      "duration_s": 10,
+      "background": "meadow",
+      "camera": {
+        "move": "slow_pan_right",
+        "zoom": 1.0
+      },
+      "characters": [
+        {
+          "id": "pip",
+          "view": "front",
+          "position": [
+            0.5,
+            0.92
+          ],
+          "scale": 1.0,
+          "actions": [
+            {
+              "motion": "idle_breathe",
+              "start_s": 0
+            },
+            {
+              "motion": "blink",
+              "start_s": 0,
+              "duration_s": 10
+            },
+            {
+              "motion": "wave",
+              "start_s": 1.0,
+              "params": {
+                "side": "left",
+                "energy": 0.7,
+                "cycles": 3
+              }
+            }
+          ],
+          "expressions": [
+            {
+              "expr": "happy",
+              "start_s": 0
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "character": "pip",
+          "line_id": "l001",
+          "text": "Hi Bunny! Look what I found in the tall grass. It's a red kite with a long yellow tail!",
+          "start_s": 1.5
+        }
+      ],
+      "sfx": [
+        {
+          "query": "soft birdsong",
+          "start_s": 0,
+          "volume": 0.3
+        }
+      ],
+      "music_cue": null
+    },
+    {
+      "id": "s01_sh02",
+      "duration_s": 4.5,
+      "background": "meadow",
+      "camera": {
+        "move": "push_in",
+        "start_s": 1,
+        "duration_s": 3
+      },
+      "characters": [
+        {
+          "id": "pip",
+          "position": [
+            0.4,
+            0.9
+          ],
+          "actions": [
+            {
+              "motion": "nod",
+              "start_s": 0.5
+            }
+          ],
+          "expressions": [
+            {
+              "expr": "surprised",
+              "start_s": 0
+            }
+          ]
+        }
+      ],
+      "notes": "Pip notices the kite."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Step 2: `synfig_mcp`: scene, rig, motion and render tools
 
-> **Status: draft for owner review.** Written at the end of Step 1. Nothing here starts until the
-> owner approves it (and may change it).
+> **Status: approved by the owner on 2026-10-21, as written (installs and proposed decisions included,
+> recorded in D-028).** Work started with task 2.1.
 
 **Goal:** an MCP server that lets an LLM build and render a cut-out shot: a bone-rigged character
 with a procedural face, moving with named, parameterized motions, lip-synced from Rhubarb cues,

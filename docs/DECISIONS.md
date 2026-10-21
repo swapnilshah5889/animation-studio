@@ -269,3 +269,16 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   layers, all required links, every GUID resolves, every image exists), because the CLI aborts or
   silently renders blank parts on these mistakes. There is no IK node in Synfig 1.5.5; if IK is
   needed, it is solved in Python.
+
+### D-028: Step 2 design (approved with the brief, 2026-10-21)
+- **Shot spec is the source of truth:** `shots/<id>/shot.json` (validated against
+  `schemas/shot.schema.json`). `scene.sif` is a build artifact regenerated from it on every change.
+  Tools edit intent, never XML.
+- **Server:** `mcp/synfig_mcp/` as a uv workspace member on the official MCP Python SDK 2.x
+  (`mcp`, MIT; `MCPServer`, the decorator-style API formerly called FastMCP). **stdio** transport
+  now; streamable HTTP in Step 5 for the Windows node.
+- **Motion composition:** per-bone channels; a later motion overrides a bone for its duration;
+  idle motions (breathe, blink) are additive layers.
+- **Face:** procedural vector eyes, lids, brows and the 9 Rhubarb mouth shapes (A–H, X) on the
+  head bone (D-007).
+- **Installs approved:** `mcp` 2.x, `jsonschema` 4.x, and the MCP Inspector via `npx`.

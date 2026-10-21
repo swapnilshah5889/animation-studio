@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "slug": "kite-day",
+  "title": "The Kite",
+  "premise": "Pip finds a lost kite and returns it to Bunny.",
+  "style": "storybook",
+  "style_commercial": "yes",
+  "characters": [
+    "pip"
+  ],
+  "stages": {
+    "story": "approved",
+    "characters": "in_progress",
+    "backgrounds": "pending",
+    "audio": "pending",
+    "shots": "pending",
+    "edit": "pending"
+  }
+}

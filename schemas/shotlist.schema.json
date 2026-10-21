@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/shotlist.schema.json",
+  "title": "Shot list",
+  "description": "All shots of a film in order (films/<film>/story/shotlist.json), written by the director in Step 5. Each shot follows shot.schema.json. Unique shot ids and the total length are checked by studio_core.schema.check_shotlist.",
+  "type": "object",
+  "required": ["schema_version", "film", "shots"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "film": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,59}$", "description": "Film slug (the films/<slug> folder)." },
+    "fps": { "type": "integer", "enum": [12, 24, 25, 30], "default": 24 },
+    "resolution": {
+      "type": "array",
+      "description": "[width, height] in pixels.",
+      "prefixItems": [{ "type": "integer", "minimum": 320 }, { "type": "integer", "minimum": 180 }],
+      "items": false,
+      "minItems": 2,
+      "default": [1920, 1080]
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": { "$ref": "shot.schema.json" }
+    }
+  }
+}

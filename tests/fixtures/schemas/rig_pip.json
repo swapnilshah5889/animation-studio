@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "pip",
+  "name": "Pip",
+  "style": "storybook",
+  "default_view": "front",
+  "views": {
+    "front": {
+      "root": "torso",
+      "bones": {
+        "torso": { "parent": null, "direction_deg": 90, "length_px": 240, "side": "center",
+                   "limits_deg": { "min": -15, "max": 15 } },
+        "head": { "parent": "torso", "attach": { "part": "torso", "at_px": [100, 18] },
+                  "direction_deg": 90, "length_px": 280, "side": "center",
+                  "limits_deg": { "min": -25, "max": 25 } },
+        "upper_arm_l": { "parent": "torso", "attach": { "part": "torso", "at_px": [178, 45] },
+                         "direction_deg": -90, "length_px": 112, "side": "left",
+                         "limits_deg": { "min": -30, "max": 170 } },
+        "forearm_l": { "parent": "upper_arm_l", "attach": { "part": "upper_arm_l", "at_px": [28, 132] },
+                       "direction_deg": -90, "length_px": 132, "side": "left",
+                       "limits_deg": { "min": -10, "max": 140 } }
+      },
+      "parts": {
+        "torso": { "file": "parts/torso.png", "size_px": [200, 280], "pivot_px": [100, 260], "bone": "torso" },
+        "head": { "file": "parts/head.png", "size_px": [220, 300], "pivot_px": [110, 285], "bone": "head" },
+        "upper_arm_l": { "file": "parts/upper_arm.png", "size_px": [56, 150], "pivot_px": [28, 20], "bone": "upper_arm_l" },
+        "forearm_l": { "file": "parts/forearm.png", "size_px": [52, 150], "pivot_px": [26, 18], "bone": "forearm_l" }
+      },
+      "draw_order": ["torso", "head", "upper_arm_l", "forearm_l"],
+      "face": {
+        "part": "head",
+        "eyes": { "left_px": [141, 194], "right_px": [79, 194], "size_px": 22 },
+        "brows": { "left_px": [141, 168], "right_px": [79, 168], "width_px": 32 },
+        "mouth": { "at_px": [110, 246], "width_px": 44 },
+        "colors": { "line": "#463430", "eye_white": "#ffffff", "iris": "#463430", "mouth": "#78283a", "tongue": "#e88a96" }
+      }
+    }
+  }
+}

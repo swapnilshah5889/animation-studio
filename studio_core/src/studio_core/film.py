@@ -2,8 +2,8 @@
 
 A film picks a style (config/models.toml [styles]) when it is created. Once the film has any
 character, the style is **locked**: generating new art in another style would no longer match
-the existing puppets (D-025). The full film.json schema arrives in Step 2
-(schemas/film.schema.json); this module only owns the style fields.
+the existing puppets (D-025). film.json follows schemas/film.schema.json and is validated on
+every save.
 """
 
 from __future__ import annotations
@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from studio_core.models import Manifest
+from studio_core.schema import validate
+
+STAGES = ("story", "characters", "backgrounds", "audio", "shots", "edit")
 
 
 class StyleLockedError(RuntimeError):
@@ -37,7 +40,15 @@ class Film:
     def create(cls, root: Path, style_id: str, manifest: Manifest) -> Film:
         if (root / "film.json").exists():
             raise FileExistsError(root / "film.json")
-        film = cls(root, {"slug": root.name, "characters": []})
+        film = cls(
+            root,
+            {
+                "schema_version": 1,
+                "slug": root.name,
+                "characters": [],
+                "stages": dict.fromkeys(STAGES, "pending"),
+            },
+        )
         film.set_style(style_id, manifest)
         return film
 
@@ -73,5 +84,8 @@ class Film:
         self.save()
 
     def save(self) -> None:
+        issues = validate("film", self.data)
+        if issues:
+            raise ValueError("invalid film.json: " + "; ".join(map(str, issues)))
         self.root.mkdir(parents=True, exist_ok=True)
         self.file.write_text(json.dumps(self.data, indent=2) + "\n")

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/film.schema.json",
+  "title": "Film project",
+  "description": "films/<slug>/film.json: the film's identity, its locked style (D-025) and the status of each pipeline stage, so work can resume after a crash (D-008). Written by studio_core.film.",
+  "type": "object",
+  "required": ["schema_version", "slug", "characters"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,59}$" },
+    "title": { "type": "string", "maxLength": 120 },
+    "premise": { "type": "string", "maxLength": 2000 },
+    "style": { "type": "string", "description": "Style preset id; locked once characters exist (D-025)." },
+    "style_commercial": { "enum": ["yes", "no", "unclear"] },
+    "characters": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+      "uniqueItems": true
+    },
+    "stages": {
+      "type": "object",
+      "description": "Status per pipeline stage (ARCHITECTURE: story → characters → backgrounds → audio → shots → edit).",
+      "propertyNames": { "enum": ["story", "characters", "backgrounds", "audio", "shots", "edit"] },
+      "additionalProperties": {
+        "enum": ["pending", "in_progress", "needs_review", "approved", "done", "failed"]
+      }
+    }
+  }
+}

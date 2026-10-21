@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/rig.schema.json",
+  "title": "Character rig",
+  "description": "A cut-out puppet: PNG parts carried by a bone hierarchy (D-027), per view. Lives at films/<film>/characters/<id>/rig.json. All positions are pixels in a part's own image (origin top-left, y down). The rest pose is the art as drawn: each bone points in its `direction_deg`, and motion angles are offsets from that rest pose. Structural rules JSON Schema cannot express (one root, no cycles, joints attach to the parent's part, draw order lists every part once) are checked by studio_core.schema.check_rig.",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "default_view", "views"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/$defs/id", "description": "Character id, e.g. 'pip'. Also the bone GUID namespace." },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Display name, e.g. 'Pip'." },
+    "style": { "type": "string", "description": "Style preset the art was made with (config/models.toml [styles], D-025)." },
+    "default_view": { "$ref": "#/$defs/view_name" },
+    "views": {
+      "type": "object",
+      "description": "One rig per view. Front is required for v1; three_quarter is optional.",
+      "propertyNames": { "$ref": "#/$defs/view_name" },
+      "required": ["front"],
+      "additionalProperties": { "$ref": "#/$defs/view" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$",
+      "description": "Lowercase identifier: letters, digits, underscores; starts with a letter."
+    },
+    "view_name": { "enum": ["front", "three_quarter"] },
+    "point_px": {
+      "type": "array",
+      "description": "[x, y] in image pixels, origin top-left, y down.",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 2
+    },
+    "size_px": {
+      "type": "array",
+      "description": "[width, height] in pixels.",
+      "prefixItems": [{ "type": "integer", "minimum": 1 }, { "type": "integer", "minimum": 1 }],
+      "items": false,
+      "minItems": 2
+    },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "view": {
+      "type": "object",
+      "required": ["root", "bones", "parts", "draw_order"],
+      "additionalProperties": false,
+      "properties": {
+        "root": { "$ref": "#/$defs/id", "description": "Name of the root bone (usually the hips/torso). Its pivot is where the character stands." },
+        "bones": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/bone" }
+        },
+        "parts": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/part" }
+        },
+        "draw_order": {
+          "type": "array",
+          "description": "Part names from back to front. Independent of the bone hierarchy (a far arm can sit behind the torso).",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "face": { "$ref": "#/$defs/face" }
+      }
+    },
+    "bone": {
+      "type": "object",
+      "required": ["parent", "direction_deg"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {
+          "description": "Parent bone name, or null for the root bone.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }]
+        },
+        "attach": {
+          "type": "object",
+          "description": "Where this bone's joint sits: a pixel in one of the parent bone's part images. Omitted for the root.",
+          "required": ["part", "at_px"],
+          "additionalProperties": false,
+          "properties": {
+            "part": { "$ref": "#/$defs/id" },
+            "at_px": { "$ref": "#/$defs/point_px" }
+          }
+        },
+        "direction_deg": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Rest direction of the bone in the drawn art, degrees counter-clockwise from +x: 90 = up (torso, head), -90 = down (hanging arms, legs)."
+        },
+        "length_px": { "type": "number", "exclusiveMinimum": 0, "description": "Visible bone length, for drawing handles only." },
+        "side": { "enum": ["left", "right", "center"], "description": "The character's own left/right, for motions with a `side` parameter." },
+        "limits_deg": {
+          "type": "object",
+          "description": "Allowed offset from the rest pose; motions and pose_at clamp to it.",
+          "required": ["min", "max"],
+          "additionalProperties": false,
+          "properties": {
+            "min": { "type": "number", "minimum": -360, "maximum": 0 },
+            "max": { "type": "number", "minimum": 0, "maximum": 360 }
+          }
+        }
+      }
+    },
+    "part": {
+      "type": "object",
+      "required": ["file", "size_px", "pivot_px", "bone"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*\\.png$",
+          "description": "PNG path relative to the character folder, e.g. 'parts/torso.png'."
+        },
+        "size_px": { "$ref": "#/$defs/size_px" },
+        "pivot_px": { "$ref": "#/$defs/point_px", "description": "The pixel that sits on the bone's joint (it rotates around this point)." },
+        "bone": { "$ref": "#/$defs/id", "description": "The bone that carries this part." }
+      }
+    },
+    "face": {
+      "type": "object",
+      "description": "Anchors for the procedural vector face (D-007), in pixels of `part` (the head image).",
+      "required": ["part", "eyes", "mouth"],
+      "additionalProperties": false,
+      "properties": {
+        "part": { "$ref": "#/$defs/id" },
+        "eyes": {
+          "type": "object",
+          "required": ["left_px", "right_px", "size_px"],
+          "additionalProperties": false,
+          "properties": {
+            "left_px": { "$ref": "#/$defs/point_px", "description": "Centre of the character's left eye (on the viewer's right in the front view)." },
+            "right_px": { "$ref": "#/$defs/point_px" },
+            "size_px": { "type": "number", "exclusiveMinimum": 0, "description": "Eye height." }
+          }
+        },
+        "brows": {
+          "type": "object",
+          "required": ["left_px", "right_px", "width_px"],
+          "additionalProperties": false,
+          "properties": {
+            "left_px": { "$ref": "#/$defs/point_px" },
+            "right_px": { "$ref": "#/$defs/point_px" },
+            "width_px": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "mouth": {
+          "type": "object",
+          "required": ["at_px", "width_px"],
+          "additionalProperties": false,
+          "properties": {
+            "at_px": { "$ref": "#/$defs/point_px" },
+            "width_px": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "line": { "$ref": "#/$defs/color" },
+            "eye_white": { "$ref": "#/$defs/color" },
+            "iris": { "$ref": "#/$defs/color" },
+            "mouth": { "$ref": "#/$defs/color" },
+            "tongue": { "$ref": "#/$defs/color" }
+          }
+        }
+      }
+    }
+  }
+}
