@@ -47,6 +47,7 @@ def animate(
     root_px: Vec | None = None,
     scale: float = 1.0,
     seed: str = "",
+    poses: list[dict[str, Any]] | None = None,
 ) -> Animation:
     """Turn a character's actions into tracks. Unknown motions raise MotionError with the list of
     known ones; angle offsets are clamped to each bone's limits."""
@@ -70,6 +71,17 @@ def animate(
             seed=seed,
         )
         clips.append(MOTIONS[name](ctx))
+
+    for pose in poses or []:  # manual key poses (pose_at): one-frame override keys per bone
+        f = frames(pose["time_s"], fps)
+        if f > n_frames - 1:
+            raise MotionError(f"pose at {pose['time_s']}s is after the end of the shot")
+        unknown = sorted(set(pose["bones"]) - set(view["bones"]))
+        if unknown:
+            raise MotionError(f"pose names unknown bones {unknown}; known: {sorted(view['bones'])}")
+        clips.append(
+            Clip("pose", f, f, {("angle", b): [Key(f, float(a))] for b, a in pose["bones"].items()})
+        )
 
     out = Animation(clips=clips)
     for (kind, bone), keys in compose(clips).items():

@@ -18,7 +18,8 @@ class RenderError(RuntimeError):
     pass
 
 
-def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+def run_tool(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run synfig or ffmpeg; raise RenderError with the tail of stderr if it fails."""
     proc = subprocess.run(cmd, capture_output=True, text=True)
     # Quirk: synfig prints warnings (e.g. the missing JPEG module) on stderr and exits 0 on success.
     if proc.returncode != 0:
@@ -61,7 +62,7 @@ def render_frames(
         cmd += ["--end-time", f"{end}f"]
     if size:
         cmd += ["-w", str(size[0]), "-h", str(size[1])]
-    _run(cmd)
+    run_tool(cmd)
     frames = sorted(out_dir.glob("frame*.png"))
     if not frames:
         raise RenderError(f"synfig wrote no frames for {sif}")
@@ -95,5 +96,5 @@ def encode_mp4(
         # Pad the audio with silence and stop at the video's end, so the shot keeps its length.
         cmd += ["-i", str(audio), "-af", "apad", "-c:a", "aac", "-shortest"]
     cmd += ["-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(mp4)]
-    _run(cmd)
+    run_tool(cmd)
     return mp4

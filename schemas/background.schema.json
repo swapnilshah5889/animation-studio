@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/background.schema.json",
+  "title": "Parallax background",
+  "description": "films/<film>/backgrounds/<id>/layers.json: the depth layers of one background, far to near (ARCHITECTURE: split_depth_layers in Step 4). Every layer image has the same size, drawn for the 1920x1080 design frame and centred on it when the camera is at rest; extra width lets the camera pan. `parallax` is how fast a layer moves when the camera pans: 0 = infinitely far (never moves), 1 = the ground plane characters stand on, >1 = closer than the characters.",
+  "type": "object",
+  "required": ["schema_version", "id", "size_px", "layers"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+    "name": { "type": "string", "maxLength": 80 },
+    "size_px": {
+      "type": "array",
+      "description": "[width, height] of every layer image, in design pixels (height 1080 = the frame height).",
+      "prefixItems": [{ "type": "integer", "minimum": 1920 }, { "type": "integer", "minimum": 1080 }],
+      "items": false,
+      "minItems": 2
+    },
+    "backdrop": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "description": "Solid colour behind everything (shows if a zoom-out reveals the edges)." },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "file", "parallax"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*\\.png$", "description": "Relative to the background folder." },
+          "parallax": { "type": "number", "minimum": 0, "maximum": 3 },
+          "in_front": { "type": "boolean", "default": false, "description": "Drawn over the characters (foreground grass, branches)." }
+        }
+      }
+    }
+  }
+}

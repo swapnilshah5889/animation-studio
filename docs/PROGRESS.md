@@ -2,10 +2,57 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.5 done; **waiting for the owner's motion
-review** (checkpoint 3), then 2.6 (parallax + camera) and 2.7 (the MCP server).
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.6 done. Next: the owner decides on 2.6b
+(move the Synfig backend under `studio_core/engines/synfig/`, D-030), then 2.7 (the MCP server).
 
 ---
+
+## 2026-10-21: Step 2 task 2.6 done: placement, parallax, camera and shot assembly
+
+**Done**
+- `studio_core/scene.py`: background layers as parallax planes, a characters plane (factor 1),
+  in-front layers, a camera group with eased presets (`static`, `slow_pan_left/right`, `push_in`,
+  `pull_out`) and a solid backdrop. Built at the 1920x1080 design size and rendered at any size.
+- `schemas/background.schema.json` (`layers.json`) and a placeholder meadow with 4 layers
+  (`scripts/make_placeholder_background.py` → `tests/fixtures/backgrounds/meadow/`).
+- A character's `position` now means the point between its feet (`rig.ground_offset_px`, D-033).
+- `studio_core/shot.py`: `shot.json` → `scene.sif` → frames → `shot.mp4`, with expression and
+  lip-sync tracks per character and the dialogue mixed in at each line's start. `animate` takes
+  manual key `poses`.
+- `scripts/make_demo_film.py`: builds `films/step2-demo/` from the fixtures and renders shot
+  `s01_sh01` (Pip waves, blinks and speaks line l001 in the meadow during a slow pan).
+- Notes: `docs/learning/parallax-and-camera.md`; `motion-library.md` covers key poses.
+
+**Verified**
+- 132 tests pass (`uv run pytest`); ruff is clean. Render tests:
+  - each layer slides by -pan x parallax, within 1 px
+  - `push_in` widens a stripe x1.25
+  - zoom 0.5 leaves no transparent pixel
+  - a character lands within 1.5 px of its position: body centre on x, lowest pixel on y
+  - `render_shot` end to end: 48 frames, plus a video and an audio stream
+- The demo shot at 1080p: 240 frames in 55 s (~0.23 s/frame), 1.1 MB MP4. Checked on a contact
+  sheet:
+  - Pip's feet are on the path at y≈0.92.
+  - Pip and the meadow move together during the pan; the hills and sky move slower.
+  - The left arm waves, and the mouth changes while talking.
+  - Speech is audible from 1.8 to 6.6 s (the line starts at 1.5 s; the WAV has a short lead-in).
+
+**Not done**
+- Sound effects and music are not mixed into `shot.mp4` yet (Step 3).
+- Placement is fixed per shot. Walking across the frame needs a moving placement and side-view art.
+
+**D-030 landed during this task**
+- `scene.py` and `shot.py` are Synfig-specific, like `sif/`, `rig.build_character` and the face
+  layers. The motion library's tracks also use Synfig value types.
+- Proposed **task 2.6b**, before the MCP server:
+  - Move the Synfig backend into `studio_core/engines/synfig/`.
+  - Give the motion tracks engine-neutral types.
+  - This way 2.7 builds on a backend interface from the start.
+- Schema audit for 2.6's additions: no engine-specific fields.
+
+**Next**
+- Owner: approve 2.6b, or go straight to 2.7.
+- Agent: 2.6b if approved, then 2.7 (`synfig_mcp` server).
 
 ## 2026-10-21: Step 2 started: task 2.1 schemas done, waiting for owner review
 
@@ -19,8 +66,8 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.2 Rig model + validator | **Done**: `studio_core/rig.py` (load + validate rig.json, bones from rest directions and joint pixels, flat bone-linked parts in draw order, skeleton layer, FK `world_pose`, `clamp_offset`); `studio_core/sif/validate.py` runs before every render (bones first, links complete, GUIDs resolve, no duplicates, images exist); placeholder **Pip** with a faceless head, both arms and two-segment legs (`tests/fixtures/characters/pip/`, `scripts/make_placeholder_character.py`). A render test lands parts within 1.5 px of FK. Note: `docs/learning/rigging.md`. |
 | 2.3 Vector shapes in the builder | **Done**: `studio_core/sif/shapes.py` (splines with Hermite tangents, smooth/ellipse/arc helpers, region, outline, polygon); render tests measure ellipse and triangle areas within 1%. Found: `bgcolor` doesn't paint renders (transparent → black in MP4), so scenes need a background layer. |
 | 2.4 Procedural face | **Done**: `studio_core/face.py` (eyes with open/half/closed and `blink_track`, brows for 6 expressions, Rhubarb mouths A–H + an expression-aware rest X), attached to the head bone via `build_character(attachments=...)`; render test: the face turns with the head (±1.5 px); preview sheet `scripts/preview_face.py`. |
-| 2.5 Motion library (owner checkpoint 3) | **Done, waiting for the owner's review of the motion preview**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
-| 2.6 Parallax + camera | To do |
+| 2.5 Motion library (owner checkpoint 3) | **Done, approved by the owner (checkpoint 3, 2026-10-21)**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
+| 2.6 Parallax + camera | **Done**: `studio_core/scene.py` (parallax planes, camera presets, backdrop, feet placement), `schemas/background.schema.json` + placeholder meadow, `studio_core/shot.py` (spec → `scene.sif` → `shot.mp4` with dialogue), key poses, demo film `scripts/make_demo_film.py`; render tests for parallax rates, zoom, placement and the full shot (D-033). Note: `docs/learning/parallax-and-camera.md`. |
 | 2.7 `synfig_mcp` server | To do |
 | 2.8 Prove it from the Inspector and Claude Code | To do |
 | 2.9 Docs, Step 3 brief | To do |

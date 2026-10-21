@@ -295,3 +295,27 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   the frame wait for side or three-quarter art (Step 4) plus scene placement moves (task 2.6).
 - **Determinism:** "random" choices (blink intervals) come from a hash of the character and the
   start frame, so renders and tests are repeatable.
+
+### D-033: Scene layout and shot assembly conventions (task 2.6)
+- **Feet, not hips:** a shot spec character's `position` is **the point between its feet** (the
+  lowest point of its rest pose), as frame fractions. Code lifts the rig's root by its feet offset
+  (`rig.ground_offset_px`). The JSON shape is unchanged; this clarifies the approved field (D-028).
+  Why: an LLM saying "stands at the bottom of the frame" means the feet. Read as the hips, the
+  example spec's `[0.5, 0.92]` put Pip's legs below the frame.
+- **Backgrounds:** `backgrounds/<id>/layers.json` (`schemas/background.schema.json`): equal-size
+  layer PNGs, far to near, centred on the 1920x1080 design frame at rest, each with a parallax
+  factor (0 = never moves, 1 = the characters' ground, >1 = nearer) and an `in_front` flag, plus a
+  backdrop colour. Characters ride the factor-1 plane.
+- **Camera presets are fixed numbers in code:** slow pans travel 240 design px over their duration,
+  `push_in`/`pull_out` zoom x1.25, all eased. Zoom is about the frame centre; a solid backdrop
+  fills any revealed edge.
+- **Design resolution:** scenes are built once at 1920x1080 (120 px per unit) and rendered at any
+  size, so previews and finals share one `scene.sif`.
+- **Manual poses** (`poses`) are key poses: one key per bone at its time, held until the next key,
+  clamped to joint limits. Motions starting later take the bone over from their first key.
+- **Shot audio:** `render_shot` mixes the shot's dialogue lines at their start times
+  (`shots/<id>/dialogue.wav`, mono 24 kHz, no volume normalization) into `shot.mp4`. Sound effects
+  and music wait for Step 3.
+- **D-030 audit for these additions:** no engine-specific fields. `scene.py` and `shot.py` are
+  Synfig backend code, like `sif/`, `rig.build_character` and the face layers; moving all of it
+  under `studio_core/engines/synfig/` is proposed as task 2.6b (PROGRESS).

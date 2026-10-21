@@ -22,12 +22,13 @@ from referencing import Registry, Resource
 from studio_core.config import REPO_ROOT
 
 SCHEMA_DIR = REPO_ROOT / "schemas"
-SCHEMAS = ("rig", "shot", "shotlist", "film")
+SCHEMAS = ("rig", "shot", "shotlist", "film", "background")
 FILE_KINDS = {
     "rig.json": "rig",
     "shot.json": "shot",
     "shotlist.json": "shotlist",
     "film.json": "film",
+    "layers.json": "background",
 }
 
 

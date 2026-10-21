@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "meadow",
+  "name": "Sunny meadow",
+  "size_px": [
+    2880,
+    1080
+  ],
+  "backdrop": "#9fd2f2",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "layers/sky.png",
+      "parallax": 0.05
+    },
+    {
+      "name": "hills",
+      "file": "layers/hills.png",
+      "parallax": 0.35
+    },
+    {
+      "name": "meadow",
+      "file": "layers/meadow.png",
+      "parallax": 1.0
+    },
+    {
+      "name": "foreground",
+      "file": "layers/foreground.png",
+      "parallax": 1.4,
+      "in_front": true
+    }
+  ]
+}

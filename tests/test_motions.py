@@ -181,6 +181,23 @@ def test_animate_errors_and_clamping() -> None:
     assert max(abs(w.value.degrees) for w in anim.angles["head"].waypoints) <= 25  # head limit
 
 
+def test_key_poses_hold_and_interpolate_and_are_clamped() -> None:
+    poses = [
+        {"time_s": 0.5, "bones": {"head": 10}},
+        {"time_s": 1.5, "bones": {"head": -40, "upper_arm_l": 90}},  # head limit is ±25
+    ]
+    anim = animate(VIEW, [], fps=FPS, n_frames=120, poses=poses)
+    head = [(w.frame, w.value.degrees) for w in anim.angles["head"].waypoints]
+    assert head == [(12, 10.0), (36, -25.0)]
+    assert [(w.frame, w.value.degrees) for w in anim.angles["upper_arm_l"].waypoints] == [
+        (36, 90.0)
+    ]
+    with pytest.raises(MotionError, match="unknown bones"):
+        animate(VIEW, [], fps=FPS, n_frames=120, poses=[{"time_s": 0, "bones": {"tail": 5}}])
+    with pytest.raises(MotionError, match="after the end"):
+        animate(VIEW, [], fps=FPS, n_frames=120, poses=[{"time_s": 9, "bones": {"head": 5}}])
+
+
 def test_idle_breathing_adds_to_a_wave() -> None:
     actions = [
         {"motion": "idle_breathe", "start_s": 0},

@@ -144,6 +144,18 @@ def world_pose(
     return out
 
 
+def ground_offset_px(view: dict[str, Any]) -> float:
+    """How far below the root joint the lowest art pixel is, at rest (art px, positive = below).
+    Scenes place characters by their feet: root = feet position + this offset upwards."""
+    rest = world_pose(view)
+    lowest = 0.0
+    for part in view["parts"].values():
+        joint = rest[part["bone"]][0]
+        bottom = joint.y - (part["size_px"][1] - part["pivot_px"][1])  # rest pose: parts unrotated
+        lowest = min(lowest, bottom)
+    return -lowest
+
+
 def _parents_first(view: dict[str, Any]) -> list[str]:
     return sorted(view["bones"], key=lambda b: len(chain(view, b)))
 

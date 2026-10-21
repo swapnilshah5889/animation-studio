@@ -42,6 +42,13 @@ Three kinds of channel:
 - Joint limits (`limits_deg`) clamp the final angles. An LLM asking for an impossible head angle
   gets the nearest allowed one.
 
+## Manual key poses
+
+A shot spec can also hold `poses`: bone angles at a time (`pose_at` in the MCP server). Each is
+one key per bone, so a bone holds its pose until the next key, and moves between keys ease in and
+out. A motion that starts later takes the bone over from its first key. Poses are clamped to the
+joint limits too.
+
 ## Animation principles in code
 
 - **Ease in/out at reversals** (`halt`): a waving forearm stops for an instant at each end of the
@@ -58,7 +65,8 @@ A front-view cut-out can only rotate parts in the picture plane. So:
 - **nod** is a small downward bob of the head (a shift), not a pitch.
 - **walk_cycle** is a march in place: legs lift in turn (a joint shift) while the body bobs.
   Swinging legs sideways read as stumbling. A real walk across the frame needs side or
-  three-quarter view art (Step 4) and moving the character's placement in the scene (task 2.6).
+  three-quarter view art (Step 4) and a placement that moves during the shot (placement is fixed
+  per shot for now).
 - `talk_gesture` and `point` raise arms sideways, because that's the only direction a front-view
   arm can move.
 
