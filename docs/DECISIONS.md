@@ -246,3 +246,26 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   (`docs/steps/STEP-1-owner-guide.md`) stays as an optional exercise, and opening a generated
   `scene.sif` in Synfig Studio is the easiest way to see a rig. "Generated files open in the GUI"
   is inferred (they are a subset of what the GUI writes) but **not yet checked by hand**.
+
+### D-027: Rig technique: bones for characters, nested groups for scene layout (owner, 2026-10-21)
+- **Context:** Step 1 checkpoint 2. Both techniques were built for the same puppet and render the
+  same animation (worst PSNR 97 dB), at the same speed (`docs/learning/synfig-format.md`,
+  "Rig technique").
+- **Decision:** **Characters are rigged with Synfig bones.** Each character has one bone
+  hierarchy in the root `<bones>` block, with GUIDs derived from character + bone name. Each part
+  is a flat group whose transformation is a `bone_link`. Art lies in bone-local space (+x along
+  the bone; `base` turns the art). A skeleton layer is written but excluded from rendering, so a
+  generated rig stays editable by hand in Synfig Studio.
+  **Scene layout uses nested groups:** character placement, camera moves, parallax background
+  layers and props.
+- **Why:**
+  - Bones decouple draw order from the hierarchy, so a far arm can sit behind the body.
+  - Skeleton Deformation can bend a single image (bendy limbs later).
+  - `scalelx` stretches one segment without scaling its children.
+  - Bones are what Synfig's own cut-out workflow uses.
+  - The cost is more XML (~1.4–1.9x) and GUID bookkeeping, all in unit-tested generator code.
+- **Consequences:** Step 2's `rig.json` describes bones (parent, joint position, rest angle) and
+  a draw order separate from the hierarchy. A validator runs before every render (bones before
+  layers, all required links, every GUID resolves, every image exists), because the CLI aborts or
+  silently renders blank parts on these mistakes. There is no IK node in Synfig 1.5.5; if IK is
+  needed, it is solved in Python.

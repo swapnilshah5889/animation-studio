@@ -2,8 +2,37 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 1 (Synfig + .sif generator), nearly done: waiting for the owner's rig-technique
-decision (checkpoint 2), then the Step 2 brief.
+**Current step:** Step 2 (`synfig_mcp`): brief drafted, **waiting for owner approval**
+(`docs/steps/STEP-2-synfig-mcp.md`). Steps 0 and 1 are done.
+
+---
+
+## 2026-10-21: Step 1 done; Step 2 brief drafted
+
+**Done**
+- **Rig technique decided by the owner (D-027):** bones for characters, nested groups for
+  scene layout (placement, camera, parallax, props).
+- **Step 1 done-when is all ticked** (`docs/steps/STEP-1-synfig.md`). The hand-built scenes
+  were replaced per D-026 (GUI-saved official example rigs, plus the scene generated both ways).
+- **Step 2 brief drafted:** `docs/steps/STEP-2-synfig-mcp.md`. It covers schemas, the rig model
+  with a validator, vector shapes for the procedural face, the motion library, parallax and
+  camera, the `synfig_mcp` server (12 tools over stdio), and tests from the MCP Inspector and
+  from Claude Code as a client.
+
+**Verified**
+- 48 tests pass (`uv run pytest`), including real Synfig renders. `uv run scripts/sif_demo.py`
+  renders the waving, lip-syncing puppet with both rig techniques; the frames match.
+
+**Next**
+- Owner: review and approve (or edit) the Step 2 brief. It proposes a few decisions to confirm:
+  - The shot spec JSON is the source of truth; `scene.sif` is regenerated from it.
+  - Motion composition: overrides per bone, plus additive idle motions.
+  - A vector face.
+  - Installs: `mcp` 2.x, `jsonschema`, and the MCP Inspector via npx.
+- Agent, after approval: Step 2 task 2.1 (schemas), then owner checkpoint 2.
+
+**Open questions for the owner**
+- Approve the Step 2 brief, including its installs and proposed decisions.
 
 ---
 

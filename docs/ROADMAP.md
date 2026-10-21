@@ -6,8 +6,8 @@ part-time work. Each step has a "done when". Don't move on until it's met and ve
 | Step | Name | Owner | Detailed brief |
 |---|---|---|---|
 | 0 | Environment setup + benchmarks | Agent | `steps/STEP-0-setup.md` |
-| 1 | Learn Synfig by hand + document its format | Owner + agent | to be written |
-| 2 | `synfig_mcp`: scene, rig, motion, render tools | Agent (owner reviews) | to be written |
+| 1 | Learn Synfig by hand + document its format | Owner + agent | `steps/STEP-1-synfig.md` (done) |
+| 2 | `synfig_mcp`: scene, rig, motion, render tools | Agent (owner reviews) | `steps/STEP-2-synfig-mcp.md` (draft) |
 | 3 | `audio_mcp`: voices, lip-sync, music, sound effects, mix | Agent | to be written |
 | 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | to be written |
 | 5 | Director agent + `edit_mcp` + `qa_mcp`: first full film | **Owner + agent** | to be written |

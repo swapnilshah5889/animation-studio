@@ -1,7 +1,7 @@
 # Step 1: Learn Synfig by hand + document its format
 
-> **Status: approved by the owner on 2026-10-20 ("yes begin").** Owner tasks 1.0–1.1 have a
-> step-by-step guide: [`STEP-1-owner-guide.md`](STEP-1-owner-guide.md).
+> **Status: done (2026-10-21).** Approved 2026-10-20; owner tasks replaced per D-026; rig
+> technique decided in D-027. Next: [`STEP-2-synfig-mcp.md`](STEP-2-synfig-mcp.md).
 
 **Goal:** understand exactly what we will automate. The owner builds a short cut-out scene by hand
 in Synfig Studio. The agent reverse-documents the resulting `.sif` XML (our own files) and then
@@ -112,9 +112,9 @@ Updated 2026-10-20 after D-026 (the owner chose not to build the scenes by hand)
       scene is generated in both rig variants and rendered (`scripts/sif_demo.py`)
 - [x] `docs/learning/synfig-format.md` covers every element in the 1.2 list, each with a rendered
       example (render tests in `tests/test_sif_*.py`, fixtures in `tests/fixtures/sif_examples/`)
-- [ ] The rig technique is decided and recorded in DECISIONS.md: **waiting for the owner**
-      (recommendation: bones for characters, groups for scene layout)
+- [x] The rig technique is decided and recorded in DECISIONS.md: **D-027**, bones for characters,
+      nested groups for scene layout (owner, 2026-10-21)
 - [x] `studio_core/sif/` builds a scene from scratch; unit, golden-file and render tests pass (48)
 - [x] `uv run scripts/sif_demo.py` produces a correct MP4: a waving puppet, a moving background, a
       mouth switching on cue (both rig variants, renders match)
-- [ ] PROGRESS.md updated, Step 2 brief drafted (after the rig decision), work committed
+- [x] PROGRESS.md updated, Step 2 brief drafted (`STEP-2-synfig-mcp.md`), work committed and pushed
