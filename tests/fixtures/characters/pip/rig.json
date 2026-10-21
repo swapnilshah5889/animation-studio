@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "id": "pip",
+  "name": "Pip",
+  "style": "storybook",
+  "default_view": "front",
+  "views": {
+    "front": {
+      "root": "torso",
+      "bones": {
+        "torso": {
+          "parent": null,
+          "direction_deg": 90,
+          "length_px": 240,
+          "side": "center",
+          "limits_deg": {
+            "min": -15,
+            "max": 15
+          }
+        },
+        "head": {
+          "parent": "torso",
+          "direction_deg": 90,
+          "length_px": 280,
+          "side": "center",
+          "limits_deg": {
+            "min": -25,
+            "max": 25
+          },
+          "attach": {
+            "part": "torso",
+            "at_px": [
+              100,
+              18
+            ]
+          }
+        },
+        "upper_arm_l": {
+          "parent": "torso",
+          "direction_deg": -90,
+          "length_px": 112,
+          "side": "left",
+          "limits_deg": {
+            "min": -30,
+            "max": 170
+          },
+          "attach": {
+            "part": "torso",
+            "at_px": [
+              178,
+              45
+            ]
+          }
+        },
+        "forearm_l": {
+          "parent": "upper_arm_l",
+          "direction_deg": -90,
+          "length_px": 132,
+          "side": "left",
+          "limits_deg": {
+            "min": -20,
+            "max": 140
+          },
+          "attach": {
+            "part": "upper_arm_l",
+            "at_px": [
+              28,
+              132
+            ]
+          }
+        },
+        "upper_arm_r": {
+          "parent": "torso",
+          "direction_deg": -90,
+          "length_px": 112,
+          "side": "right",
+          "limits_deg": {
+            "min": -170,
+            "max": 30
+          },
+          "attach": {
+            "part": "torso",
+            "at_px": [
+              22,
+              45
+            ]
+          }
+        },
+        "forearm_r": {
+          "parent": "upper_arm_r",
+          "direction_deg": -90,
+          "length_px": 132,
+          "side": "right",
+          "limits_deg": {
+            "min": -140,
+            "max": 20
+          },
+          "attach": {
+            "part": "upper_arm_r",
+            "at_px": [
+              28,
+              132
+            ]
+          }
+        },
+        "thigh_l": {
+          "parent": "torso",
+          "direction_deg": -90,
+          "length_px": 100,
+          "side": "left",
+          "limits_deg": {
+            "min": -35,
+            "max": 35
+          },
+          "attach": {
+            "part": "torso",
+            "at_px": [
+              132,
+              262
+            ]
+          }
+        },
+        "shin_l": {
+          "parent": "thigh_l",
+          "direction_deg": -90,
+          "length_px": 130,
+          "side": "left",
+          "limits_deg": {
+            "min": -10,
+            "max": 60
+          },
+          "attach": {
+            "part": "thigh_l",
+            "at_px": [
+              32,
+              118
+            ]
+          }
+        },
+        "thigh_r": {
+          "parent": "torso",
+          "direction_deg": -90,
+          "length_px": 100,
+          "side": "right",
+          "limits_deg": {
+            "min": -35,
+            "max": 35
+          },
+          "attach": {
+            "part": "torso",
+            "at_px": [
+              68,
+              262
+            ]
+          }
+        },
+        "shin_r": {
+          "parent": "thigh_r",
+          "direction_deg": -90,
+          "length_px": 130,
+          "side": "right",
+          "limits_deg": {
+            "min": -60,
+            "max": 10
+          },
+          "attach": {
+            "part": "thigh_r",
+            "at_px": [
+              32,
+              118
+            ]
+          }
+        }
+      },
+      "parts": {
+        "torso": {
+          "file": "parts/torso.png",
+          "size_px": [
+            200,
+            280
+          ],
+          "pivot_px": [
+            100,
+            260
+          ],
+          "bone": "torso"
+        },
+        "head": {
+          "file": "parts/head.png",
+          "size_px": [
+            220,
+            300
+          ],
+          "pivot_px": [
+            110,
+            285
+          ],
+          "bone": "head"
+        },
+        "upper_arm_l": {
+          "file": "parts/upper_arm.png",
+          "size_px": [
+            56,
+            150
+          ],
+          "pivot_px": [
+            28,
+            20
+          ],
+          "bone": "upper_arm_l"
+        },
+        "upper_arm_r": {
+          "file": "parts/upper_arm.png",
+          "size_px": [
+            56,
+            150
+          ],
+          "pivot_px": [
+            28,
+            20
+          ],
+          "bone": "upper_arm_r"
+        },
+        "forearm_l": {
+          "file": "parts/forearm.png",
+          "size_px": [
+            52,
+            150
+          ],
+          "pivot_px": [
+            26,
+            18
+          ],
+          "bone": "forearm_l"
+        },
+        "forearm_r": {
+          "file": "parts/forearm.png",
+          "size_px": [
+            52,
+            150
+          ],
+          "pivot_px": [
+            26,
+            18
+          ],
+          "bone": "forearm_r"
+        },
+        "thigh_l": {
+          "file": "parts/thigh.png",
+          "size_px": [
+            64,
+            130
+          ],
+          "pivot_px": [
+            32,
+            16
+          ],
+          "bone": "thigh_l"
+        },
+        "thigh_r": {
+          "file": "parts/thigh.png",
+          "size_px": [
+            64,
+            130
+          ],
+          "pivot_px": [
+            32,
+            16
+          ],
+          "bone": "thigh_r"
+        },
+        "shin_l": {
+          "file": "parts/shin.png",
+          "size_px": [
+            64,
+            150
+          ],
+          "pivot_px": [
+            32,
+            14
+          ],
+          "bone": "shin_l"
+        },
+        "shin_r": {
+          "file": "parts/shin.png",
+          "size_px": [
+            64,
+            150
+          ],
+          "pivot_px": [
+            32,
+            14
+          ],
+          "bone": "shin_r"
+        }
+      },
+      "draw_order": [
+        "thigh_r",
+        "shin_r",
+        "thigh_l",
+        "shin_l",
+        "torso",
+        "upper_arm_r",
+        "forearm_r",
+        "upper_arm_l",
+        "forearm_l",
+        "head"
+      ],
+      "face": {
+        "part": "head",
+        "eyes": {
+          "left_px": [
+            141,
+            196
+          ],
+          "right_px": [
+            79,
+            196
+          ],
+          "size_px": 30
+        },
+        "brows": {
+          "left_px": [
+            141,
+            164
+          ],
+          "right_px": [
+            79,
+            164
+          ],
+          "width_px": 34
+        },
+        "mouth": {
+          "at_px": [
+            110,
+            246
+          ],
+          "width_px": 46
+        },
+        "colors": {
+          "line": "#463430",
+          "eye_white": "#ffffff",
+          "iris": "#463430",
+          "mouth": "#78283a",
+          "tongue": "#e88a96"
+        }
+      }
+    }
+  }
+}

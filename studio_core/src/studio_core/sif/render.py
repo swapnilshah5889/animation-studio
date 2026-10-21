@@ -11,6 +11,7 @@ import subprocess
 from pathlib import Path
 
 from studio_core.config import StudioConfig, load_config
+from studio_core.sif.validate import validate_sif
 
 
 class RenderError(RuntimeError):
@@ -33,8 +34,16 @@ def render_frames(
     end: int | None = None,
     size: tuple[int, int] | None = None,
     cfg: StudioConfig | None = None,
+    validate: bool = True,
 ) -> list[Path]:
-    """Render frames begin..end (inclusive; default: the whole canvas) to out_dir/frame.NNNN.png."""
+    """Render frames begin..end (inclusive; default: the whole canvas) to out_dir/frame.NNNN.png.
+
+    The file is validated first (studio_core.sif.validate); pass validate=False only to
+    reproduce a CLI failure on purpose."""
+    if validate:
+        issues = validate_sif(sif)
+        if issues:
+            raise RenderError(f"{sif.name} would not render correctly: " + "; ".join(issues))
     cfg = cfg or load_config()
     shutil.rmtree(out_dir, ignore_errors=True)
     out_dir.mkdir(parents=True)

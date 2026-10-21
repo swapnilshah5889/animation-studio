@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): task 2.1 (schemas) done, **waiting for the owner's schema
-review** (checkpoint 2). Steps 0 and 1 are done.
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1 (schemas, approved) and 2.2 (rig model +
+validator) done; next 2.3 (vector shapes) and 2.4 (procedural face). Steps 0 and 1 are done.
 
 ---
 
@@ -15,8 +15,8 @@ The owner approved the Step 2 brief as written (D-028).
 
 | Task | Status |
 |---|---|
-| 2.1 Schemas | **Done, waiting for owner review (checkpoint 2)**: `schemas/rig`, `shot`, `shotlist`, `film`; `studio_core/schema.py` (schema + semantic checks with fixable messages); `scripts/validate.py`; valid examples in `tests/fixtures/schemas/`; 27 tests of specific mistakes; `film.json` now validated on save. Learning note: `docs/learning/json-schema.md`. |
-| 2.2 Rig model + validator | Next, after the schema review |
+| 2.1 Schemas | **Done, approved by the owner (checkpoint 2, 2026-10-21)**: `schemas/rig`, `shot`, `shotlist`, `film`; `studio_core/schema.py` (schema + semantic checks with fixable messages); `scripts/validate.py`; valid examples in `tests/fixtures/schemas/`; 27 tests of specific mistakes; `film.json` now validated on save. Learning note: `docs/learning/json-schema.md`. |
+| 2.2 Rig model + validator | **Done**: `studio_core/rig.py` (load + validate rig.json, bones from rest directions and joint pixels, flat bone-linked parts in draw order, skeleton layer, FK `world_pose`, `clamp_offset`); `studio_core/sif/validate.py` runs before every render (bones first, links complete, GUIDs resolve, no duplicates, images exist); placeholder **Pip** with a faceless head, both arms and two-segment legs (`tests/fixtures/characters/pip/`, `scripts/make_placeholder_character.py`). A render test lands parts within 1.5 px of FK. Note: `docs/learning/rigging.md`. |
 | 2.3 Vector shapes in the builder | To do |
 | 2.4 Procedural face | To do |
 | 2.5 Motion library (owner checkpoint 3) | To do |
