@@ -2,9 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.7 done (3.2b, the Parler Indian voices, deferred
-by the owner). Next: 3.8 (prove it: the done-when shot through both servers, owner checkpoint 4).
-Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.8 done (3.2b deferred by the owner). **Waiting for
+the owner's review of the done-when shot** (checkpoint 4, `films/step3-demo/shots/s01_sh01/shot.mp4`),
+then 3.9 (docs, Step 4 brief). Step 2 has one done-when item open (D-035).
 
 ---
 
@@ -24,7 +24,7 @@ The owner approved the Step 3 brief as written (D-036).
 | 3.5 Sound-effect library and search: `find_sfx` | **Done**: 8 Kenney + 10 OpenGameArt CC0 packs + FSD50K's CC0 eval clips (owner-approved, child-safe filter) → **4,268 sounds, 9.6 h**; BigSoundBank left out per its robots.txt; CLAP in Qdrant with hybrid ranking; spot-check 24/24; remaining gaps: cows, a cartoon boing, a slide whistle (D-043, D-044). Note: `docs/learning/embeddings-and-vector-search.md`. |
 | 3.6 The mix | **Done**: `studio_core/audio/mix.py` (dialogue/sfx/music buses, sfx normalization, computed ducking envelope, −14 LUFS gain, 4×-oversampled limiter with a true-peak check), `[mix]` config, `render_shot` writes `mix.wav`; tests measure ducking (−10 dB ± 0.5), sound timing (±10 ms) and loudness (±1 LU, ≤ −1 dBTP) (D-045). |
 | 3.7 `audio_mcp` server, and shot tools for sound | **Done**: `mcp/audio_mcp` (7 tools: describe_audio, set_voice, speak, lipsync, compose, find_sfx, preview_mix); `synfig_mcp` gains add_sound_effect, set_music, sound-effect removal, music cues in describe_film; tests through real MCP clients (in-process + stdio, with and without models); Inspector check over both servers 32/32 (D-046). |
-| 3.8 Prove it (owner checkpoint 4) | To do |
+| 3.8 Prove it (owner checkpoint 4) | **Done, waiting for the owner's review**: `scripts/run_step3_shot.py` builds the done-when shot with a scripted MCP client over both servers (launched from `.mcp.json`): 27 calls, 109 s. Pip and Bunny speak in their cast voices with mouth cues, plus composed music, birdsong found by description, and a 1080p render. All 6 checks pass (−14.8 LUFS, −1.5 dBTP); transcript `docs/learning/mcp-step3-shot.md`. Known issue: the chosen birdsong has road traffic in it. |
 | 3.9 Docs, Step 4 brief | To do |
 
 **Verified**
