@@ -23,7 +23,7 @@ KID_SAFE_NEGATIVE = (
 )
 
 
-class _Graph:
+class Graph:
     def __init__(self) -> None:
         self.nodes: dict[str, dict[str, Any]] = {}
 
@@ -73,7 +73,7 @@ def txt2img(
     style = manifest.styles[style_id]
     files = manifest.files
     settings = style.settings(fast)
-    g = _Graph()
+    g = Graph()
 
     ckpt = g.add(
         "CheckpointLoaderSimple",

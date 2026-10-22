@@ -56,7 +56,7 @@ custom_nodes = ["ComfyUI-segment-anything-2", "comfyui_controlnet_aux"]
 # The default must be a style whose files are all commercial-OK (D-019, D-025).
 default_style = "storybook"
 # Other weights this machine needs (file ids from config/models.toml).
-required_files = ["sam2.1-hiera-small", "depth-anything-v2-small"]
+required_files = ["sam2.1-hiera-small", "sam2.1-hiera-base-plus", "depth-anything-v2-small"]
 
 [envs]
 # Isolated Python environments for heavy ML stacks (one venv each, never shared).
