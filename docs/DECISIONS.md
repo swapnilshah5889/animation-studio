@@ -622,6 +622,12 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
     51 thunder.
 - Only the chosen clips are extracted from the split zip. The archives are then deleted;
   the extracted CC0 originals are kept. Each clip's manifest URL is its Freesound page.
+- **Measured:**
+  - 3,513 clips added (2 were duplicates), so the library has 4,268 sounds, 9.6 h, 6.0 GB.
+  - Indexing the new clips took 221 s.
+  - The spot-check grew to 24 asserted queries (birds, dogs, cats, roosters, frogs, rain,
+    thunder, waves, a squeaky door...), all passing, with scores ~0.6–0.7.
+  - Remaining gaps: cows, a cartoon boing, a slide whistle.
 
 ### D-045: The shot mix (task 3.6)
 - `studio_core/audio/mix.py`: dialogue, sound-effect and music buses, built sample-exactly with

@@ -47,3 +47,19 @@ or NSFW galleries, and anything named after a real studio or living artist (D-01
   films**. Mark them clearly and keep them out of the default pipeline.
 - **Custom licenses** (e.g. some Llama, Gemma or FLUX variants, the SAM 3 "SAM License"): read the
   terms and summarize them here.
+
+## Sound-effect library (not models; data the studio uses)
+
+CC0 only, a license per file in `~/ai-studio/sfx-library/manifest.json` (D-036, D-043, D-044).
+Built by `scripts/fetch_sfx_library.py`.
+
+| Source | License | Sounds | Notes |
+|---|---|---|---|
+| [Kenney](https://kenney.nl/assets/category:Audio): 8 packs (impact, interface, RPG, UI, jingles, digital, sci-fi, casino) | CC0 | 581 | Direct zips |
+| [OpenGameArt](https://opengameart.org): 10 child-friendly packs | CC0 (checked per page) | 174 | 10 s crawl delay respected |
+| [FSD50K](https://zenodo.org/records/4060432) eval split: Freesound clips | CC0 clips only (the dataset mixes CC0/BY/NC/Sampling+) | 3,513 | Labels for people's voices and bodies and for violence are excluded, as are clips with unsuitable words. Each clip's URL is its Freesound page |
+| **Total** | | **4,268 (9.6 h)** | 6.0 GB with the kept originals (2.9 GB) |
+
+Left out on purpose: BigSoundBank (its robots.txt forbids robots on its audio), Sonniss GDC
+(not CC0; its license forbids AI training), BBC Sound Effects (non-commercial), bulk Freesound
+(API terms).

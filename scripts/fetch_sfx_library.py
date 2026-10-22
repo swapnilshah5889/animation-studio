@@ -7,6 +7,10 @@ manifest schema refuses anything else (sfx_library.schema.json). Every sound is 
 48 kHz mono 16-bit WAV (what CLAP indexes and the mix uses); the downloaded originals stay in
 _downloads/ so the conversion can be redone offline.
 
+Plus FSD50K's eval split: CC0 clips only, minus labels and words not for a children's film
+(fsd50k_selection). Its 6 GB split zip is downloaded, joined, the chosen clips extracted, and
+the archives deleted.
+
 Not included, on purpose:
 - BigSoundBank: its robots.txt keeps every robot off its audio files, and its ai.txt asks that
   they not be used for training. A human may hand-pick sounds there later.
@@ -19,9 +23,12 @@ downloads there.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 import time
 import urllib.request
@@ -101,8 +108,10 @@ def download(url: str, dest: Path, delay_s: float) -> bool:
         return False
     dest.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=120) as response:
-        dest.write_bytes(response.read())
+    partial = dest.with_name(dest.name + ".part")
+    with urllib.request.urlopen(request, timeout=120) as response, partial.open("wb") as out:
+        shutil.copyfileobj(response, out, length=1 << 20)  # streamed: some files are GBs
+    partial.replace(dest)
     time.sleep(delay_s)
     return True
 
@@ -124,6 +133,110 @@ def originals(folder: Path) -> list[Path]:
 def words(path: Path) -> list[str]:
     raw = re.sub(r"([a-z])([A-Z])", r"\1 \2", path.stem)
     return [w for w in re.split(r"[^A-Za-z]+", raw.lower()) if len(w) > 1]
+
+
+# --------------------------------------------------------------------------- FSD50K
+# FSD50K (Zenodo 4060432): Freesound clips with AudioSet labels, a license per clip. Only the
+# eval split's CC0 clips are used, minus the labels below (D-044).
+FSD = "https://zenodo.org/api/records/4060432/files"
+FSD_SMALL = ["FSD50K.metadata.zip", "FSD50K.ground_truth.zip", "FSD50K.doc.zip"]
+FSD_AUDIO = ["FSD50K.eval_audio.z01", "FSD50K.eval_audio.zip"]  # one split zip, 6.26 GB
+FSD_DENY = {
+    # recordings of real people's voices and bodies: privacy and consent, children included
+    "Human_voice", "Speech", "Male_speech_and_man_speaking", "Female_speech_and_woman_speaking",
+    "Child_speech_and_kid_speaking", "Conversation", "Chatter", "Crowd", "Singing",
+    "Male_singing", "Female_singing", "Laughter", "Giggle", "Chuckle_and_chortle", "Screaming",
+    "Shout", "Yell", "Whispering", "Crying_and_sobbing", "Gasp", "Sigh", "Breathing",
+    "Respiratory_sounds", "Cough", "Sneeze", "Burping_and_eructation", "Fart",
+    "Chewing_and_mastication", "Speech_synthesizer", "Cheering",
+    # violence
+    "Gunshot_and_gunfire", "Explosion",
+}  # fmt: skip
+FSD_WORDS = re.compile(
+    EXCLUDE.pattern + r"|sex|porn|nsfw|drug|beer|alcohol|vomit|puke|fuck|shit|damn|bitch",
+    re.IGNORECASE,
+)
+
+
+def fsd50k_selection(folder: Path) -> list[dict]:
+    """The eval clips we may use: CC0, no denied label, nothing unsuitable in their text."""
+    for name in FSD_SMALL:
+        download(f"{FSD}/{name}/content", folder / name, 1.0)
+        with zipfile.ZipFile(folder / name) as z:
+            z.extractall(folder)
+    info = json.loads((folder / "FSD50K.metadata" / "eval_clips_info_FSD50K.json").read_text())
+    chosen = []
+    with (folder / "FSD50K.ground_truth" / "eval.csv").open() as fh:
+        for row in csv.DictReader(fh):
+            clip, labels = info[row["fname"]], row["labels"].split(",")
+            text = " ".join([clip["title"], clip["description"], " ".join(clip["tags"])])
+            if "publicdomain/zero" not in clip["license"] or set(labels) & FSD_DENY:
+                continue
+            if FSD_WORDS.search(text):
+                continue
+            chosen.append({"fname": row["fname"], "labels": labels, **clip})
+    return chosen
+
+
+def fsd50k_originals(folder: Path, chosen: list[dict]) -> Path:
+    """Extract only the chosen clips; download and join the split zip only if some are missing.
+    The 6 GB archives are deleted afterwards (the extracted CC0 clips are kept)."""
+    out = folder / "eval_cc0"
+    missing = [c for c in chosen if not (out / f"{c['fname']}.wav").is_file()]
+    if missing:
+        for name in FSD_AUDIO:
+            if download(f"{FSD}/{name}/content", folder / name, 1.0):
+                print(f"downloaded fsd50k/{name}", flush=True)
+        joined = folder / "eval_joined.zip"
+        if not joined.is_file():
+            subprocess.run(
+                ["zip", "-q", "-s", "0", str(folder / FSD_AUDIO[1]), "--out", str(joined)],
+                check=True,
+            )
+        out.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(joined) as z:
+            for clip in missing:
+                member = f"FSD50K.eval_audio/{clip['fname']}.wav"
+                (out / f"{clip['fname']}.wav").write_bytes(z.read(member))
+        for name in [*FSD_AUDIO, joined.name]:
+            (folder / name).unlink(missing_ok=True)
+    return out
+
+
+def fsd50k_sounds(lib: Path) -> list[dict]:
+    folder = lib / "_downloads" / "fsd50k"
+    chosen = fsd50k_selection(folder)
+    originals = fsd50k_originals(folder, chosen)
+    sounds = []
+    for clip in chosen:
+        out = lib / "fsd50k" / f"{clip['fname']}.wav"
+        if not out.is_file():
+            out.parent.mkdir(parents=True, exist_ok=True)
+            src = originals / f"{clip['fname']}.wav"
+            ffmpeg.run(["-i", str(src), "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(out)])
+        seconds = ffmpeg.duration(out)
+        if not MIN_S <= seconds <= MAX_S:
+            continue
+        label_words = [w.lower() for lab in clip["labels"] for w in re.split(r"[_()]+", lab) if w]
+        tags = sorted({*label_words, *(t.lower() for t in clip["tags"][:20])})[:30]
+        title = " ".join(clip["title"].split())[:120]
+        labels = ", ".join(lab.replace("_", " ") for lab in clip["labels"])
+        sounds.append(
+            {
+                "id": f"fsd50k_{clip['fname']}",
+                "file": str(out.relative_to(lib)),
+                "source": "fsd50k",
+                "pack": "FSD50K (eval, CC0 clips)",
+                "license": "CC0-1.0",
+                "url": f"https://freesound.org/s/{clip['fname']}/",
+                "original_name": title[:200],
+                "description": f"{labels}. {title}"[:500],
+                "tags": [t[:40] for t in tags],
+                "duration_s": round(seconds, 3),
+                "sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
+            }
+        )
+    return sounds
 
 
 def main() -> int:
@@ -177,6 +290,7 @@ def main() -> int:
                     "sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
                 }
             )
+    sounds += fsd50k_sounds(lib)
     # the same audio in two packs: keep the first
     seen, unique = set(), []
     for s in sounds:

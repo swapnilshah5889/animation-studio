@@ -2,7 +2,7 @@
 the real library (marked `models`: needs Qdrant, the indexed library and the CLAP env).
 
 The spot-check is a test, not the Step 7 eval harness: each cartoon query must find a sound of
-the right kind in its top 5. Known gaps (sounds the CC0 starter library doesn't have) are
+the right kind in its top 5 (24 queries). Known gaps (sounds the CC0 library doesn't have) are
 printed, not asserted, so the owner can decide what to add.
 """
 
@@ -74,8 +74,18 @@ SPOT_CHECK = {  # query → words, any of which a top-5 result must contain
     "landing after a jump": ["jump", "land"],
     "a wooden knock": ["wood", "knock"],
     "a happy jingle": ["jingle"],
+    # animals and nature, from FSD50K's CC0 clips (D-044)
+    "birds singing": ["bird", "chirp"],
+    "a dog barking": ["bark", "dog"],
+    "a cat meowing": ["meow", "cat"],
+    "a rooster crowing": ["rooster", "chicken"],
+    "frogs croaking": ["frog"],
+    "rain falling": ["rain"],
+    "thunder rumbling": ["thunder"],
+    "waves on the beach": ["waves", "surf"],
+    "a squeaky door": ["door"],
 }
-KNOWN_GAPS = ["birds singing", "a dog barking", "rain falling", "a cat meowing", "a cow mooing"]
+KNOWN_GAPS = ["a cow mooing", "a cartoon boing", "a slide whistle"]
 
 
 @pytest.mark.models
