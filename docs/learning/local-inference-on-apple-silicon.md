@@ -67,6 +67,35 @@ Rule of thumb: memory ≈ parameters × bits / 8, plus the KV cache (grows with 
 runtime overhead. Bigger context windows cost memory, so the director should not ask for 128k
 tokens of context it does not need.
 
+## Finding where the memory goes (a worked example)
+
+ACE-Step 1.5 needed ~21 GB for a 10-second music cue and pushed the Mac into swap. It now runs in
+under 10 GB (task 3.4, D-041). The method carries over to any model:
+
+1. **Measure the right number.** `/usr/bin/time -l` reports a process's **peak memory
+   footprint**: everything it owns, including GPU (Metal) buffers and pages that were
+   compressed or swapped. That's the number that decides whether the Mac swaps. "Maximum
+   resident set size" misses GPU buffers, so it can look fine while the machine swaps.
+2. **Ask each framework what it holds.** PyTorch reports `torch.mps.current_allocated_memory()`
+   (live tensors) and `driver_allocated_memory()` (live tensors plus its cache). Here: 6.9 GB
+   allocated, 8.9 GB with the cache, but an 18.7 GB footprint. So ~10 GB belonged to something
+   else.
+3. **Read the logs for second copies.** ACE-Step quietly converted its VAE to a second framework
+   (MLX), in float32 and compiled, and decoded with that copy. Two frameworks means two memory
+   pools. Neither one's numbers show the other.
+4. **Check the precision.** ACE-Step chooses float32 on MPS (bf16 only on CUDA). Every loader
+   read one attribute, `handler.dtype`, so changing it to bf16 halved the weights without editing
+   the library.
+
+| Change | Peak footprint (10 s cue) |
+|---|---|
+| as shipped (fp32, MLX VAE) | 21.0 GB, 5.7 GB swapped |
+| bf16 weights | 18.6 GB |
+| bf16 + one VAE (PyTorch's) | **9.6 GB, no swap** |
+
+Precision alone saved 2.4 GB; removing the duplicate saved 9. **Look for duplicates before
+reaching for quantization.**
+
 ## Gotchas
 
 - **Docker on macOS cannot see the GPU.** Its Linux VM gets CPU only, so models always run

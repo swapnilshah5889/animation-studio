@@ -271,3 +271,56 @@ _Measured 2026-10-19 20:54._
     fast variant is now 16 of its own steps (verified clean, 91 s including model load).
 - Timings here are cleaner than the earlier "SDXL text-to-image" section (138 s vs 222 s for 25
   steps): less memory pressure during this run.
+
+### Music (ACE-Step)
+
+_Measured 2026-10-22 11:10._
+
+| Model | Load s | Generate s | Process wall s | Peak footprint | System |
+|---|---|---|---|---|---|
+| ACE-Step 1.5 turbo (PyTorch/MPS DiT, bf16, PyTorch VAE, 10 s) | 7 | 6 | 21 | 9.6 GB | peak used 18.1 GB, min free 43%, swap +0.00 GB |
+
+- turbo DiT (PyTorch/MPS), 8 steps, bf16, PyTorch VAE, LM off, seed 42
+- caption: gentle, playful background music for a preschool cartoon, ukulele, glockenspiel, soft hand percussion, bright and happy, major key
+- Peak footprint counts the process's own pages, including GPU/MLX buffers and pages that were compressed or swapped; it can exceed physical RAM.
+
+### Music (ACE-Step)
+
+_Measured 2026-10-22 11:10._
+
+| Model | Load s | Generate s | Process wall s | Peak footprint | System |
+|---|---|---|---|---|---|
+| ACE-Step 1.5 turbo (PyTorch/MPS DiT, bf16, PyTorch VAE, 30 s) | 7 | 14 | 29 | 9.6 GB | peak used 18.2 GB, min free 42%, swap +0.00 GB |
+
+- turbo DiT (PyTorch/MPS), 8 steps, bf16, PyTorch VAE, LM off, seed 42
+- caption: gentle, playful background music for a preschool cartoon, ukulele, glockenspiel, soft hand percussion, bright and happy, major key
+- Peak footprint counts the process's own pages, including GPU/MLX buffers and pages that were compressed or swapped; it can exceed physical RAM.
+
+### Music (ACE-Step)
+
+_Measured 2026-10-22 11:11._
+
+| Model | Load s | Generate s | Process wall s | Peak footprint | System |
+|---|---|---|---|---|---|
+| ACE-Step 1.5 turbo (PyTorch/MPS DiT, bf16, PyTorch VAE, 60 s) | 7 | 25 | 40 | 9.7 GB | peak used 18.1 GB, min free 43%, swap +0.00 GB |
+
+- turbo DiT (PyTorch/MPS), 8 steps, bf16, PyTorch VAE, LM off, seed 42
+- caption: gentle, playful background music for a preschool cartoon, ukulele, glockenspiel, soft hand percussion, bright and happy, major key
+- Peak footprint counts the process's own pages, including GPU/MLX buffers and pages that were compressed or swapped; it can exceed physical RAM.
+
+### Music memory fix, summary (task 3.4, D-041)
+
+_Measured 2026-10-22, 10 s cue, PyTorch/MPS DiT, Ollama and ComfyUI unloaded. The first three
+rows were dry runs (`--dry-run`), copied here._
+
+| Precision | VAE | Peak footprint | Swap | Generate s |
+|---|---|---|---|---|
+| fp32 (ACE-Step's MPS default) | MLX (second copy, fp32) | 21.0 GB | +5.72 GB | 10 |
+| bf16 | MLX | 18.6 GB | +0.30 GB | 8 |
+| fp16 | MLX | 18.5 GB | +0.26 GB | 8 |
+| **bf16** | **PyTorch (the one already loaded)** | **9.6 GB** | **0** | 6 |
+
+- With bf16 + PyTorch VAE, PyTorch held 6.85 GB allocated (8.2 GB with its cache) after
+  loading. Before, the footprint was ~10 GB above PyTorch's own numbers: the MLX VAE and its
+  buffers.
+- Longer cues barely change the peak: 9.6 GB at 30 s, 9.7 GB at 60 s (rows above).

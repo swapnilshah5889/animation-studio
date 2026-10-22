@@ -533,3 +533,32 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
 - Lines run in parallel, up to 4 at once.
 - Measured: same audio + same text gives identical cues (Rhubarb is deterministic); 6.3 s for a
   5.6 s line under Rosetta.
+
+### D-041: Music: memory fixed in place; compose conventions (task 3.4)
+- **The fix (option a, no download):**
+  - ACE-Step 1.5 runs with bf16 weights (it picks fp32 on MPS) and PyTorch's DiT and VAE only:
+    `--precision bf16 --no-mlx-dit --no-mlx-vae` in `scripts/audio/acestep_compose.py`.
+  - The ~30 GB peak (D-020) came from fp32 weights plus duplicate MLX copies of the DiT and the
+    VAE. ACE-Step built the MLX VAE even with the MLX DiT off.
+  - bf16 is applied by intercepting the handler's `dtype` attribute in a subclass; ACE-Step's
+    code is untouched.
+  - Option (b), ComfyUI's ACE-Step nodes (+6.3 GB download), isn't needed.
+- **Measured (docs/benchmarks.md), 10 s cue:**
+  - fp32: 21.0 GB, 5.7 GB swapped
+  - bf16: 18.6 GB
+  - bf16 + PyTorch VAE: **9.6 GB, no swap**, flat at 30 s (9.6 GB) and 60 s (9.7 GB)
+  - Generation 6 / 14 / 25 s for 10 / 30 / 60 s of music; model load 7 s.
+  - Budget: ≤ 14 GB (D-036).
+- **`compose` conventions** (`studio_core/audio/music.py`):
+  - 9 moods (playful, calm, curious, adventurous, silly, sleepy, sad, mysterious, triumphant),
+    each with caption words, default instruments, a tempo range scaled by energy, and a key.
+  - An allowed-instrument list. Every caption is "instrumental background music for a
+    children's animated cartoon, ..., no vocals"; sad and mysterious moods say "never scary".
+  - The seed comes from the cue id unless given. The request hash covers mood, energy,
+    instruments, duration, seed, model and precision.
+  - Cues are generated at ≥ 10 s and trimmed: 50 ms fade-in, 1.5 s fade-out. 48 kHz stereo,
+    normalized to −20 LUFS (linear gain), so `music_volume` means the same for every cue.
+  - No looping in v1 (shots are ≤ 60 s).
+- **Memory guard:** `compose` unloads every Ollama model first, refuses while ComfyUI is
+  running, and measures each cue's peak footprint (`/usr/bin/time -l`). A test fails if a
+  10 s cue passes the budget.

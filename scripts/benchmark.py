@@ -486,15 +486,20 @@ def bench_music(cfg: StudioConfig, args: argparse.Namespace) -> None:
         "--out-dir",
         str(out),
         "--duration",
-        "30",
+        str(args.duration),
+        "--precision",
+        args.precision,
         *(["--no-mlx-dit"] if args.no_mlx_dit else []),
+        *(["--no-mlx-vae"] if args.no_mlx_vae else []),
     ]
     with MemoryWatch() as mem:
         elapsed, footprint, stdout = timed_with_footprint(cmd)
     result = json.loads(stdout.strip().splitlines()[-1])
     rows = [
         [
-            f"ACE-Step 1.5 turbo ({'PyTorch/MPS' if args.no_mlx_dit else 'MLX'} DiT)",
+            f"ACE-Step 1.5 turbo ({'PyTorch/MPS' if args.no_mlx_dit else 'MLX'} DiT, "
+            f"{args.precision}, {'PyTorch' if args.no_mlx_vae else 'MLX'} VAE, "
+            f"{args.duration:g} s)",
             f"{result['load_s']:.0f}",
             f"{result['gen_s']:.0f}",
             f"{elapsed:.0f}",
@@ -502,7 +507,7 @@ def bench_music(cfg: StudioConfig, args: argparse.Namespace) -> None:
             mem.summary(),
         ]
     ]
-    headers = ["Model", "Load s", "Generate 30 s", "Process wall s", "Peak footprint", "System"]
+    headers = ["Model", "Load s", "Generate s", "Process wall s", "Peak footprint", "System"]
     notes = [
         *result.get("notes", []),
         "Peak footprint counts the process's own pages, including GPU/MLX buffers and pages that "
@@ -704,6 +709,9 @@ def main() -> int:
     add("tts", bench_tts, runs=3)
     p = add("music", bench_music, runs=1)
     p.add_argument("--no-mlx-dit", action="store_true")
+    p.add_argument("--precision", choices=["fp32", "bf16", "fp16"], default="fp32")
+    p.add_argument("--no-mlx-vae", action="store_true")
+    p.add_argument("--duration", type=float, default=30.0)
     p = add("rhubarb", bench_rhubarb)
     p.add_argument("--wav", required=True)
     p.add_argument("--dialog")

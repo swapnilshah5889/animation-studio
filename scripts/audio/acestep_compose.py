@@ -47,6 +47,19 @@ def ensure_model() -> None:
     os.environ["HF_HUB_OFFLINE"] = "1"
 
 
+def memory_now(torch) -> dict[str, float]:
+    """GPU memory held by PyTorch (allocated, and reserved by its MPS driver), and the process's
+    peak resident size so far, in GB."""
+    import resource
+
+    gb = 1024**3
+    out = {"peak_rss": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / gb, 2)}
+    if torch.backends.mps.is_available():
+        out["mps_allocated"] = round(torch.mps.current_allocated_memory() / gb, 2)
+        out["mps_driver"] = round(torch.mps.driver_allocated_memory() / gb, 2)
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True)
@@ -58,6 +71,17 @@ def main() -> int:
     parser.add_argument("--device", default="auto")
     parser.add_argument("--format", default="wav", choices=["wav", "flac", "mp3"])
     parser.add_argument(
+        "--precision",
+        choices=["fp32", "bf16", "fp16"],
+        default="fp32",
+        help="weights on the GPU (MPS). ACE-Step uses fp32 on MPS; half precision halves memory",
+    )
+    parser.add_argument(
+        "--no-mlx-vae",
+        action="store_true",
+        help="decode with the PyTorch VAE already loaded, instead of building a second MLX copy",
+    )
+    parser.add_argument(
         "--no-mlx-dit",
         action="store_true",
         help="run the DiT in PyTorch/MPS only (the MLX path keeps a second copy of the weights)",
@@ -65,12 +89,36 @@ def main() -> int:
     args = parser.parse_args()
 
     ensure_model()
+    import torch
     from acestep.handler import AceStepHandler
     from acestep.inference import GenerationConfig, GenerationParams, generate_music
     from acestep.llm_inference import LLMHandler
 
+    half = {"fp32": None, "bf16": torch.bfloat16, "fp16": torch.float16}[args.precision]
+
+    class Handler(AceStepHandler):
+        """ACE-Step picks float32 for MPS (initialize_service). Every loader reads `self.dtype`,
+        so intercepting that one attribute loads the DiT and the text encoder in half
+        precision directly, without touching ACE-Step's code. The VAE keeps its own dtype."""
+
+        @property
+        def dtype(self):  # type: ignore[override]
+            return self.__dict__.get("_dtype")
+
+        @dtype.setter
+        def dtype(self, value):  # type: ignore[override]
+            self.__dict__["_dtype"] = (
+                half if (half is not None and value == torch.float32) else value
+            )
+
+        def _init_mlx_vae(self) -> bool:
+            if not args.no_mlx_vae:
+                return super()._init_mlx_vae()
+            self.mlx_vae, self.use_mlx_vae = None, False  # keep the PyTorch VAE only
+            return False
+
     start = time.perf_counter()
-    dit = AceStepHandler()
+    dit = Handler()
     status, ok = dit.initialize_service(
         project_root=str(ACE_ROOT),
         config_path="acestep-v15-turbo",
@@ -81,6 +129,7 @@ def main() -> int:
         print(json.dumps({"error": f"initialize_service failed: {status}"}))
         return 1
     load_s = time.perf_counter() - start
+    memory = {"after_load": memory_now(torch)}
     llm = LLMHandler()  # never initialized: no LM installed (D-020)
 
     params = GenerationParams(
@@ -104,6 +153,7 @@ def main() -> int:
     t0 = time.perf_counter()
     result = generate_music(dit, llm, params, config, save_dir=str(args.out_dir))
     gen_s = time.perf_counter() - t0
+    memory["after_generate"] = memory_now(torch)
     if not result.success:
         print(json.dumps({"error": result.error}))
         return 1
@@ -113,13 +163,17 @@ def main() -> int:
         json.dumps(
             {
                 "device": str(getattr(dit, "device", args.device)),
+                "precision": args.precision,
+                "memory_gb": memory,
+                "dtype": str(dit.dtype),
                 "load_s": round(load_s, 1),
                 "gen_s": round(gen_s, 1),
                 "duration_s": args.duration,
                 "files": files,
                 "notes": [
                     f"turbo DiT ({'PyTorch/MPS' if args.no_mlx_dit else 'MLX'}), {args.steps} "
-                    f"steps, LM off, seed {args.seed}",
+                    f"steps, {args.precision}, {'PyTorch' if args.no_mlx_vae else 'MLX'} VAE, "
+                    f"LM off, seed {args.seed}",
                     f"caption: {args.caption}",
                 ],
             }

@@ -2,12 +2,12 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.3 done; voices cast (D-039). Next: 3.4 (music:
-fix ACE-Step's memory first, then `compose`). Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.4 done. **Waiting for the owner's music review**
+(checkpoint 3, `renders/music-samples/index.html`). Step 2 has one done-when item open (D-035).
 
 ---
 
-## 2026-10-22: Step 3 started: tasks 3.1–3.3 (schemas, voices, lip-sync) done
+## 2026-10-22: Step 3 started: tasks 3.1–3.4 (schemas, voices, lip-sync, music) done
 
 The owner approved the Step 3 brief as written (D-036).
 
@@ -18,7 +18,7 @@ The owner approved the Step 3 brief as written (D-036).
 | 3.1 Audio schemas and file layout | **Done**: `schemas/voice`, `line`, `lipsync`, `music`, `sfx_library`; shot schema gains `sfx[].sound` and `music_volume`; semantic checks (cue order and coverage, unique voices, sounds and audio, line/voice consistency); asset checks in `shot_spec` (line metadata, stale mouth cues, chosen sounds in the library, music cues exist); `studio_core/audio/library.py` (manifest loader); files named by id recognized by folder in `validate_file` (D-037). |
 | 3.2 Voices: `speak` (owner checkpoint 2: casting) | **Done; cast by the owner** (Pip c12, Bunny c03, D-039): `studio_core/audio/voices.py` (text checks, content-hash cache, one Kokoro batch per call, trim + pitch step + linear-gain loudness, line metadata, stale cues removed), `studio_core/audio/ffmpeg.py`, `scripts/audio/kokoro_batch.py`, 4 casting voices fetched; casting page `scripts/audio/voice_casting.py` (14 candidates × 2 lines) (D-038). Note: `docs/learning/voices-and-loudness.md`. |
 | 3.3 Lip-sync: `lipsync` | **Done**: `studio_core/audio/lipsync.py` (Rhubarb on the final audio with the text, recognizer by language, cache by validity and length, relative `soundFile`, parallel lines); `speak` lip-syncs by default (D-040). Note: `docs/learning/lip-sync.md`. |
-| 3.4 Music: `compose` (owner checkpoint 3) | To do |
+| 3.4 Music: `compose` (owner checkpoint 3) | **Done, waiting for the owner's review**: memory fixed in place (bf16 + PyTorch DiT and VAE only): **21.0 → 9.6 GB** peak for a 10 s cue, no swap, flat to 60 s; `studio_core/audio/music.py` (9 moods, instrument list, caption in code, seeded, cached by hash, Ollama unloaded and ComfyUI refused first, peak footprint measured per cue, trimmed + faded + −20 LUFS); samples page `scripts/audio/music_samples.py` (D-041). |
 | 3.5 Sound-effect library and search: `find_sfx` | To do |
 | 3.6 The mix | To do |
 | 3.7 `audio_mcp` server, and shot tools for sound | To do |
@@ -58,6 +58,23 @@ The owner approved the Step 3 brief as written (D-036).
   with no errors and no warnings.
 - 200 tests pass; ruff is clean. The suite now takes ~60 s, because the `models` tests run
   Kokoro and Rhubarb. Skip them with `-m "not models"`.
+
+**Task 3.4 (same day)**
+- Memory hunt (measured, `docs/benchmarks.md`), 10 s cue:
+  - fp32 (ACE-Step's MPS default): 21.0 GB, 5.7 GB swapped
+  - bf16: 18.6 GB
+  - bf16 + PyTorch VAE: **9.6 GB, no swap**
+- PyTorch's own numbers (6.9 GB allocated) showed that ~10 GB lived elsewhere: a second,
+  float32 MLX copy of the VAE that ACE-Step builds on Macs. Option (b), ComfyUI with a 6.3 GB
+  download, wasn't needed. Note: `local-inference-on-apple-silicon.md` (worked example).
+- The fix holds at 30 s (9.6 GB) and 60 s (9.7 GB). Generation takes 6 / 14 / 25 s.
+- `compose` test (`-m models`): a 10 s cue within the budget, normalized, with valid metadata.
+  The repeat call is a cache hit.
+- Music samples: 3 moods × 2 takes, 15 s each, 130 s in all. Every take peaked at 9.6 GB and
+  measured −20 LUFS, true peak ≤ −1.5 dBTP. All 6 embedded clips decode.
+- 206 tests pass (~90 s with the `models` tests); ruff is clean.
+- Next: the owner reviews the samples (checkpoint 3), then 3.5 (the sound-effect library and
+  `find_sfx`).
 
 ## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
 
