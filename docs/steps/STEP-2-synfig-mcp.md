@@ -1,7 +1,8 @@
 # Step 2: `synfig_mcp`: scene, rig, motion and render tools
 
-> **Status: approved by the owner on 2026-10-21, as written (installs and proposed decisions included,
-> recorded in D-028).** Work started with task 2.1.
+> **Status: done (2026-10-22), with one done-when item open.** The Claude Code run was skipped by
+> the owner because the `claude` CLI can't be logged in on this machine (D-035). Approved
+> 2026-10-21 as written (D-028); tool changes during the build are recorded in D-034.
 
 **Goal:** an MCP server that lets an LLM build and render a cut-out shot: a bone-rigged character
 with a procedural face, moving with named, parameterized motions, lip-synced from Rhubarb cues,
@@ -148,13 +149,16 @@ nod, …"), because the LLM reads them.
 
 ## Done when
 
-- [ ] Schemas approved by the owner; valid and invalid fixtures tested
-- [ ] `rig.json` → bone rig with draw order and validator; the placeholder rig has a procedural face
-- [ ] Motion library v1 with timing unit tests; the owner approved the motion preview
-- [ ] Parallax background and camera presets render correctly (render tests)
-- [ ] `synfig_mcp` exposes the tools above over stdio; all are tested; the Inspector lists and
-      calls them
+- [x] Schemas approved by the owner; valid and invalid fixtures tested
+- [x] `rig.json` → bone rig with draw order and validator; the placeholder rig has a procedural face
+- [x] Motion library v1 with timing unit tests; the owner approved the motion preview
+- [x] Parallax background and camera presets render correctly (render tests)
+- [x] `synfig_mcp` exposes the tools above over stdio; all are tested; the Inspector lists and
+      calls them (`scripts/inspector_check.py`)
 - [ ] **From Claude Code as an MCP client, the LLM builds and renders a 10-second shot of a
       rigged character waving and blinking in front of a parallax background, with a mouth cue
-      track driving the mouth** (ROADMAP Step 2)
-- [ ] Learning notes, DECISIONS, PROGRESS updated; Step 3 brief drafted; work committed and pushed
+      track driving the mouth** (ROADMAP Step 2). **Open:** skipped by the owner (CLI login).
+      `scripts/run_first_shot.py` does it from any logged-in terminal. Shots with the same
+      ingredients were built and rendered through the tools by real MCP clients (the tests and
+      the Inspector), but with scripted calls, not an LLM choosing them.
+- [x] Learning notes, DECISIONS, PROGRESS updated; Step 3 brief drafted; work committed and pushed

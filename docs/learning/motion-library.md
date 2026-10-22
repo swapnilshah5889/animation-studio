@@ -22,6 +22,28 @@ Three kinds of channel:
   root.
 - **eyes** (open/half/closed) drives the face's eye switch, for blinks.
 
+## Keyframes and curves
+
+Animation software stores **keys** (a value at a frame) and a **curve** that decides how the value
+travels between keys. Our clips are exactly that: `Key(frame, value, interp)`. The interpolation
+names map to Synfig's own waypoint types (see synfig-format.md):
+
+| Interp | Synfig | Use |
+|---|---|---|
+| `EASE` | `halt` | slow in and out; reversals (the end of a wave swing), starts and stops |
+| `CLAMPED` | `clamped` | smooth pass-through points that never overshoot |
+| `LINEAR` | `linear` | constant speed (rare: it looks mechanical) |
+| `CONSTANT` | `constant` | jumps: eye states, mouth shapes, expressions |
+
+Why keys instead of a value on every frame: a 10-second wave is ~20 keys instead of 240 values,
+the `.sif` stays editable by hand in Synfig (an animator can drag a key), and the engine
+interpolates at any frame rate. The catch: when two motions add up (breathing on top of a wave),
+the sum has to be computed on our side. `timeline.sample` imitates Synfig's curves (`halt` as a
+smoothstep) closely enough to add values at every key time.
+
+This is **pose-to-pose** animation: the library writes the extreme poses (arm up, forearm
+left, forearm right) and the curves draw the in-betweens.
+
 ## Parameters
 
 | Parameter | Meaning |
@@ -53,11 +75,34 @@ joint limits too.
 
 - **Ease in/out at reversals** (`halt`): a waving forearm stops for an instant at each end of the
   swing, like a pendulum. Linear motion between extremes looks robotic.
-- **Overlap:** the upper arm raises first and the forearm starts waving once it's up.
+- **Overlap:** parts of a body don't all start and stop together. The upper arm raises first,
+  and the forearm is already swinging a little (30% of the amplitude) by the time it's up.
+- **Follow-through:** after the main action, the trailing part settles instead of freezing. At
+  the end of a wave the forearm eases back to a third of its swing while the arm is still raised,
+  then both come down together. In `jump`, the body overshoots on landing (a small squash) and
+  recovers. Not done yet: secondary motion on parts that aren't bones (Pip's ears move with the
+  head as one piece).
 - **Anticipation and squash** in `jump`: crouch before the leap, a small squash on landing.
 - **Repeatable "randomness":** blinks come at irregular intervals, but the irregularity comes from
   a hash of the character and start time. The same shot always renders the same, which keeps
   evals and tests stable.
+
+## Why energy is a parameter
+
+The director describes intent: "a shy little wave", "a big excited wave". It shouldn't have to
+pick angles in degrees, which it can't see and would get wrong in different ways for every
+motion. One number from 0 to 1 carries that intent, and each motion decides what it means for
+its own body parts. For `wave`:
+
+| energy | arm raise | forearm swing | time to raise | per swing |
+|---|---|---|---|---|
+| 0 | 120° | ±15° | 0.45 s | 0.32 s |
+| 1 | 160° | ±35° | 0.30 s | 0.22 s |
+
+Bigger moves are also a little faster, as in real excitement. Because the number is bounded and
+the same for every motion, it is easy for an LLM to use, easy to validate in the schema, and
+easy to test ("energy 1 moves more than energy 0"). It also gives the evals in Step 7 something
+measurable to check against the script's mood.
 
 ## Front-view limits (honest notes)
 

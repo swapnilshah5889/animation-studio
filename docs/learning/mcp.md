@@ -82,6 +82,31 @@ scriptable: `scripts/inspector_check.py` lists the tools and calls every one, in
 that must be refused, on a scratch film. Gotcha: Inspector 2.9 asks for Node ≥ 22.19; with this
 machine's Node 22.13 it prints warnings but works.
 
+**What it showed us** (task 2.8):
+- **Docstrings reach the model verbatim, indentation included.** Every description carried
+  `\n        ` from the source code: noise in the model's prompt on every request. Tools are now
+  registered with `inspect.cleandoc`, and a test guards it.
+- **Argument validation happens before our code runs.** `motion: "wavee"` never reaches
+  `apply_motion`. pydantic rejects it against the enum and the error lists the allowed values.
+  That's why enums and ranges belong in the type hints.
+- **Errors arrive as normal results** with `isError: true` and the text prefixed
+  "Error executing tool <name>:". A client that only reads text still gets the full message.
+- **Every result is sent twice:** as JSON text in `content` and as an object in
+  `structuredContent`. Clients that ignore output schemas still work.
+
+## How a tool schema reaches the model
+
+```
+server: @tool functions ──tools/list──▶ client (Claude Code, the director) ──▶ model request:
+        name, description,                 adds the server prefix:              "tools": [{name,
+        inputSchema, outputSchema          mcp__synfig_mcp__apply_motion         description,
+                                                                                 input_schema}]
+model ──tool_use {name, input}──▶ client ──tools/call──▶ server ──result──▶ client ──▶ model
+```
+
+The model only ever sees the name, the description and the input schema. Those three are its
+whole manual for the tool, so every word in a docstring is paid for on every request.
+
 ## Claude Code as the client
 
 `.mcp.json` at the repo root registers the server for anyone who opens the project:

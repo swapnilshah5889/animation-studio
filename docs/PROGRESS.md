@@ -2,10 +2,32 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.8 done. The Claude Code done-when run was
-skipped by the owner (D-035), so that done-when item stays open. Next: 2.9 (docs, Step 3 brief).
+**Current step:** Step 2 (`synfig_mcp`) is done, with one done-when item open: the Claude Code run,
+skipped by the owner (D-035). **Waiting for the owner to review the Step 3 brief**
+(`docs/steps/STEP-3-audio-mcp.md`).
 
 ---
+
+## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
+
+**Done**
+- `docs/learning/mcp.md`:
+  - what the Inspector showed (docstring indentation reaching the model, validation before our
+    code runs, error and result shapes)
+  - how a tool schema reaches the model
+- `docs/learning/motion-library.md`: keyframes and curves (pose-to-pose, interpolation types),
+  overlap and follow-through as the code does them, and why `energy` is a parameter (with the
+  wave's numbers).
+- `docs/steps/STEP-2-synfig-mcp.md`: status and done-when checklist updated. Every item is met
+  except the Claude Code run (D-035).
+- DECISIONS: nothing new. The brief's list (shot spec as source of truth, motion composition,
+  face design, changes) is covered by D-028, D-029 and D-033–D-035.
+- **Step 3 brief drafted:** `docs/steps/STEP-3-audio-mcp.md` (voices, lip-sync, music, sound
+  effects with CLAP + Qdrant, the mix). Not started.
+
+**Next**
+- Owner: review the Step 3 brief, its proposed decisions and its installs.
+- Agent, after approval: task 3.1 (audio schemas).
 
 ## 2026-10-21/22: Step 2 task 2.8 done: the Inspector and Claude Code as clients
 
@@ -169,7 +191,7 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.6 Parallax + camera | **Done**: `studio_core/scene.py` (parallax planes, camera presets, backdrop, feet placement), `schemas/background.schema.json` + placeholder meadow, `studio_core/shot.py` (spec → `scene.sif` → `shot.mp4` with dialogue), key poses, demo film `scripts/make_demo_film.py`; render tests for parallax rates, zoom, placement and the full shot (D-033). Note: `docs/learning/parallax-and-camera.md`. |
 | 2.7 `synfig_mcp` server | **Done**: `mcp/synfig_mcp/` (workspace member, `mcp` 2.3.0, stdio, `uv run synfig-mcp`) with 14 tools over the engine-neutral editor `studio_core/shot_spec.py`; 18 tests, including a real client in-process and over stdio, fixable errors and renders (D-034). Note: `docs/learning/mcp.md`. |
 | 2.8 Prove it from the Inspector and Claude Code | **Done, except the Claude Code run (skipped by the owner)**: Inspector check (`scripts/inspector_check.py`, 19/19 as expected); `.mcp.json`; headless Claude Code connects with only our 14 tools; the done-when run `scripts/run_first_shot.py` is ready but not run, because the CLI login isn't available (D-035). |
-| 2.9 Docs, Step 3 brief | To do |
+| 2.9 Docs, Step 3 brief | **Done**: `mcp.md` (the Inspector's findings, how a tool schema reaches the model), `motion-library.md` (keyframes and curves, follow-through, why energy is a parameter); Step 2 brief checklist ticked; Step 3 brief drafted for review. |
 
 **Verified:** 75 tests pass (`uv run pytest`). The four example files validate; each mistake
 case is reported at the right path.
