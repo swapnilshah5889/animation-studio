@@ -1,7 +1,8 @@
 # Step 3: `audio_mcp`: voices, lip-sync, music, sound effects and the mix
 
-> **Status: approved by the owner on 2026-10-22, as written (installs and proposed decisions
-> included, recorded in D-036).** Work started with task 3.1.
+> **Status: done (2026-10-22).** Approved as written (D-036). Every done-when item is met. One
+> addition, task 3.2b (Indian voices with Indic Parler-TTS, D-042), is built but its gated
+> download is deferred by the owner. Changes during the build are in D-037 to D-046.
 
 **Goal:** an MCP server that turns the director's intent into the sound of a shot. Each
 character speaks with their own voice and the mouth follows automatically. A music cue fits the
@@ -266,17 +267,17 @@ Web research, 2026-10-22 (nothing downloaded except the 0.5 MB probe voice):
 
 ## Done when
 
-- [ ] Audio schemas approved with this brief's decisions; valid and invalid fixtures tested
-- [ ] The owner cast two voices; `speak` + `lipsync` produce a line, its text, metadata and cues
-      in one call, cached by hash
-- [ ] `compose` makes a 10 s cue within the memory budget (peak ≤ 14 GB, no swap), with metadata
-- [ ] The CC0 library is downloaded, licensed in its manifest, and indexed; `find_sfx` passes the
-      retrieval spot-check
-- [ ] Mix tests pass (ducking depth, loudness ±1 LU, sound timing ±10 ms)
-- [ ] **A line of dialogue is voiced, lip-synced onto the Step 2 puppet automatically, and mixed
+- [x] Audio schemas approved with this brief's decisions; valid and invalid fixtures tested
+- [x] The owner cast two voices (Pip c12, Bunny c03, D-039); `speak` + `lipsync` produce a line,
+      its text, metadata and cues in one call, cached by hash
+- [x] `compose` makes a 10 s cue within the memory budget: 9.6 GB peak, no swap (D-041)
+- [x] The CC0 library is downloaded (4,268 sounds), licensed in its manifest, and indexed;
+      `find_sfx` passes the retrieval spot-check (24/24)
+- [x] Mix tests pass (ducking depth, loudness ±1 LU, sound timing ±10 ms)
+- [x] **A line of dialogue is voiced, lip-synced onto the Step 2 puppet automatically, and mixed
       with music and one sound effect into a playable shot, all through MCP tools** (ROADMAP
-      Step 3)
-- [ ] Learning notes, DECISIONS, PROGRESS, MODELS updated; Step 4 brief drafted; work committed
+      Step 3): `scripts/run_step3_shot.py`, approved by the owner (checkpoint 4)
+- [x] Learning notes, DECISIONS, PROGRESS, MODELS updated; Step 4 brief drafted; work committed
       and pushed
 
 ## Risks

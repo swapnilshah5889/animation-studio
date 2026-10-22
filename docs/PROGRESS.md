@@ -2,11 +2,35 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.8 done (3.2b deferred by the owner). **Waiting for
-the owner's review of the done-when shot** (checkpoint 4, `films/step3-demo/shots/s01_sh01/shot.mp4`),
-then 3.9 (docs, Step 4 brief). Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 is **done** (2026-10-22). **Waiting for the owner to review the Step 4 brief**
+(`docs/steps/STEP-4-comfy-mcp.md`). Open items: Step 2's Claude Code run (D-035) and task 3.2b's
+Parler download (deferred by the owner).
 
 ---
+
+## 2026-10-22: Step 3 done; Step 4 brief drafted
+
+**Step 3 in one paragraph:** the director can now make a film's sound through `audio_mcp`.
+- **Voices:** characters are cast once (Pip and Bunny by the owner) and speak lines with
+  automatic mouth cues. Kokoro is in use, and the Hindi voices work.
+- **Music:** composed from a mood at 9.6 GB peak memory (it was 21+ GB).
+- **Sound effects:** found by description among 4,268 CC0 sounds, with CLAP in Qdrant and a
+  hybrid ranking.
+- **The mix:** shots get a full mix (ducked music, −14 LUFS, true-peak safe).
+- **The done-when shot** was built only through MCP tool calls and approved by the owner.
+
+**Owner decisions this step:** the brief (D-036), the casting (D-039), the music samples, the
+Indian voices (D-042; Parler download deferred), FSD50K's CC0 clips (D-044), the done-when shot
+(with the birdsong fix).
+
+**Verified:** see the task table above. The full suite passes (229 tests, ~3 min), with the
+`models` tests running Kokoro, Rhubarb, ACE-Step and CLAP. The Inspector check covers both
+servers, 32/32.
+
+**Next**
+- Owner: review the Step 4 brief (`comfy_mcp`: puppets and backgrounds from text).
+- Open: Step 2's Claude Code run (D-035); 3.2b's Parler download when the owner logs in to
+  Hugging Face.
 
 ## 2026-10-22: Step 3 started: tasks 3.1–3.4 (schemas, voices, lip-sync, music) done
 
@@ -25,7 +49,7 @@ The owner approved the Step 3 brief as written (D-036).
 | 3.6 The mix | **Done**: `studio_core/audio/mix.py` (dialogue/sfx/music buses, sfx normalization, computed ducking envelope, −14 LUFS gain, 4×-oversampled limiter with a true-peak check), `[mix]` config, `render_shot` writes `mix.wav`; tests measure ducking (−10 dB ± 0.5), sound timing (±10 ms) and loudness (±1 LU, ≤ −1 dBTP) (D-045). |
 | 3.7 `audio_mcp` server, and shot tools for sound | **Done**: `mcp/audio_mcp` (7 tools: describe_audio, set_voice, speak, lipsync, compose, find_sfx, preview_mix); `synfig_mcp` gains add_sound_effect, set_music, sound-effect removal, music cues in describe_film; tests through real MCP clients (in-process + stdio, with and without models); Inspector check over both servers 32/32 (D-046). |
 | 3.8 Prove it (owner checkpoint 4) | **Done; approved by the owner (checkpoint 4)**: `scripts/run_step3_shot.py` builds the done-when shot with a scripted MCP client over both servers (launched from `.mcp.json`): 27 calls, 109 s. Pip and Bunny speak in their cast voices with mouth cues, plus composed music, birdsong found by description, and a 1080p render. All 6 checks pass (−14.8 LUFS, −1.5 dBTP); transcript `docs/learning/mcp-step3-shot.md`. The owner's note (traffic in the chosen birdsong) was fixed with `find_sfx(avoid=...)` and the shot re-rendered. |
-| 3.9 Docs, Step 4 brief | To do |
+| 3.9 Docs, Step 4 brief | **Done**: Step 3 brief checklist ticked; learning notes (voices and loudness, lip-sync, embeddings and vector search, the memory hunt, MCP with two servers); MODELS (Kokoro voices, CLAP, the sound library); Step 4 brief drafted for review. |
 
 **Verified**
 - 186 tests pass (`uv run pytest`); ruff is clean.
