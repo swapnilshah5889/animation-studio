@@ -16,7 +16,8 @@ What every image job needs, in one place:
   from its folder.
 - **One copy only:** the film folder keeps the images. ComfyUI's own copies (its output folder)
   and the images uploaded for the run (its input folder) are deleted afterwards, when ComfyUI
-  runs on this machine, so nothing piles up there.
+  runs on this machine, so nothing piles up there. Every run's save prefix gets a fresh token,
+  because ComfyUI answers a repeated graph from its cache with the (deleted) earlier files.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ import subprocess
 import tempfile
 import time
 import urllib.parse
+import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -157,6 +159,15 @@ def run_graph(
     make_room_for_images(cfg)
     comfy = ensure_comfy(cfg)
     graph = json.loads(json.dumps(graph))  # don't mutate the caller's graph
+    # ComfyUI caches a graph it has seen: re-run unchanged, it would only point at files
+    # forget_copies already deleted. A fresh prefix makes the save node run again (the
+    # cached image upstream is reused, so it costs nothing).
+    token = uuid.uuid4().hex[:8]
+    for node in graph.values():
+        if node["class_type"] == "SaveImage":
+            node["inputs"]["filename_prefix"] = (
+                f"{node['inputs'].get('filename_prefix', 'run')}_{token}"
+            )
     uploaded: list[str] = []
     produced_names: list[str] = []
     try:

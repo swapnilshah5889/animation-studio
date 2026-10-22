@@ -137,5 +137,11 @@ def test_real_run(tmp_path: Path) -> None:
     record = run_graph(tmp_path, "test", graph, out_dir=out, seed=11, style="storybook")
     (name,) = record.outputs
     assert Image.open(out / name).size == (512, 512)
-    assert json.loads((out / "run.json").read_text())["graph"] == graph
+    saved = json.loads((out / "run.json").read_text())["graph"]
+    for node_id, node in graph.items():  # the graph as run: save prefixes carry a run token
+        if node["class_type"] == "SaveImage":
+            prefix = node["inputs"]["filename_prefix"]
+            assert saved[node_id]["inputs"]["filename_prefix"].startswith(prefix + "_")
+            saved[node_id]["inputs"]["filename_prefix"] = prefix
+    assert saved == graph
     assert free_comfy()
