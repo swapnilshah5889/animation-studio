@@ -905,3 +905,50 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     edit of the front: the round-2 text prompt, N seeds, the best by the checks.
   - Before cutting, the arm bones are fitted to the drawn angles, then the arms hang as now.
   - Ground shadows are cut away by the colour key.
+
+### D-053: The three-quarter view comes from FLUX.2 klein (owner approved, task 4.5)
+- **`build_puppet(three_quarter="klein")` is the default.** `puppet/turn.py` redraws the
+  chosen sheet's front figure turned (D-052's round-2 prompt) for seeds 1–3. For each seed it:
+  - drops ground shadows: colourless pixels at the feet, keeping any sizeable piece only the
+    shadow had joined (shoes drawn apart from the legs)
+  - places the figure where the three-quarter view goes: the front figure's height, soles on
+    the skeleton's sole, legs centred on its pelvis, edges unmixed from klein's background
+  - scores it with the cut's own checks: turn ≥ 0.5, no paint only one view has, the most
+    three-quarter skeleton on the figure once fitted, a turn near 1
+  - The best sheet and every seed's edit, `run.json` and scores land in
+    `design/<candidate>/three_quarter/`.
+  - It is made once (about 7.5 min for Kit), then reused. `regenerate_turn` makes new edits;
+    `turn_design(replace=True)` re-places and re-scores existing edits without the model.
+  - `three_quarter="sheet"` cuts SDXL's own figure as before.
+- **Limbs fitted to the drawing before the cut** (`puppet/fit.py`, written by a subagent), in
+  every view, without changing drawings that already follow the skeleton (both SDXL c3
+  figures stay unchanged):
+  - Arms: the angles are fitted, and so is the forearm's length, up to the drawn paw's end.
+  - Legs: fitted as straight bars under the torso.
+  - Shoulders: slide (up to 0.75 of an upper arm) onto the drawn arm's centre line. On
+    Kit's near arm, upper-arm coverage went from 24% to 100%.
+- **Arms drawn behind the torso** (the far arm in a three-quarter view) start where they come
+  out from behind the body. The cut walks in from the hand until the cross-section stops
+  being narrow. Pixels before that point stay with the torso (scarf, chest).
+  - A mostly hidden upper arm becomes a plain sleeve in the forearm's colour.
+  - A partly hidden limb's stretch is painted from its own visible pixels.
+  - The forearm's elbow disc is repainted from the forearm itself.
+  - All of this is opaque, and hidden at rest behind the torso.
+- **Faces in any view:**
+  - **Nose:** the lowest compact, near-black blob around the nose line, anywhere in the head.
+    A turned nose sits on the outline.
+  - **Eyes:** dots or arcs (not lines), a little above the nose and within half a head of it,
+    so ear shading is excluded. One found eye takes its side from the skeleton's offsets to
+    the nose.
+  - **Size from the front:** the three-quarter face takes the front's eye size, brow width
+    and mouth width, scaled by head width. A redrawn view's tiny dot eyes would otherwise
+    shrink the character's eyes.
+- **Other fixes:** a pale face inside the outline is figure (its eyes were being dropped as
+  islands), and paws past the wrist get a wider strip.
+- **Kit:** seed 3 chosen.
+  - Turn 108% of asked.
+  - Consistency clean.
+  - Joints on the fitted three-quarter skeleton: 88%. The rebuild takes 27 s once the klein
+    edit exists.
+  - In the test render (`preview_puppet.py --view three_quarter`), Kit faces Pip, waves with
+    the far arm, blinks and talks.

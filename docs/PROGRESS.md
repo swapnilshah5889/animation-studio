@@ -2,12 +2,67 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done. FLUX.2 klein 4B is installed and
-trialled (D-052): it turns Kit properly and keeps the design, but doesn't hold the rig's arm
-pose. **Owner decision pending:** wire it into `build_puppet` (with arm fitting) or not. Then
-4.6 (`generate_background`). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
-download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files,
-Kit's real voice (placeholder c13), and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done. The three-quarter view now comes
+from FLUX.2 klein (D-053), and Kit renders in both views. **Owner review pending:** Kit's new
+three-quarter render (`renders/puppet-preview/step4-demo-kit-three_quarter/`). Next: 4.6
+(`generate_background`). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
+download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's
+real voice (placeholder c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-22: FLUX.2 klein wired into build_puppet (D-053)
+
+The owner approved wiring klein in as proposed in D-052. Built with one subagent in parallel
+(`puppet/fit.py`: limbs fitted to the drawing), plus this session.
+
+**Built**
+- `puppet/turn.py`:
+  - klein redraws the front figure turned, for seeds 1–3
+  - ground shadows are dropped
+  - each figure is placed where the three-quarter view goes, edges unmixed
+  - each sheet is scored with the cut's checks; the best is kept and reused
+    (`regenerate_turn`, or `replace=True` to re-place existing edits)
+- `build_puppet(three_quarter="klein")` is now the default.
+- `puppet/fit.py` (subagent), applied to every view before the cut:
+  - arm angles, forearm lengths to the drawn paw, shoulders slid onto the drawn arm
+  - legs fitted as bars under the torso
+  - drawings that follow the skeleton are left exactly as they were
+- `build.py`:
+  - arms drawn behind the torso are cut where they emerge, with the hidden stretch painted
+    (a mostly hidden upper arm becomes a plain sleeve)
+  - a nose finder that works on turned heads (lowest compact black blob)
+  - eyes: dots or arcs near the nose, never ear shading
+  - the three-quarter face takes the front's eye, brow and mouth sizes
+  - wider paws past the wrist
+
+**Bugs found by looking at renders, and fixed**
+- a paw floating beside the body (the forearm was too short for the drawn arm)
+- leg corridors cutting the tail
+- an eye drawn by the ear
+- the face lost inside klein's pale face (eyes dropped as islands)
+- a scarf chunk riding on the far arm
+- a hole in the torso where the far arm had been
+
+**Verified**
+- Kit: seed 3 of 3 chosen (turn 108% of asked, consistency clean).
+  - Every three-quarter limb passes except one shin (coverage 0.81).
+  - Near upper arm on its drawn arm: 24% → 100%.
+- Renders of both views (7 s, 1080p, about 35 s each). In the three-quarter view Kit faces
+  Pip, waves with the far arm, blinks and talks. The front view is unchanged.
+- 322 tests pass, model tests excluded. New tests:
+  - limb fitting: 24 (subagent)
+  - turn: 6 (shadows, placement, a pale face, best-seed choice, reuse, replace)
+- Klein build: about 7.5 min the first time (three edits), then 27 s.
+
+**Known limits**
+- A small hard edge at the chin when the head turns.
+- Legs fitted as straight bars (bent knees aren't followed).
+- Hidden upper arms are plain sleeves.
+- The three-quarter style is a little flatter than the SDXL front.
+
+**Open questions for the owner**
+1. Does Kit's three-quarter view pass now?
 
 ---
 
@@ -266,7 +321,7 @@ The owner approved the Step 4 brief as written (D-047).
 | 4.2 Skeleton templates | **Done**: `studio_core/puppet/skeleton.py` (Pip proportions, A-pose, front + three-quarter turnaround on 1344×768, OpenPose image and rig bones from the same joints); 7 tests: keypoints found in the image within 1.5 px, bone directions within 1°, names, roles, parents, limits and draw order identical to Pip (D-048). |
 | 4.3 `design_character` (owner checkpoint 2) | **Done; owner chose c3**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
 | 4.4 `build_puppet` (owner checkpoint 3) | **Done; approved by the owner**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
-| 4.5 Three-quarter view | **Done; owner decides on FLUX.2 klein**: both views cut into one rig, `puppet/consistency.py` compares them, `preview_puppet.py --view three_quarter`. Kit's 3/4 fails the check (hat, barely turned) (D-051). |
+| 4.5 Three-quarter view | **Done; FLUX.2 klein wired in (D-052, D-053)**: both views cut into one rig, `puppet/consistency.py` compares them, `preview_puppet.py --view three_quarter`. Kit's 3/4 fails the check (hat, barely turned) (D-051). |
 | 4.6 `generate_background` | To do |
 | 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
 | 4.8 `comfy_mcp` server | To do |

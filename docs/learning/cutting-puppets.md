@@ -66,3 +66,16 @@ pixel, which bone carries it.
   off the head's centre line in a three-quarter view. The drawing says how far it does. A
   ratio near 0 means SDXL drew another front view, a common failure without a model trained
   for view changes.
+
+## A redrawn view needs its bones refitted (D-052, D-053)
+A second view redrawn by an image model (FLUX.2 klein) keeps the character but not our pose:
+the arms come out at whatever angle the model likes. The skeleton the rig uses is then wrong
+for that drawing, so before cutting, `puppet/fit.py` turns each arm bone toward the drawn arm:
+- **What counts as an arm:** a line through the silhouette is not enough, because a line into
+  the torso is "inside" too. An arm is *narrow*: walk sideways from the line and you reach
+  background within a couple of limb radii on both sides. Score a candidate angle by the
+  longest run of such samples starting near the shoulder.
+- **Move only when clearly better** than the skeleton's own line, and by more than half a limb
+  radius at the hand, so drawings that already follow the skeleton stay exactly as they were.
+- **Known gaps:** shoulders aren't refitted, bone lengths are kept, and arms pressed against
+  the body can't be told apart from it (they are reported and left alone).
