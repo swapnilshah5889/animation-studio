@@ -14,6 +14,9 @@ What every image job needs, in one place:
 - **A record next to every output:** `run.json` holds the exact graph, the parameters, the seed,
   the style, ComfyUI's version and the timings. Any image can be regenerated, or explained,
   from its folder.
+- **One copy only:** the film folder keeps the images. ComfyUI's own copies (its output folder)
+  and the images uploaded for the run (its input folder) are deleted afterwards, when ComfyUI
+  runs on this machine, so nothing piles up there.
 """
 
 from __future__ import annotations
@@ -23,13 +26,14 @@ import shutil
 import subprocess
 import tempfile
 import time
+import urllib.parse
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from studio_core.comfy import Comfy, ComfyError
-from studio_core.config import REPO_ROOT, StudioConfig, load_config
+from studio_core.config import REPO_ROOT, StudioConfig, expand_path, load_config
 from studio_core.ollama import Ollama
 
 START_SCRIPT = REPO_ROOT / "scripts" / "comfy_server.sh"
@@ -111,6 +115,27 @@ def ensure_comfy(cfg: StudioConfig, start: bool = True) -> Comfy:
     raise ImageJobError(f"ComfyUI didn't start within {START_TIMEOUT_S}s; see its server.log")
 
 
+def comfy_dirs(cfg: StudioConfig) -> tuple[Path, Path] | None:
+    """ComfyUI's input and output folders, if it runs on this machine (else None)."""
+    host = urllib.parse.urlparse(cfg.get("services", "comfyui_url")).hostname
+    root = expand_path(cfg.get("comfyui", "root"))
+    if host not in ("127.0.0.1", "localhost") or not root.is_dir():
+        return None
+    return root / "input", root / "output"
+
+
+def forget_copies(cfg: StudioConfig, uploaded: list[str], produced: list[str]) -> None:
+    """Delete the run's uploads and ComfyUI's copies of its outputs (names as ComfyUI gave them)."""
+    dirs = comfy_dirs(cfg)
+    if dirs is None:
+        return
+    for folder, names in zip(dirs, (uploaded, produced), strict=True):
+        for name in names:
+            path = (folder / name).resolve()
+            if path.is_relative_to(folder.resolve()) and path.is_file():
+                path.unlink()
+
+
 def run_graph(
     film_root: Path,
     kind: str,
@@ -132,15 +157,18 @@ def run_graph(
     make_room_for_images(cfg)
     comfy = ensure_comfy(cfg)
     graph = json.loads(json.dumps(graph))  # don't mutate the caller's graph
-    for placeholder, path in (uploads or {}).items():
-        uploaded = comfy.upload_image(path)
-        for node in graph.values():
-            for key, value in node["inputs"].items():
-                if value == placeholder:
-                    node["inputs"][key] = uploaded
+    uploaded: list[str] = []
+    produced_names: list[str] = []
     try:
+        for placeholder, path in (uploads or {}).items():
+            uploaded.append(comfy.upload_image(path))
+            for node in graph.values():
+                for key, value in node["inputs"].items():
+                    if value == placeholder:
+                        node["inputs"][key] = uploaded[-1]
         with tempfile.TemporaryDirectory() as tmp:
             produced, seconds = comfy.run(graph, Path(tmp))
+            produced_names = [p.name for p in produced]
             if out_dir.exists():
                 shutil.rmtree(out_dir)
             out_dir.mkdir(parents=True)
@@ -151,6 +179,8 @@ def run_graph(
                 outputs.append(name)
     except ComfyError as e:
         raise ImageJobError(f"ComfyUI refused the {kind} graph: {e}") from None
+    finally:
+        forget_copies(cfg, uploaded, produced_names)
     version = comfy.system_stats().get("system", {}).get("comfyui_version", "")
     record = RunRecord(
         kind=kind,

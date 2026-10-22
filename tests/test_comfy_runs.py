@@ -48,6 +48,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeComfy:
     comfy = FakeComfy()
     monkeypatch.setattr(comfy_runs, "make_room_for_images", lambda cfg: [])
     monkeypatch.setattr(comfy_runs, "ensure_comfy", lambda cfg: comfy)
+    monkeypatch.setattr(comfy_runs, "comfy_dirs", lambda cfg: None)  # never the real folders
     return comfy
 
 
@@ -93,6 +94,25 @@ def test_run_graph_uploads_renames_and_records(fake: FakeComfy, tmp_path: Path) 
     assert saved["kind"] == "design" and saved["seed"] == 7 and saved["style"] == "storybook"
     assert saved["params"] == {"description": "a small fox"} and saved["comfyui"] == "0.42.1"
     assert saved["outputs"] == ["candidate_1.png", "candidate_2.png"] and record.seconds == 1.25
+
+
+def test_comfys_copies_are_deleted(
+    fake: FakeComfy, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    comfy_in, comfy_out = tmp_path / "in", tmp_path / "out"
+    for folder, names in ((comfy_in, ["uploaded_pose.png", "other.png"]), (comfy_out, [
+        "a_00001_.png", "b_00001_.png", "older_00001_.png"])):  # fmt: skip
+        folder.mkdir()
+        for name in names:
+            (folder / name).write_text("x")
+    monkeypatch.setattr(comfy_runs, "comfy_dirs", lambda cfg: (comfy_in, comfy_out))
+    src = tmp_path / "pose.png"
+    Image.new("RGB", (8, 8)).save(src)
+    graph = {"1": {"class_type": "LoadImage", "inputs": {"image": "@pose"}}}
+    run_graph(tmp_path, "design", graph, out_dir=tmp_path / "run", uploads={"@pose": src})
+    assert sorted(p.name for p in comfy_in.iterdir()) == ["other.png"]  # only this run's files
+    assert sorted(p.name for p in comfy_out.iterdir()) == ["older_00001_.png"]
+    assert len(list((tmp_path / "run").glob("*.png"))) == 2
 
 
 def test_comfy_errors_become_job_errors(fake: FakeComfy, tmp_path: Path) -> None:
