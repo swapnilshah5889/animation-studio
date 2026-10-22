@@ -717,3 +717,46 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   Motions are offsets from rest (D-027), so a wave raises the arm 25° higher than on Pip. If
   that looks wrong on the first puppet, add a per-bone neutral offset rather than changing
   the pose.
+
+### D-049: Character design candidates (task 4.3)
+- **`design_character`** (`studio_core/puppet/design.py`): a description plus the film's style
+  gives N turnaround sheets (front + three-quarter on one 1344×768 canvas). Seeds are recorded
+  per candidate. Rounds add candidates (c1..c4, then c5..c8) rather than replacing them.
+  `candidates.json` follows `schemas/design.schema.json`. The prompt template is code; the
+  director writes only the description, which passes the shared children's-content word check
+  (`studio_core/safety.py`, now also used by `speak`).
+- **Two conditions from one skeleton:**
+  - OpenPose at strength 1.0 for all steps (where the joints are)
+  - a code-drawn **mannequin** as a "depth" image at strength 0.4 for the first half of the
+    steps (where the body isn't)
+  - **Why:** OpenPose alone let SDXL rest the arms against the body, and the front-view
+    "limbs clear" check failed on 3 of 4 early sheets. With the mannequin at 0.6, both test
+    seeds passed, but the character turned into a wooden doll. 0.4 for half the steps is the
+    compromise.
+  - Both conditions share one loaded ControlNet.
+- **Faces:** SDXL draws eyes and a mouth whatever the prompt says. Weighting the negatives
+  (`(eyes:1.5)`) didn't remove them, and it cost the arms. So the prompt asks gently, and the
+  build step paints the face area over (as D-047 planned). The owner reviews faces by eye.
+- **Normal mode by default:**
+  - Fast mode (Lightning, CFG 1) ignores the negative prompt, so sheets came back on textured
+    paper with scattered leaves, extra tails and a signature.
+  - Normal mode takes about 4–8 min per sheet on this machine under the current memory pressure
+    (the swap was nearly full), against about 1–2 min for fast mode.
+  - `fast=True` stays available for quick looks.
+- **Automatic checks** (`puppet/checks.py`, pixel geometry, no model):
+  - a plain background
+  - one figure per view (silhouette pieces grouped by the skeleton they sit on, and enclosed
+    holes filled, so a white shirt inside an outline counts as figure)
+  - height within 0.8–1.15 of the pose
+  - at least 85% of the joints on the figure (the misses are listed)
+  - front arms clear of the body
+  - no extra shapes (props, text, shadows, clutter)
+  - **Known limits:** thin text and clutter close to a figure can pass, and the colour key is
+    only a check (the real cut in 4.4 uses SAM 2.1).
+- **Review page:** `scripts/design_review.py` writes `characters/<id>/design/review.html`, with
+  every sheet, its seed, timings and checks, and a toggleable skeleton overlay. The page is
+  self-contained. It is safe to re-run: existing seeds are skipped. `--recheck` re-runs
+  improved checks on existing sheets without generating anything.
+- **One copy of every image:** `run_graph` deletes ComfyUI's own output copies and the
+  uploaded conditioning images after each run, when ComfyUI is local. The film folder and its
+  `run.json` are the record (the owner asked for no leftover files).

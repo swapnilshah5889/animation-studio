@@ -23,6 +23,7 @@ EXAMPLES = {
     "lipsync": "audio/pip_line_01.rhubarb.json",  # real Rhubarb output (Step 0)
     "music": "schemas/music_m01.json",
     "sfx_library": "schemas/sfx_library.json",
+    "design": "schemas/design_kit.json",
 }
 
 
@@ -295,6 +296,28 @@ CASES: list[tuple[str, str, Mutation, str, str]] = [
         lambda d: d["sounds"][1].update(sha256=d["sounds"][0]["sha256"]),
         "sounds",
         "the same audio appears more than once",
+    ),
+    ("design", "unknown choice", lambda d: d.update(chosen="c9"), "chosen", "unknown candidate"),
+    (
+        "design",
+        "duplicate candidate",
+        lambda d: d["candidates"][1].update(id="c1", sheet="c1/sheet.png"),
+        "candidates",
+        "'c1' appears more than once",
+    ),
+    (
+        "design",
+        "ok with problems",
+        lambda d: d["candidates"][0].update(ok=True),
+        "candidates[0].ok",
+        "exactly when problems is empty",
+    ),
+    (
+        "design",
+        "sheet elsewhere",
+        lambda d: d["candidates"][1].update(sheet="c1/sheet.png"),
+        "candidates[1].sheet",
+        "should be c2/sheet.png",
     ),
 ]
 

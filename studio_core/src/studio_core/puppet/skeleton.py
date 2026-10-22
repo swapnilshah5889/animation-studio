@@ -250,6 +250,42 @@ def pose_image(skeletons: list[Skeleton], size: tuple[int, int]) -> Image.Image:
     return img
 
 
+def mannequin_image(skeletons: list[Skeleton], size: tuple[int, int]) -> Image.Image:
+    """A depth-style mannequin on the same joints: an oval head, a torso and round-ended limbs,
+    grey on black (brighter = nearer). The stick figure says where the joints are; the
+    mannequin says where the body *isn't*, so a weak depth condition keeps the arms off the
+    torso (OpenPose alone let SDXL rest them against it, task 4.3). In three-quarter view the
+    near limbs are lighter and the far ones darker."""
+    img = Image.new("RGB", size, (0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for sk in skeletons:
+        j, h = sk.joints, sk.height_px
+        three_quarter = sk.view == "three_quarter"
+
+        def limb(side: str, shade: int, j=j, h=h) -> None:
+            grey = (shade,) * 3
+            for chain, width in (
+                (("shoulder", "elbow", "wrist", "hand"), h * 0.075),
+                (("hip", "knee", "ankle", "foot"), h * 0.086),
+            ):
+                points = [j[f"{side}_{n}"] for n in chain]
+                draw.line(points, fill=grey, width=round(width), joint="curve")
+                for x, y in points[1:]:
+                    r = width * (0.6 if (x, y) == points[-1] else 0.5)
+                    draw.ellipse([x - r, y - r, x + r, y + r], fill=grey)
+
+        limb("l", 120 if three_quarter else 170)  # the far side in 3/4, drawn first
+        torso = [j["r_shoulder"], j["l_shoulder"], j["l_hip"], j["r_hip"]]
+        draw.polygon(torso, fill=(160,) * 3)
+        draw.line([j["neck"], j["pelvis"]], fill=(160,) * 3, width=round(h * 0.12))
+        (nx, ny), (_, ty) = j["neck"], j["head_top"]
+        r = (ny - ty) / 2
+        cx = (j["nose"][0] + nx) / 2 if three_quarter else nx
+        draw.ellipse([cx - 0.85 * r, ty, cx + 0.85 * r, ny + 0.15 * r], fill=(185,) * 3)
+        limb("r", 200 if three_quarter else 170)
+    return img
+
+
 def direction_deg(sk: Skeleton, start: str, end: str) -> float:
     """Direction from one joint to another in degrees, y up (the rig's convention)."""
     (x1, y1), (x2, y2) = sk.joints[start], sk.joints[end]

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/design.schema.json",
+  "title": "Character design candidates",
+  "description": "films/<film>/characters/<id>/design/candidates.json: every turnaround sheet generated for a character (task 4.3, D-049), with its seed and automatic checks. Rounds add candidates (c1..c4, then c5..c8); `chosen` names the one a puppet is built from (task 4.4).",
+  "type": "object",
+  "required": ["schema_version", "character", "style", "candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "character": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+    "style": { "type": "string", "minLength": 1, "description": "The film's style preset when the sheets were made (D-025)." },
+    "chosen": { "type": "string", "pattern": "^c[1-9][0-9]*$", "description": "The candidate the puppet is built from." },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "seed", "fast", "sheet", "ok", "problems"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^c[1-9][0-9]*$" },
+          "description": { "type": "string", "minLength": 3, "maxLength": 300, "description": "The director's words; code wraps them in the turnaround prompt." },
+          "seed": { "type": "integer", "minimum": 0 },
+          "fast": { "type": "boolean", "description": "Made with the few-step (Lightning) settings." },
+          "sheet": { "type": "string", "pattern": "^c[1-9][0-9]*/sheet\\.png$", "description": "Relative to the design folder." },
+          "ok": { "type": "boolean", "description": "True when the automatic checks found no problem." },
+          "problems": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "seconds": { "type": "number", "minimum": 0 },
+          "created": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

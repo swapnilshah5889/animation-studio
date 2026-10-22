@@ -2,9 +2,82 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): brief approved (D-047); tasks 4.1 (ComfyUI plumbing) and 4.2
-(skeleton templates) done. Next: 4.3 (`design_character`, owner checkpoint 2). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
-download (deferred).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.3 done; **owner checkpoint 2 pending**
+(review the first design candidates: `films/step4-demo/characters/kit/design/review.html`).
+Next: 4.4 (`build_puppet`) from the chosen candidate. Open items: Step 2's Claude Code run
+(D-035), task 3.2b's Parler download (deferred), Docker's memory reservation (owner's call).
+
+---
+
+## 2026-10-22: Step 4 task 4.3 done: `design_character` and the first candidates
+
+**Built**
+- `studio_core/puppet/design.py`: `design_character(film_root, id, description, n, seed, fast)`.
+  - Each candidate is a turnaround sheet in the film's style, with a recorded seed.
+  - Rounds add candidates; `candidates.json` is validated against the new `design` schema.
+  - The description passes the shared word check (`studio_core/safety.py`, which `speak`
+    now uses too).
+- Conditioning: the OpenPose skeleton at 1.0 plus a code-drawn mannequin (`mannequin_image`
+  in `skeleton.py`) as weak depth (0.4, first half of the steps). Both share one ControlNet
+  loader (`comfy_graphs.txt2img`).
+- `studio_core/puppet/checks.py` checks each sheet:
+  - a plain background
+  - figures grouped by skeleton, with holes filled
+  - height and joints on the figure, listing the joints that miss
+  - front arms clear of the body
+  - extra shapes (props, text, shadows, clutter)
+- `comfy_runs.run_graph` now deletes ComfyUI's own copies of outputs and the uploaded
+  conditioning images after each run, so the film folder holds the only copy.
+- `scripts/design_review.py`: generates the missing candidates (safe to re-run), frees
+  ComfyUI, and writes the review page with a skeleton overlay toggle.
+- Learning note: `docs/learning/controlnet-conditioning.md`.
+
+**What the experiments showed** (scratch runs, deleted afterwards; details in D-049)
+- OpenPose alone: arms rested against the body in 3 of 4 early sheets.
+- Weighted face negatives (`(eyes:1.5)`): faces stayed and the arms vanished.
+- Fast mode (Lightning, CFG 1): about 1–2 min instead of 4–8, but the negative prompt is
+  ignored, so the sheets came back with paper texture, leaves, a signature and extra tails.
+- Mannequin depth at 0.6: limbs always clear, but a wooden-doll look. 0.4 for half the steps
+  keeps the style.
+- The first version of the checks gave false alarms: light clothes split the silhouette.
+  Grouping the pieces by skeleton and filling holes fixed it, and a sheet then fails only when
+  a look at it agrees.
+
+**Demo: Kit, "a cheerful young fox with a green scarf"** (storybook, normal mode, seeds 101–104)
+
+| Candidate | Time | Checks | By eye |
+|---|---|---|---|
+| c1 (seed 101) | 267 s | pass | Arms well clear, plain background, no shadow, a closed-eye smile. The 3/4 view is barely turned. |
+| c2 (seed 102) | 239 s | fail: 12 extra shapes, 75% of joints | A cluttered sheet (mini foxes, leaves) with a white body suit. Rightly rejected. |
+| c3 (seed 103) | 270 s | pass | A fox in a coat, with a tail. The 3/4 view adds a small hat the front lacks. |
+| c4 (seed 104) | 328 s | fail: a hand touches the tail | Arms clear otherwise. Shorts in the front view, none in the 3/4. |
+
+- **Faces:** all four have faces (two with closed-eye smiles), so 4.4's face fill is needed.
+- **Three-quarter views:** mostly a front view with a slight turn. That is task 4.5's
+  problem.
+- **Speed:** 10–14 s per step, with swap nearly full during the runs.
+
+**Verified**
+- 254 tests pass, model tests excluded. New tests:
+  - checks on synthetic sheets drawn from the skeleton: clean, busy background, arm on hip,
+    missing view, figure off the pose, light shirt, extra shape, clutter
+  - the mannequin itself passes the checks
+  - design rounds with a fake ComfyUI: numbering, seeds, validation, refusals, style change
+  - ComfyUI copies deleted, and only this run's
+  - the design schema with 4 mutation cases
+- Live model test `test_one_real_candidate` (fast mode): passes, run together with `test_real_run` (123 s). ComfyUI kept no output copies, and the images uploaded for the run were deleted.
+
+**Open questions for the owner**
+1. Checkpoint 2: is the look right, which candidate (if any) should become Kit's puppet,
+   and are the faces acceptable given that the build step paints them over?
+2. Speed: each normal-mode sheet takes 4–8 min, partly because memory is under pressure
+   (swap nearly full). Docker's VM reserves about 8 GB; lowering it is your call. There is
+   also a second ComfyUI (port 8189, started by another app, "Montage") running from our
+   ComfyUI install.
+3. Cleanup: `~/ai-studio/scratch/` (about 510 MB from Steps 0–2, Oct 19–21) and the
+   Oct 19–20 images in ComfyUI's output folder predate this task. Delete them?
+
+**Cleaned up:** the experiments' scratch files (96 MB) and 15 images from today's runs in ComfyUI's output and input folders (4.1 smoke, 4.3 experiments, and the demo's copies from before the automatic cleanup).
 
 ---
 
@@ -18,7 +91,7 @@ The owner approved the Step 4 brief as written (D-047).
 |---|---|
 | 4.1 ComfyUI plumbing | **Done**: `studio_core/comfy_runs.py` (`film_style`, `make_room_for_images` with a music guard, `ensure_comfy` starts ComfyUI on demand, `run_graph` uploads, collects, renames and writes `run.json`, `free_comfy`); 5 approved models installed via the manifest. |
 | 4.2 Skeleton templates | **Done**: `studio_core/puppet/skeleton.py` (Pip proportions, A-pose, front + three-quarter turnaround on 1344×768, OpenPose image and rig bones from the same joints); 7 tests: keypoints found in the image within 1.5 px, bone directions within 1°, names, roles, parents, limits and draw order identical to Pip (D-048). |
-| 4.3 `design_character` (owner checkpoint 2) | To do |
+| 4.3 `design_character` (owner checkpoint 2) | **Done; waiting for the owner's review**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
 | 4.4 `build_puppet` (owner checkpoint 3) | To do |
 | 4.5 Three-quarter view | To do |
 | 4.6 `generate_background` | To do |

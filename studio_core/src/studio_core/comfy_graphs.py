@@ -11,6 +11,7 @@ against comfy_workflows/txt2img_sdxl*.json, which scripts/export_workflows.py re
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from studio_core.models import Manifest
@@ -35,6 +36,20 @@ class _Graph:
         return node_id
 
 
+@dataclass(frozen=True)
+class Control:
+    """A ControlNet condition: `image` is a LoadImage input (an uploaded name, or a placeholder
+    run_graph substitutes); `type` picks a union model's mode ("openpose", "depth", "repaint",
+    ...; "auto" leaves it unset)."""
+
+    model: str  # file id in config/models.toml
+    image: str
+    type: str = "auto"
+    strength: float = 1.0
+    start: float = 0.0
+    end: float = 1.0
+
+
 def join_prompt(*parts: str) -> str:
     return ", ".join(p.strip() for p in parts if p and p.strip())
 
@@ -50,8 +65,11 @@ def txt2img(
     width: int = 1024,
     height: int = 1024,
     filename_prefix: str = "txt2img",
+    controls: list[Control] | None = None,
+    batch_size: int = 1,
 ) -> dict[str, dict[str, Any]]:
-    """A text-to-image workflow for one style. `fast` uses the style's few-step settings."""
+    """A text-to-image workflow for one style. `fast` uses the style's few-step settings.
+    `controls` condition the image (ControlNet), e.g. a pose skeleton drawn in code."""
     style = manifest.styles[style_id]
     files = manifest.files
     settings = style.settings(fast)
@@ -94,12 +112,36 @@ def txt2img(
     negative_text = join_prompt(style.data.get("negative", ""), negative, KID_SAFE_NEGATIVE)
     positive = g.add("CLIPTextEncode", "positive", clip=clip, text=positive_text)
     negative_node = g.add("CLIPTextEncode", "negative", clip=clip, text=negative_text)
-    latent = g.add("EmptyLatentImage", width=width, height=height, batch_size=1)
+    pos, neg = [positive, 0], [negative_node, 0]
+    loaded: dict[str, str] = {}  # one loader per ControlNet file, shared by its conditions
+    for c in controls or []:
+        if c.model not in loaded:
+            loaded[c.model] = g.add(
+                "ControlNetLoader", "ControlNet", control_net_name=files[c.model].comfy_name
+            )
+        net = loaded[c.model]
+        if c.type != "auto":
+            net = g.add("SetUnionControlNetType", control_net=[net, 0], type=c.type)
+        image = g.add("LoadImage", "control image", image=c.image)
+        applied = g.add(
+            "ControlNetApplyAdvanced",
+            f"apply ControlNet ({c.type})",
+            positive=pos,
+            negative=neg,
+            control_net=[net, 0],
+            image=[image, 0],
+            strength=c.strength,
+            start_percent=c.start,
+            end_percent=c.end,
+            vae=vae,
+        )
+        pos, neg = [applied, 0], [applied, 1]
+    latent = g.add("EmptyLatentImage", width=width, height=height, batch_size=batch_size)
     sampled = g.add(
         "KSampler",
         model=model,
-        positive=[positive, 0],
-        negative=[negative_node, 0],
+        positive=pos,
+        negative=neg,
         latent_image=[latent, 0],
         seed=seed,
         steps=settings["steps"],

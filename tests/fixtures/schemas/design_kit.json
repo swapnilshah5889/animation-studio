@@ -1,0 +1,29 @@
+{
+ "schema_version": 1,
+ "character": "kit",
+ "style": "storybook",
+ "chosen": "c2",
+ "candidates": [
+  {
+   "id": "c1",
+   "description": "a cheerful young fox with a green scarf",
+   "seed": 101,
+   "fast": false,
+   "sheet": "c1/sheet.png",
+   "ok": false,
+   "problems": ["three_quarter: only 81% of the joints are on the figure (the pose wasn't followed)"],
+   "seconds": 239.85,
+   "created": "2026-10-22T10:00:00Z"
+  },
+  {
+   "id": "c2",
+   "description": "a cheerful young fox with a green scarf",
+   "seed": 102,
+   "fast": false,
+   "sheet": "c2/sheet.png",
+   "ok": true,
+   "problems": [],
+   "seconds": 241.0
+  }
+ ]
+}
