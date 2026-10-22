@@ -43,8 +43,9 @@ import json
 import math
 import shutil
 from dataclasses import dataclass, field
+from itertools import pairwise
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 from PIL import Image, ImageFilter
@@ -60,6 +61,7 @@ from studio_core.puppet.checks import (
 )
 from studio_core.puppet.consistency import ViewCut, compare_views
 from studio_core.puppet.design import CANVAS, DesignError, design_dir, load_candidates
+from studio_core.puppet.fit import fit_limbs
 from studio_core.puppet.segment import segment_sheet
 from studio_core.puppet.skeleton import (
     DRAW_ORDER,
@@ -302,7 +304,9 @@ def assign_parts(
         t, d = _coords(mask.shape, bone["joint_px"], bone["end_px"])
         t_min = 0.0 if bone["parent"] == "torso" else -0.2
         t_max = 1.35 if name in END_LIMBS else 1.15
-        corridor = mask & ~head & (t >= t_min) & (t <= t_max) & (np.abs(d) <= CORRIDOR * r + 2)
+        # Past the wrist or ankle (t > 0.85 of an end limb), paws and feet spread wider.
+        width = np.where((t > 0.85) & (name in END_LIMBS), 2.2 * r, CORRIDOR * r) + 2
+        corridor = mask & ~head & (t >= t_min) & (t <= t_max) & (np.abs(d) <= width)
         core = corridor & (t >= 0.55) & (t <= 0.9) & (np.abs(d) <= 0.6 * r)
         if core.any():  # its own colours: a whole upper arm or thigh, a forearm or shin's top
             colors = _palette(img[core], 6, min_share=0.05)
@@ -403,32 +407,69 @@ def clean_face(
     for b in found:
         b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
         b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
+    # The nose: the lowest solid, near-black mark around the nose line, looked for anywhere in
+    # the head, because a turned head's nose sits on its outline, outside the face zone. Eyes
+    # sit higher, outlines are thin, mouths are rarely black and never compact.
+    band = head.copy()
+    band[: max(0, int(nose_row - 0.25 * row_w))] = False
+    band[int(nose_row + 0.3 * row_w) :] = False
+    blacks = []
+    if band.any():
+        bx0, by0, bx1, by1 = _bbox(band)
+        for b in _blobs((band & (luma < 60))[by0:by1, bx0:bx1]):
+            compact = max(b["w"], b["h"]) <= 3 * min(b["w"], b["h"])  # not a mouth line
+            if (
+                compact
+                and b["area"] / (b["w"] * b["h"]) >= 0.45
+                and b["area"] >= (0.03 * row_w) ** 2
+            ):
+                b["cx"], b["cy"], b["bottom"] = b["cx"] + bx0, b["cy"] + by0, b["bottom"] + by0
+                blacks.append(b)
+    nose = max(blacks, key=lambda b: b["cy"]) if blacks else None
     solid = [b for b in found if b["solid"]]
-    # Open eyes are a pair of solid marks at one height; the nose is the solid mark just below
-    # them. With closed (arc) eyes there is no pair: the solid mark nearest the skeleton's nose
-    # line, preferring the centre, is the nose.
-    pairs = [
-        (a, b)
-        for i, a in enumerate(solid)
-        for b in solid[i + 1 :]
-        if abs(a["cy"] - b["cy"]) < 0.08 * row_w and abs(a["cx"] - b["cx"]) > 0.12 * row_w
-    ]
-    nose = None
-    if pairs:
-        # Two eyes match in size and height; a nose next to an eye doesn't.
-        pair = min(
-            pairs,
-            key=lambda ab: abs(math.log(ab[0]["area"] / ab[1]["area"]))
-            + abs(ab[0]["cy"] - ab[1]["cy"]) / (0.08 * row_w),
+    if nose is None:
+        # No black nose. Open eyes are a pair of solid marks at one height and the nose is the
+        # solid mark just below them; with closed (arc) eyes there is no pair, and the solid
+        # mark nearest the skeleton's nose line, preferring the centre, is the nose.
+        pairs = [
+            (a, b)
+            for i, a in enumerate(solid)
+            for b in solid[i + 1 :]
+            if abs(a["cy"] - b["cy"]) < 0.08 * row_w and abs(a["cx"] - b["cx"]) > 0.12 * row_w
+        ]
+        if pairs:
+            # Two eyes match in size and height; a nose next to an eye doesn't.
+            pair = min(
+                pairs,
+                key=lambda ab: (
+                    abs(math.log(ab[0]["area"] / ab[1]["area"]))
+                    + abs(ab[0]["cy"] - ab[1]["cy"]) / (0.08 * row_w)
+                ),
+            )
+            eye_y = (pair[0]["cy"] + pair[1]["cy"]) / 2
+            below = [b for b in solid if all(b is not e for e in pair) and b["cy"] > eye_y]
+            nose = min(below, key=lambda b: b["cy"]) if below else None
+        elif solid:
+            nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
+
+    def on_nose(b: dict[str, Any]) -> bool:
+        return nose is not None and (
+            abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2
+            and abs(b["cy"] - nose["cy"]) <= nose["h"] / 2 + 2
         )
-        eye_y = (pair[0]["cy"] + pair[1]["cy"]) / 2
-        below = [b for b in solid if all(b is not e for e in pair) and b["cy"] > eye_y]
-        nose = min(below, key=lambda b: b["cy"]) if below else None
-    elif solid:
-        nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
-    marks = [b for b in found if b is not nose]
+
+    marks = [b for b in found if b is not nose and not on_nose(b)]
     nose_y = nose["cy"] if nose else sk.joints["nose"][1]
-    above = [b for b in marks if b["cy"] < nose_y - 0.02 * row_w]
+    nx = nose["cx"] if nose else sk.joints["nose"][0]
+    # Eyes sit a little above the nose and within about half a head of it: further back or
+    # higher, a turned head's marks are ear shading, not a far eye.
+    above = [
+        b
+        for b in marks
+        if nose_y - 0.25 * row_w < b["cy"] < nose_y - 0.02 * row_w
+        and abs(b["cx"] - nx) < 0.45 * row_w
+        and max(b["w"], b["h"]) <= 4 * min(b["w"], b["h"])  # a dot or an arc, not a line
+    ]
     top = min((b["cy"] for b in above), default=nose_y)
 
     def score(b: dict[str, Any]) -> float:  # big, and lower (eyes) rather than higher (brows)
@@ -443,13 +484,14 @@ def clean_face(
         if len(pair) == 2:
             eyes = {"right": pair[0], "left": pair[1]}  # the character's left is screen-right
         else:
-            side = (
-                "left"
-                if first["cx"] > (sk.joints["l_eye"][0] + sk.joints["r_eye"][0]) / 2
-                else "right"
+            # One eye: the side whose skeleton eye sits at the most similar offset from the nose
+            # (a turned face shows the near eye, well behind the nose).
+            offset = first["cx"] - nx
+            side = min(
+                ("left", "right"),
+                key=lambda e: abs(offset - (sk.joints[f"{e[0]}_eye"][0] - sk.joints["nose"][0])),
             )
             eyes = {side: first}
-    nx = nose["cx"] if nose else sk.joints["nose"][0]
     mouth = [b for b in marks if b["cy"] > nose_y and abs(b["cx"] - nx) < 0.25 * row_w]
 
     remove = np.zeros_like(head)
@@ -499,8 +541,70 @@ def clean_face(
         "eyes_found": sorted(k for k, b in eyes.items() if not b.get("inferred")),
         "mouth_marks": len(mouth),
         "marks_painted_over": len(marks),
+        "head_width_px": round(row_w, 1),
     }
     return cleaned, anchors, notes
+
+
+def emergence(figure: np.ndarray, bone: dict[str, Any], r: float) -> float:
+    """Where along a bone (t, 0 = joint) the drawn limb comes out from behind the body. Walked
+    from the far end inward: the limb is narrow (its cross-section reaches background within
+    2.5 radii on both sides) until it enters the body. Walking outward from the shoulder
+    instead is fooled by gaps above the shoulders (a near-horizontal arm's cross-section is
+    vertical there)."""
+    (ax, ay), (bx, by) = bone["joint_px"], bone["end_px"]
+    length = math.hypot(bx - ax, by - ay)
+    nx, ny = -(by - ay) / length, (bx - ax) / length
+    limit = int(2.5 * r) + 1
+    steps = np.linspace(0.9, 0.0, 46)
+    for prev, t in pairwise(steps):
+        x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+        narrow = _walk(figure, x, y, nx, ny, limit) is not None and (
+            _walk(figure, x, y, -nx, -ny, limit) is not None
+        )
+        if not narrow:
+            return float(prev)
+    return 0.0
+
+
+def complete_hidden(
+    rgb: np.ndarray,
+    figure: np.ndarray,
+    parts: dict[str, np.ndarray],
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+    order: tuple[str, ...],
+) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Arms drawn *behind* the torso (the far arm in a three-quarter view) start where they
+    come out from behind the body: corridor pixels before that are the torso's (a scarf, the
+    chest), and the hidden stretch back to the joint is painted from the sleeve's own colours,
+    so a raised arm shows a whole sleeve. An upper arm that is mostly hidden becomes a plain
+    sleeve in the forearm's colour. Returns, per hidden arm, where it emerges and
+    the masks to fill, and notes."""
+    fills: dict[str, dict[str, Any]] = {}
+    notes: dict[str, Any] = {}
+    rank = {name: i for i, name in enumerate(order)}
+    for name in ("upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r"):
+        if rank[name] > rank["torso"]:
+            continue  # in front of the torso: drawn whole
+        bone, r = bones[name], fits[name]["radius_px"]
+        t_e = emergence(figure, bone, r)
+        if t_e <= 0.05:
+            continue
+        t, d = _coords(figure.shape, bone["joint_px"], bone["end_px"])
+        sleeve = name.startswith("upper") and t_e >= 0.5
+        # A plain sleeve replaces the whole upper arm, so all its cut pixels go back.
+        before = parts[name] & (t < t_e) if not sleeve else parts[name].copy()
+        parts[name] &= ~before
+        parts["torso"] |= before
+        ends = _disc(figure.shape, bone["joint_px"], r) | _disc(figure.shape, bone["end_px"], r)
+        fills[name] = {
+            "t": t_e,
+            "stretch": (t >= 0) & (t < t_e + 0.05) & (np.abs(d) <= r),
+            "whole": ((t >= 0) & (t <= 1) & (np.abs(d) <= r)) | ends,
+        }
+        notes[name] = {"emerges_at_t": round(t_e, 2), "drawn": "sleeve" if sleeve else "fill"}
+    return fills, notes
 
 
 # ----------------------------------------------------------------------------------- caps
@@ -677,6 +781,10 @@ def _cut_view(
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
     order = draw_order(sk.view)
+    # Limbs drawn elsewhere than the skeleton's (a klein three-quarter figure: arms at other
+    # angles and lengths, legs apart) are found first, so the bones and the cut follow the
+    # drawing (puppet/fit.py). A drawing that follows the skeleton is left as it is.
+    sk, limbs_fitted = fit_limbs(figure, sk)
     bones = rig_bones(sk)
     fits = {limb: limb_fit(figure, sk, bones[limb]) for limb in LIMBS}
     # No limb much thicker than its mirror (the three-quarter view's near side may be wider).
@@ -696,7 +804,31 @@ def _cut_view(
     head = head_mask(img, figure, sk)
     parts = assign_parts(img, figure, head, bones, fits)
     rgb, anchors, face_notes = clean_face(img, head, sk)
+    hidden, hidden_notes = complete_hidden(rgb, figure, parts, bones, fits, order)
     masks, pixels = add_caps(rgb, figure, parts, bones, fits, sk.height_px, order)
+    drawn: dict[str, np.ndarray] = {}  # pixels made here, not cut: opaque wherever they are
+    luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
+    for name, info in hidden.items():
+        fore = "forearm" + name[-2:]
+        if name.startswith("upper") and info["t"] >= 0.5:
+            # Mostly hidden (it comes out from behind the body near the elbow): a plain sleeve
+            # in the forearm's colour with a darker edge, instead of whatever lies over it.
+            shape = info["whole"]
+            sleeve = np.median(rgb[parts[fore] & (luma > 80)], axis=0)
+            pixels[name] = np.where(shape[..., None], sleeve, pixels[name])
+            pixels[name][shape & ~_shrink(shape, 2)] = 0.55 * sleeve
+            masks[name] = shape
+            drawn[name] = shape
+            # The forearm's elbow disc came from the sheet, where the scarf or the body lies:
+            # repaint it from the forearm's own pixels.
+            cap = masks[fore] & ~parts[fore]
+            pixels[fore] = paint_from(pixels[fore], parts[fore], cap)
+            drawn[fore] = cap
+        else:  # partly hidden: the stretch behind the body, from the arm's own visible pixels
+            fill = info["stretch"] & ~masks[name]
+            pixels[name] = paint_from(pixels[name], parts[name], fill)
+            masks[name] |= fill
+            drawn[name] = fill
     alpha = _alpha(img, figure, bg)
 
     parts_dir = folder / "parts" / sk.view
@@ -715,7 +847,10 @@ def _cut_view(
         y0 = max(0, min(y0, *(int(y) - 2 for _, y in joints)))
         x1 = min(m.shape[1], max(x1, *(int(x) + 3 for x, _ in joints)))
         y1 = min(m.shape[0], max(y1, *(int(y) + 3 for _, y in joints)))
-        a = np.where(m, alpha, 0)[y0:y1, x0:x1]
+        a = np.where(m, alpha, 0)
+        if bone_name in drawn:
+            a = np.where(drawn[bone_name], 1.0, a)
+        a = a[y0:y1, x0:x1]
         color = _unmix(pixels[bone_name][y0:y1, x0:x1], a, bg)
         rgba = np.dstack([color, a * 255]).round().astype("uint8")
         Image.fromarray(rgba, "RGBA").save(parts_dir / f"{bone_name}.png")
@@ -777,6 +912,8 @@ def _cut_view(
     }
     hung = hang_arms(folder, view)
     report = {
+        "limbs_fitted": limbs_fitted,
+        "hidden_limbs": hidden_notes,
         "limbs": fits,
         "limbs_ok": all(f["ok"] for f in fits.values()),
         "face": face_notes,
@@ -794,6 +931,21 @@ def _cut_view(
     return _Cut(view, report, ViewCut(sk, parts))
 
 
+def _match_face(front: _Cut, other: _Cut) -> None:
+    """The other view's vector face takes the front's eye size, brow width and mouth width,
+    scaled by head width. The eyes are part of who the character is: a redrawn view may draw
+    them as tiny dots, but the puppet's eyes must look the same from every side."""
+    scale = other.report["face"]["head_width_px"] / front.report["face"]["head_width_px"]
+    f, o = front.view["face"], other.view["face"]
+    size = round(f["eyes"]["size_px"] * scale, 1)
+    o["eyes"]["size_px"] = size
+    for side in ("left", "right"):
+        x, y = o["eyes"][f"{side}_px"]
+        o["brows"][f"{side}_px"] = [x, round(y - 0.95 * size, 1)]
+    o["brows"]["width_px"] = round(f["brows"]["width_px"] * scale, 1)
+    o["mouth"]["width_px"] = round(f["mouth"]["width_px"] * scale, 1)
+
+
 def build_puppet(
     film_root: Path,
     character_id: str,
@@ -801,10 +953,16 @@ def build_puppet(
     name: str | None = None,
     candidate: str | None = None,
     sam: bool = True,
+    three_quarter: Literal["klein", "sheet"] = "klein",
+    regenerate_turn: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
-    palette.json, and build/report.json with each view's fit and the views' consistency."""
+    palette.json, and build/report.json with each view's fit and the views' consistency.
+
+    `three_quarter="klein"` (D-053) first redraws the three-quarter figure from the front with
+    FLUX.2 klein (puppet/turn.py, best of a few seeds, made once and reused unless
+    `regenerate_turn`); "sheet" cuts SDXL's own three-quarter figure."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -814,6 +972,19 @@ def build_puppet(
     sheet = design_dir(film_root, character_id) / candidate / "sheet.png"
     if not sheet.is_file():
         raise DesignError(f"no sheet for candidate {candidate!r}")
+    source: dict[str, Any] = {"method": "sheet"}
+    if three_quarter == "klein":
+        from studio_core.puppet.turn import turn_design  # turn uses this module
+
+        turned = turn_design(
+            film_root, character_id, candidate=candidate, regenerate=regenerate_turn
+        )
+        sheet = turned.sheet
+        source = {
+            "method": "FLUX.2 klein from the front",
+            "seed": turned.choice["chosen_seed"],
+            "scores": turned.choice["seeds"][f"s{turned.choice['chosen_seed']}"],
+        }
     img = np.asarray(Image.open(sheet).convert("RGB")).astype("float32")
     skeletons = list(turnaround(CANVAS))
     folder = film_root / "characters" / character_id
@@ -829,6 +1000,7 @@ def build_puppet(
         figures, silhouettes = _add_sam(film_root, sheet, skeletons, keys, folder)
 
     cuts = {sk.view: _cut_view(img, sk, figures[sk.view], bgs[sk.view], folder) for sk in skeletons}
+    _match_face(cuts["front"], cuts["three_quarter"])
     rig = {
         "schema_version": 1,
         "id": character_id,
@@ -843,6 +1015,7 @@ def build_puppet(
     (folder / "palette.json").write_text(json.dumps({"colors": colors}, indent=1) + "\n")
     report = {
         "candidate": candidate,
+        "three_quarter_source": source,
         "views": {
             view: {"silhouette": silhouettes[view], **cut.report} for view, cut in cuts.items()
         },

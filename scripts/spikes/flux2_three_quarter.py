@@ -41,10 +41,11 @@ from studio_core.comfy_runs import free_comfy, run_graph
 from studio_core.config import REPO_ROOT
 from studio_core.models import load_manifest
 from studio_core.puppet import build
-from studio_core.puppet.checks import background, check_sheet, components, fill_holes, silhouette
+from studio_core.puppet.checks import check_sheet
 from studio_core.puppet.consistency import ViewCut, compare_views
 from studio_core.puppet.design import CANVAS, design_dir, load_candidates
 from studio_core.puppet.skeleton import mannequin_image, turnaround
+from studio_core.puppet.turn import place  # shadows dropped, edges unmixed (D-053)
 
 OUT = REPO_ROOT / "renders" / "spikes" / "flux2-three-quarter"
 SIZE = (896, 1024)  # the front crop's aspect (672x768) at ~0.9 MP, multiples of 16
@@ -85,39 +86,6 @@ ROUNDS = {
         ),
     },
 }
-
-
-def figure_only(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """The largest figure on a plain background (colour key, holes filled) and the bg colour."""
-    bg, _ = background(img)
-    mask = silhouette(img, bg)
-    small = fill_holes(mask[::4, ::4])
-    blobs = components(small)
-    keep = np.repeat(np.repeat(blobs[0], 4, axis=0), 4, axis=1)[: mask.shape[0], : mask.shape[1]]
-    full = np.zeros_like(mask)
-    full[: keep.shape[0], : keep.shape[1]] = keep
-    return mask & build._grow(full, 2), bg
-
-
-def place(sheet: np.ndarray, edited: np.ndarray, height: float, sk) -> np.ndarray:
-    """The sheet with its three-quarter half replaced by the edited figure, scaled to `height`
-    with its soles on the skeleton's sole and its legs centred on the skeleton's pelvis."""
-    mask, _ = figure_only(edited)
-    x0, y0, x1, y1 = build._bbox(mask)
-    scale = height / (y1 - y0)
-    fig = Image.fromarray(edited[y0:y1, x0:x1].astype("uint8"))
-    alpha = Image.fromarray((mask[y0:y1, x0:x1] * 255).astype("uint8"))
-    size = (round((x1 - x0) * scale), round((y1 - y0) * scale))
-    fig, alpha = fig.resize(size, Image.Resampling.LANCZOS), alpha.resize(size)
-    legs = np.asarray(alpha)[int(size[1] * 0.75) :] > 127  # the bottom quarter: legs and feet
-    legs_x = float(np.nonzero(legs)[1].mean()) if legs.any() else size[0] / 2
-    bg, _ = background(sheet)
-    out = Image.fromarray(sheet.astype("uint8"))
-    ImageDraw.Draw(out).rectangle([CANVAS[0] // 2, 0, CANVAS[0], CANVAS[1]], fill=tuple(
-        int(c) for c in bg))  # fmt: skip
-    px, sole = sk.joints["pelvis"][0], sk.joints["sole"][1]
-    out.paste(fig, (round(px - legs_x), round(sole - size[1])), alpha)
-    return np.asarray(out).astype("float32")
 
 
 def measure(sheet: np.ndarray) -> dict:

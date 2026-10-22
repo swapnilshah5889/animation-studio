@@ -167,7 +167,7 @@ def test_the_face_is_painted_out_but_the_nose_stays() -> None:
 
 
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
-    built = build_puppet(film, "kit", name="Kit", sam=False)
+    built = build_puppet(film, "kit", name="Kit", sam=False, three_quarter="sheet")
     folder = film / "characters" / "kit"
     assert built.rig_path == folder / "rig.json" and validate_file(built.rig_path) == []
     assert set(built.rig["views"]) == {"front", "three_quarter"}
@@ -195,7 +195,7 @@ def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
 
 
 def test_turning_the_arms_back_reproduces_the_sheet(film: Path) -> None:
-    built = build_puppet(film, "kit", sam=False)
+    built = build_puppet(film, "kit", sam=False, three_quarter="sheet")
     for sk in (FRONT, SIDE):
         view = built.rig["views"][sk.view]
         turned = built.report["views"][sk.view]["arms_turned_to_hang_deg"]
@@ -222,11 +222,11 @@ def test_sam_joins_the_colour_key_unless_it_went_wrong(
         return paths
 
     monkeypatch.setattr(build, "segment_sheet", fake_segment)
-    views = build_puppet(film, "kit").report["views"]
+    views = build_puppet(film, "kit", three_quarter="sheet").report["views"]
     assert {v["silhouette"]["method"] for v in views.values()} == {"colour key + SAM 2.1"}
     masks["three_quarter"] = np.zeros_like(drawn["front"])
     masks["three_quarter"][:, 672:] = True  # SAM returned the whole column
-    views = build_puppet(film, "kit").report["views"]
+    views = build_puppet(film, "kit", three_quarter="sheet").report["views"]
     assert views["front"]["silhouette"]["method"] == "colour key + SAM 2.1"
     assert views["three_quarter"]["silhouette"]["sam_rejected"]
 
@@ -280,4 +280,4 @@ def test_nothing_chosen_is_refused(film: Path) -> None:
     del data["chosen"]
     data_path.write_text(json.dumps(data))
     with pytest.raises(BuildError, match="no design chosen"):
-        build_puppet(film, "kit", sam=False)
+        build_puppet(film, "kit", sam=False, three_quarter="sheet")
