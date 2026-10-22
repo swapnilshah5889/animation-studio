@@ -33,6 +33,9 @@ def test_recognizer_choice() -> None:
     assert recognizer_for(None) == "pocketSphinx"  # Step 0 fixture lines: English
     assert recognizer_for(meta("af_heart", "bf_emma")) == "pocketSphinx"
     assert recognizer_for(meta("af_heart", "ef_dora")) == "phonetic"
+    english_parler = {"voice": {"engine": "parler", "speaker": "Mary", "language": "en-in"}}
+    assert recognizer_for(english_parler) == "pocketSphinx"
+    assert recognizer_for({"voice": {**english_parler["voice"], "language": "hi"}}) == "phonetic"
 
 
 def test_refusals(tmp_path: Path) -> None:

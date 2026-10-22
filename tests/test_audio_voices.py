@@ -13,7 +13,7 @@ import pytest
 
 from studio_core.audio import ffmpeg
 from studio_core.audio.voices import (
-    MODEL,
+    ENGINES,
     VoiceError,
     check_text,
     line_hash,
@@ -26,6 +26,7 @@ from studio_core.schema import validate
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VOICE = json.loads((FIXTURES / "schemas" / "voice_pip.json").read_text())
+KOKORO = ENGINES["kokoro"]["model"]
 has_kokoro = expand_path(load_config().get("envs", "kokoro")["python"]).exists()
 has_rhubarb = load_config().path("tools", "rhubarb").exists()
 
@@ -79,10 +80,10 @@ def test_check_text() -> None:
 
 
 def test_line_hash() -> None:
-    base = line_hash("Hi!", VOICE, MODEL)
-    assert base == line_hash("Hi!", {**VOICE, "notes": "changed notes"}, MODEL)  # notes ignored
-    assert base != line_hash("Hi?", VOICE, MODEL)
-    assert base != line_hash("Hi!", {**VOICE, "speed": 1.1}, MODEL)
+    base = line_hash("Hi!", VOICE, KOKORO)
+    assert base == line_hash("Hi!", {**VOICE, "notes": "changed notes"}, KOKORO)  # notes ignored
+    assert base != line_hash("Hi?", VOICE, KOKORO)
+    assert base != line_hash("Hi!", {**VOICE, "speed": 1.1}, KOKORO)
     assert base != line_hash("Hi!", VOICE, "another model")
 
 
@@ -191,3 +192,72 @@ def test_speak_writes_lines_caches_and_regenerates(tmp_path: Path) -> None:
     assert [(r.line_id, r.take, r.cached) for r in redo] == [("l002", 2, False)]
     fresh = json.loads(cues.read_text())  # the stale cues were replaced by cues for this take
     assert fresh["metadata"]["duration"] == pytest.approx(redo[0].duration_s, abs=0.05)
+
+
+# ------------------------------------------------------------------ languages, Parler (3.2b)
+
+PARLER = {
+    "schema_version": 1,
+    "character": "asha",
+    "engine": "parler",
+    "language": "en-in",
+    "speaker": "Mary",
+    "pitch": "high",
+    "speed": 1.15,
+    "expressiveness": 0.9,
+}
+HINDI = "नमस्ते बनी! देखो, मुझे ऊँची घास में क्या मिला। एक लाल पतंग!"
+
+
+def test_hindi_text_is_speakable() -> None:
+    assert check_text(HINDI) == []
+
+
+def test_parler_description_is_written_by_code() -> None:
+    from studio_core.audio.voices import parler_description
+
+    text = parler_description(PARLER)
+    assert text.startswith("Mary's voice is high-pitched and very expressive and animated")
+    assert "speaking quickly" in text and "no background noise" in text
+    calm = parler_description({**PARLER, "pitch": "low", "speed": 0.8, "expressiveness": 0.1})
+    assert "low-pitched and monotone, speaking slowly" in calm
+    assert "moderate in pitch and expressive, speaking at a moderate pace" in parler_description(
+        {k: v for k, v in PARLER.items() if k not in ("pitch", "speed", "expressiveness")}
+    )
+
+
+def test_jobs_per_engine() -> None:
+    from studio_core.audio.voices import _job, seed_of
+
+    items = [{"key": "l001", "text": "Hello!", "voice": PARLER}]
+    (line,) = _job("parler", items, "/tmp/x", load_config())["lines"]
+    assert line["description"].startswith("Mary's voice") and line["seed"] == seed_of(
+        "Hello!", PARLER
+    )
+    assert seed_of("Hello!", PARLER) != seed_of("Hello?", PARLER)
+    hindi_voice = {**VOICE, "voices": [{"id": "hf_alpha"}], "language": "en-in"}
+    items = [{"key": "l002", "text": "Hello!", "voice": hindi_voice}]
+    assert _job("kokoro", items, "/tmp/x", load_config())["lines"][0]["lang"] == "a"
+
+
+def test_voice_schema_per_engine() -> None:
+    assert validate("voice", PARLER) == []
+    no_speaker = {k: v for k, v in PARLER.items() if k != "speaker"}
+    assert "'speaker' is a required property" in str(validate("voice", no_speaker)[0])
+    mixed = {**PARLER, "voices": [{"id": "af_heart"}]}
+    assert "a parler voice doesn't use 'voices'" in str(validate("voice", mixed)[0])
+    assert "only parler voices use 'speaker'" in str(
+        validate("voice", {**VOICE, "speaker": "Mary"})[0]
+    )
+    assert validate("voice", {**PARLER, "language": "fr"})  # not a supported language yet
+
+
+@pytest.mark.models
+@pytest.mark.skipif(not (has_kokoro and has_rhubarb), reason="no Kokoro env or Rhubarb")
+def test_kokoro_speaks_hindi_with_phonetic_cues(tmp_path: Path) -> None:
+    voice = {**VOICE, "voices": [{"id": "hf_alpha", "weight": 1}], "language": "hi"}
+    film = film_with_voice(tmp_path, voice)
+    (line,) = speak(film, "pip", [{"text": HINDI}])
+    cues = json.loads(line.cues.read_text())
+    assert validate("lipsync", cues) == [] and len(cues["mouthCues"]) > 10
+    assert ffmpeg.measure(line.wav).integrated_lufs == pytest.approx(-20, abs=0.5)

@@ -28,6 +28,7 @@ import json
 import re
 import subprocess
 import tempfile
+import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,7 +41,7 @@ from studio_core.schema import validate
 
 SAMPLE_RATE = 24_000
 PEAK_CEILING_DB = -1.5
-WORKER = REPO_ROOT / "scripts" / "audio" / "kokoro_batch.py"
+WORKER = REPO_ROOT / "scripts" / "audio" / "kokoro_batch.py"  # workers live next to each other
 BLOCKLIST = REPO_ROOT / "config" / "safety_blocklist.txt"
 LINE_ID = re.compile(r"^l([0-9]{3,})$")
 # Letters (any script), digits, spaces and the punctuation speech uses.
@@ -70,6 +71,12 @@ def _blocklist() -> set[str]:
     return {w.strip().lower() for w in words if w.strip() and not w.startswith("#")}
 
 
+def _speakable(c: str) -> bool:
+    """Letters, digits, spaces, speech punctuation, plus the combining marks of scripts like
+    Devanagari (vowel signs, virama) and its danda punctuation."""
+    return bool(ALLOWED.match(c)) or unicodedata.category(c).startswith("M") or c in "\u0964\u0965"
+
+
 def check_text(text: str) -> list[str]:
     """Why a line can't be spoken in a children's film ([] = fine)."""
     problems = []
@@ -79,7 +86,7 @@ def check_text(text: str) -> list[str]:
         problems.append(f"the text is {len(text)} characters; split it into lines of at most 300")
     if re.search(r"https?://|www\.|@\w+\.\w", text):
         problems.append("the text contains a web or email address")
-    odd = sorted({c for c in text if not ALLOWED.match(c)})
+    odd = sorted({c for c in text if not _speakable(c)})
     if odd:
         problems.append(f"the text contains characters that can't be spoken: {''.join(odd)!r}")
     blocked = sorted({w for w in re.findall(r"[a-z']+", text.lower()) if w in _blocklist()})
@@ -136,20 +143,105 @@ def load_voice(film_root: Path, character_id: str) -> dict[str, Any]:
 
 
 def _defaults(voice: dict[str, Any]) -> dict[str, Any]:
-    return {"speed": 1.0, "pitch_semitones": 0.0, "loudness_lufs": -20.0, **voice}
+    return {
+        "speed": 1.0,
+        "pitch_semitones": 0.0,
+        "loudness_lufs": -20.0,
+        "pitch": "moderate",
+        "expressiveness": 0.5,
+        **voice,
+    }
+
+
+# --------------------------------------------------------------------------- engines
+
+# What each worker reports as its model; part of every line's hash, so a model change re-voices.
+ENGINES = {
+    "kokoro": {
+        "env": "kokoro",
+        "worker": "kokoro_batch.py",
+        "model": "kokoro-82m v1.0 (kokoro 0.9.4)",
+    },
+    "parler": {
+        "env": "parler",
+        "worker": "parler_batch.py",
+        "model": "indic-parler-tts (parler-tts d108732)",
+    },
+}
+KOKORO_LANG = {"en-us": "a", "en-gb": "b", "en-in": "a", "hi": "h"}  # Kokoro has no en-IN rules
+
+
+def model_of(voice: dict[str, Any]) -> str:
+    engine = voice["engine"]
+    if engine not in ENGINES:
+        raise VoiceError(f"{engine} isn't installed; it's decided at voice casting")
+    return ENGINES[engine]["model"]
+
+
+def parler_description(voice: dict[str, Any]) -> str:
+    """Parler is steered by a description. Code writes it from the voice's settings (the LLM
+    never does), naming the speaker so the voice stays the same from line to line."""
+    v = _defaults(voice)
+    pitch = {"low": "low-pitched", "moderate": "moderate in pitch", "high": "high-pitched"}
+    e = v["expressiveness"]
+    style = "monotone" if e < 0.25 else "very expressive and animated" if e > 0.75 else "expressive"
+    pace = "slowly" if v["speed"] < 0.9 else "quickly" if v["speed"] > 1.1 else "at a moderate pace"
+    return (
+        f"{v['speaker']}'s voice is {pitch[v['pitch']]} and {style}, speaking {pace}, "
+        "with a very clear, close-up recording that has no background noise."
+    )
+
+
+def seed_of(text: str, voice: dict[str, Any]) -> int:
+    """A fixed seed per line for engines that sample (Parler): same line, same take."""
+    return int(line_hash(text, voice, model_of(voice))[:8], 16)
+
+
+def run_worker(engine: str, job: dict[str, Any], cfg: StudioConfig) -> dict[str, Any]:
+    python = expand_path(cfg.get("envs", ENGINES[engine]["env"])["python"])
+    worker = WORKER.parent / ENGINES[engine]["worker"]
+    proc = subprocess.run(
+        [str(python), str(worker)], input=json.dumps(job), capture_output=True, text=True
+    )
+    if proc.returncode != 0:
+        raise VoiceError(f"the {engine} worker failed: {proc.stderr[-1500:]}")
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+def _job(engine: str, items: list[dict[str, Any]], raw_dir: str, cfg: StudioConfig) -> dict:
+    if engine == "kokoro":
+        return {
+            "out_dir": raw_dir,
+            "device": cfg.get("audio", "kokoro_device", "cpu"),
+            "voices": items[0]["voice"]["voices"],
+            "speed": 1.0,
+            "lines": [
+                {
+                    "key": it["key"],
+                    "text": it["text"],
+                    "voices": it["voice"]["voices"],
+                    "speed": _defaults(it["voice"])["speed"],
+                    "lang": KOKORO_LANG.get(it["voice"].get("language", "")),
+                }
+                for it in items
+            ],
+        }
+    return {
+        "out_dir": raw_dir,
+        "device": cfg.get("audio", "parler_device", "mps"),
+        "lines": [
+            {
+                "key": it["key"],
+                "text": it["text"],
+                "description": parler_description(it["voice"]),
+                "seed": seed_of(it["text"], it["voice"]),
+            }
+            for it in items
+        ],
+    }
 
 
 # --------------------------------------------------------------------------- synthesis
-
-
-def run_worker(job: dict[str, Any], cfg: StudioConfig) -> dict[str, Any]:
-    python = expand_path(cfg.get("envs", "kokoro")["python"])
-    proc = subprocess.run(
-        [str(python), str(WORKER)], input=json.dumps(job), capture_output=True, text=True
-    )
-    if proc.returncode != 0:
-        raise VoiceError(f"the Kokoro worker failed: {proc.stderr[-1500:]}")
-    return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
 def postprocess(raw: Path, out: Path, voice: dict[str, Any], cfg: StudioConfig) -> float:
@@ -174,42 +266,24 @@ def postprocess(raw: Path, out: Path, voice: dict[str, Any], cfg: StudioConfig) 
 
 def synthesize(
     items: list[dict[str, Any]], out_dir: Path, cfg: StudioConfig | None = None
-) -> tuple[dict[str, Path], str]:
-    """Speak `items` ({key, text, voice}) into out_dir/<key>.wav, finished. One worker call.
-    Returns ({key: wav}, model name)."""
+) -> tuple[dict[str, Path], dict[str, str]]:
+    """Speak `items` ({key, text, voice}) into out_dir/<key>.wav, finished. One worker call per
+    engine. Returns ({key: wav}, {engine: model name the worker reported})."""
     cfg = cfg or load_config()
     for item in items:
-        if item["voice"]["engine"] != "kokoro":
-            raise VoiceError(
-                f"{item['voice']['engine']} isn't installed; it's decided at voice casting"
-            )
+        model_of(item["voice"])  # refuses engines that aren't installed
     out_dir.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=out_dir, prefix=".raw-") as raw_dir:
-        job = {
-            "out_dir": raw_dir,
-            "device": cfg.get("audio", "kokoro_device", "cpu"),
-            "voices": items[0]["voice"]["voices"] if items else [],
-            "speed": 1.0,
-            "lines": [
-                {
-                    "key": it["key"],
-                    "text": it["text"],
-                    "voices": it["voice"]["voices"],
-                    "speed": _defaults(it["voice"])["speed"],
-                }
-                for it in items
-            ],
-        }
-        result = run_worker(job, cfg) if items else {"files": {}, "model": ""}
-        out = {}
-        for it in items:
-            wav = out_dir / f"{it['key']}.wav"
-            postprocess(Path(result["files"][it["key"]]), wav, it["voice"], cfg)
-            out[it["key"]] = wav
-    return out, result["model"]
-
-
-MODEL = "kokoro-82m v1.0 (kokoro 0.9.4)"  # what the worker reports; part of every line's hash
+    out, models = {}, {}
+    for engine in sorted({it["voice"]["engine"] for it in items}):
+        group = [it for it in items if it["voice"]["engine"] == engine]
+        with tempfile.TemporaryDirectory(dir=out_dir, prefix=".raw-") as raw_dir:
+            result = run_worker(engine, _job(engine, group, raw_dir, cfg), cfg)
+            models[engine] = result["model"]
+            for it in group:
+                wav = out_dir / f"{it['key']}.wav"
+                postprocess(Path(result["files"][it["key"]]), wav, it["voice"], cfg)
+                out[it["key"]] = wav
+    return out, models
 
 
 def speak(
@@ -236,13 +310,14 @@ def speak(
     if problems:
         raise VoiceError("; ".join(problems))
 
+    model = model_of(voice)
     known = existing_lines(film_root)
     by_hash = {m["hash"]: lid for lid, m in known.items() if m["character"] == character_id}
     plan: list[dict[str, Any]] = []  # per input line: id, text, hash, take, cached
     taken: set[str] = set()
     for line in lines:
         text = " ".join(line["text"].split())
-        digest = line_hash(text, voice, MODEL)
+        digest = line_hash(text, voice, model)
         lid = line.get("line_id") or (None if regenerate else by_hash.get(digest))
         lid = lid or next_line_id(film_root, taken)
         if lid in taken:
@@ -258,11 +333,14 @@ def speak(
     folder = _dialogue_dir(film_root)
     todo = [p for p in plan if not p["cached"]]
     with tempfile.TemporaryDirectory(dir=film_root, prefix=".speak-") as work:
-        wavs, model = synthesize(
+        wavs, reported = synthesize(
             [{"key": p["id"], "text": p["text"], "voice": voice} for p in todo], Path(work), cfg
         )
-        if todo and model != MODEL:
-            raise VoiceError(f"the worker reports {model!r}, expected {MODEL!r}; update MODEL")
+        if todo and reported.get(voice["engine"]) != model:
+            raise VoiceError(
+                f"the worker reports {reported.get(voice['engine'])!r}, expected {model!r}; "
+                "update ENGINES"
+            )
         folder.mkdir(parents=True, exist_ok=True)
         for p in todo:
             wav = folder / f"{p['id']}.wav"
@@ -273,7 +351,7 @@ def speak(
                 "character": character_id,
                 "text": p["text"],
                 "voice": voice,
-                "model": MODEL,
+                "model": model,
                 "sample_rate": SAMPLE_RATE,
                 "duration_s": round(ffmpeg.duration(wav), 3),
                 "hash": p["hash"],

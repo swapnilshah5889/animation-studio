@@ -4,17 +4,27 @@
   "title": "Character voice",
   "description": "films/<film>/characters/<id>/voice.json: how a character sounds (D-036). Chosen once at casting and used for every line the character speaks; the director never names raw voices in a line. One or more voices are blended by weight, then speed and a small pitch step are applied, and each line is normalized to a speech loudness.",
   "type": "object",
-  "required": ["schema_version", "character", "engine", "voices"],
+  "required": ["schema_version", "character", "engine"],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "engine": { "const": "parler" } } },
+      "then": { "required": ["speaker", "language"] },
+      "else": { "required": ["voices"] }
+    }
+  ],
   "properties": {
     "schema_version": { "const": 1 },
     "character": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$", "description": "Character id (characters/<id>)." },
-    "engine": { "enum": ["kokoro", "chatterbox"], "description": "Text-to-speech model family. chatterbox only if approved at voice casting (STEP-3 checkpoint 2)." },
+    "engine": { "enum": ["kokoro", "parler", "chatterbox"], "description": "Text-to-speech model family: kokoro (voices), parler (Indic Parler-TTS: a named speaker, D-042). chatterbox only if approved at voice casting." },
+    "language": { "enum": ["en-us", "en-gb", "en-in", "hi"], "description": "Language and accent of the lines. Required for parler; for kokoro it defaults to the first voice's language." },
+    "speaker": { "type": "string", "pattern": "^[A-Z][a-z]{1,20}$", "description": "parler: a named speaker of the model, e.g. 'Mary' (English) or 'Divya' (Hindi)." },
+    "pitch": { "enum": ["low", "moderate", "high"], "default": "moderate", "description": "parler: the speaker's pitch, asked for in the description at synthesis." },
     "voices": {
       "type": "array",
       "minItems": 1,
       "maxItems": 4,
-      "description": "Voices to blend, each with a weight; weights are normalized to sum to 1.",
+      "description": "kokoro: voices to blend, each with a weight; weights are normalized to sum to 1.",
       "items": {
         "type": "object",
         "required": ["id"],
@@ -25,9 +35,9 @@
         }
       }
     },
-    "speed": { "type": "number", "minimum": 0.7, "maximum": 1.4, "default": 1, "description": "1 = the voice's natural pace." },
+    "speed": { "type": "number", "minimum": 0.7, "maximum": 1.4, "default": 1, "description": "1 = the voice's natural pace. parler: below 0.9 asks for a slow pace, above 1.1 a fast one." },
     "pitch_semitones": { "type": "number", "minimum": -3, "maximum": 4, "default": 0, "description": "Pitch step applied after synthesis (raises pitch and formants together, like a shorter vocal tract). 0 = none." },
-    "expressiveness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "How animated the delivery is, for engines that support it (chatterbox). Ignored by kokoro." },
+    "expressiveness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "How animated the delivery is, for engines that support it (parler, chatterbox). Ignored by kokoro." },
     "loudness_lufs": { "type": "number", "minimum": -30, "maximum": -14, "default": -20, "description": "Integrated loudness each line is normalized to before mixing." },
     "notes": { "type": "string", "maxLength": 500, "description": "Casting notes for humans." }
   }

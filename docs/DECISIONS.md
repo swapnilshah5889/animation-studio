@@ -562,3 +562,19 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
 - **Memory guard:** `compose` unloads every Ollama model first, refuses while ComfyUI is
   running, and measures each cue's peak footprint (`/usr/bin/time -l`). A test fails if a
   10 s cue passes the budget.
+
+### D-042: Indian voices with Indic Parler-TTS (owner, 2026-10-22)
+- **Approved:** task 3.2b as proposed in the Step 3 brief.
+  - Indic Parler-TTS (AI4Bharat, Apache-2.0, gated, 0.94B params, 3.75 GB) is a second TTS
+    engine for Indian English and Indian languages.
+  - Plus Kokoro's 4 Hindi voices.
+  - Child voices stay a Step 7 item. A fine-tune would add new Parler speakers, and the
+    pitch/formant processor can come any time.
+- **`envs/parler`** (its own env: parler-tts pins `transformers==4.46.1`):
+  - parler-tts at its last commit (`d108732`, 2024-12-10)
+  - torch and torchaudio 2.5.1 (contemporary with that transformers)
+  - two dependency overrides: `descript-audiotools==0.7.2` from PyPI instead of parler's git
+    "temporary fix" (whose repo needs git-lfs), and `protobuf>=4` over audiotools 0.7.2's
+    `<3.20` pin. The import check passes; inference is checked when the weights are in.
+- **The owner's step:** accept the model's terms on Hugging Face and log in with a free token
+  (allowed by CLAUDE.md for gated downloads). Agents never handle the token.

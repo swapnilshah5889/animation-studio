@@ -1,0 +1,22 @@
+# Isolated environment for Indic Parler-TTS (Step 3 task 3.2b, D-042): Indian English and Indian
+# languages. parler-tts pins transformers==4.46.1 exactly, which conflicts with the Kokoro env,
+# so it gets its own (D-016). Kept out of the uv workspace on purpose.
+#   cd envs/parler && uv sync
+[project]
+name = "parler-env"
+version = "0.0.0"
+requires-python = "==3.12.*"
+dependencies = [
+    # last commit on main (2024-12-10); the project is quiet, so pin it exactly
+    "parler-tts @ git+https://github.com/huggingface/parler-tts@d108732cd57788ec86bc857d99a6cabd66663d68",
+    "torch==2.5.1",  # contemporary with transformers 4.46.1
+    "torchaudio==2.5.1",  # must match torch (pulled in by audiotools)
+    "soundfile>=0.13",
+]
+
+[tool.uv]
+package = false
+# parler-tts takes descript-audiotools from git as a "temporary fix" until 0.7.4, which was never
+# published; that repo needs git-lfs to check out. Use the PyPI release (MIT) instead, and let
+# protobuf follow parler-tts (>=4) rather than audiotools 0.7.2 (<3.20), which is why git was used.
+override-dependencies = ["descript-audiotools==0.7.2", "protobuf>=4.0.0"]

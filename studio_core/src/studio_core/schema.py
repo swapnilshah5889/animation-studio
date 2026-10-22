@@ -248,8 +248,21 @@ def _duplicates(values: list[Any]) -> list[Any]:
 
 
 def check_voice(data: dict[str, Any]) -> list[Issue]:
-    ids = [v["id"] for v in data["voices"]]
-    return [Issue("voices", f"voice {d!r} is listed twice") for d in _duplicates(ids)]
+    ids = [v["id"] for v in data.get("voices", [])]  # parler voices name a speaker instead
+    issues = [Issue("voices", f"voice {d!r} is listed twice") for d in _duplicates(ids)]
+    if data["engine"] == "parler":
+        issues += [
+            Issue(key, f"a parler voice doesn't use {key!r} (it names a speaker); remove it")
+            for key in ("voices",)
+            if key in data
+        ]
+    else:
+        issues += [
+            Issue(key, f"only parler voices use {key!r}; remove it")
+            for key in ("speaker", "pitch")
+            if key in data
+        ]
+    return issues
 
 
 def check_line(data: dict[str, Any]) -> list[Issue]:

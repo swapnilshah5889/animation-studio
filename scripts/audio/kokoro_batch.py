@@ -10,9 +10,10 @@ The job (JSON on stdin):
      "lines": [{"key": "l001", "text": "Hi Bunny!"},
                {"key": "x", "text": "...", "voices": [{"id": "am_puck"}], "speed": 1.1}]}
 
-Each line may override the job's voices and speed. Voices are blended by weight (a weighted
-average of the voice packs). The model loads once per job. Writes <out_dir>/<key>.wav (24 kHz
-mono, float) for each line and prints one JSON line:
+Each line may override the job's voices and speed, and set "lang" (a Kokoro language letter:
+a, b, h, ...) to read with another language's rules than its first voice's. Voices are blended
+by weight (a weighted average of the voice packs). The model loads once per job. Writes
+<out_dir>/<key>.wav (24 kHz mono, float) for each line and prints one JSON line:
 
     {"model": "kokoro-82m v1.0 (kokoro 0.9.4)", "sample_rate": 24000, "device": "cpu",
      "files": {"l001": "/abs/dir/l001.wav"}, "load_s": 1.4, "synth_s": 0.9}
@@ -76,6 +77,7 @@ def main() -> int:
     files, synth_s = {}, 0.0
     for line in job["lines"]:
         lang, pack = blend(line.get("voices") or job["voices"])
+        lang = line.get("lang") or lang  # e.g. a Hindi voice reading English rules
         t1 = time.perf_counter()
         results = pipeline(lang)(line["text"], voice=pack, speed=line.get("speed", job["speed"]))
         audio = torch.cat([r.audio for r in results if r.audio is not None]).cpu()

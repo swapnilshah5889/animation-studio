@@ -7,8 +7,8 @@ Runs Rhubarb Lip Sync on audio/dialogue/<line>.wav with the line's text as a hin
 audio/lipsync/<line>.json in Rhubarb's own JSON format (schemas/lipsync.schema.json): mouth
 shapes A to H and X, the set the procedural mouth draws (D-007).
 
-- **Recognizer:** `pocketSphinx` for English voices (Kokoro ids starting with a or b),
-  `phonetic` (language-independent) for anything else.
+- **Recognizer:** `pocketSphinx` for English (the voice's `language`, or Kokoro ids starting
+  with a or b), `phonetic` (language-independent) for anything else, e.g. Hindi.
 - **Cache:** cues that exist, validate and match the audio's length are reused. `speak` deletes
   the cues of any line whose audio it replaces, so a re-take is always redone.
 - Lines run in parallel (Rhubarb uses one core per line; it runs under Rosetta, D-022).
@@ -50,6 +50,9 @@ def recognizer_for(meta: dict | None) -> str:
     the Step 0 fixture lines), phonetic otherwise."""
     if meta is None:
         return "pocketSphinx"
+    language = meta["voice"].get("language")
+    if language:
+        return "pocketSphinx" if language.startswith("en") else "phonetic"
     ids = [v["id"] for v in meta["voice"]["voices"]]
     return "pocketSphinx" if all(i[0] in ENGLISH_VOICE_PREFIXES for i in ids) else "phonetic"
 

@@ -65,6 +65,7 @@ studio_core = { python = ".venv/bin/python", import = "vtracer" }
 # comfyui_manager imports ComfyUI's own "comfy" package, so probe it from the ComfyUI folder.
 comfyui = { python = "~/ai-studio/comfyui/.venv/bin/python", import = "comfyui_manager", cwd = "~/ai-studio/comfyui" }
 kokoro = { python = "envs/kokoro/.venv/bin/python", import = "kokoro" }
+parler = { python = "envs/parler/.venv/bin/python", import = "parler_tts" }  # Indic Parler-TTS (D-042)
 ace_step = { python = "~/ai-studio/ace-step/.venv/bin/python", import = "acestep" }  # ACE-Step 1.5 checkout
 
 [models]

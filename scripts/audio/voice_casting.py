@@ -123,7 +123,8 @@ def main() -> int:
         for code, _, voice in CANDIDATES
         for n, text in enumerate(LINES, 1)
     ]
-    wavs, model = synthesize(items, OUT)
+    wavs, models = synthesize(items, OUT)
+    model = ", ".join(models.values())
     rows = []
     for code, label, _ in CANDIDATES:
         players = "".join(

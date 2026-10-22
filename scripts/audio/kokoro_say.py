@@ -34,6 +34,11 @@ VOICES = [
     "af_sky",
     "af_aoede",
     "af_kore",
+    # Hindi (Step 3 task 3.2b, D-042)
+    "hf_alpha",
+    "hf_beta",
+    "hm_omega",
+    "hm_psi",
 ]
 
 
