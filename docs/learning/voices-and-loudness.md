@@ -1,7 +1,7 @@
 # Voices and loudness
 
 How a line of text becomes a finished line of dialogue (`studio_core/audio/voices.py`, task 3.2),
-and the loudness ideas the mix (task 3.6) builds on.
+and how the shot mix (task 3.6) uses loudness.
 
 ## A voice is a vector
 
@@ -53,6 +53,34 @@ ffmpeg's `loudnorm` can reach a target in one pass by compressing as it goes, wh
 shape of the sound. We measure first, then apply **one fixed gain**: the line only gets louder or
 softer, and the same input always gives the same output. The gain is capped so the true peak
 stays under the ceiling. That cap is the only case where a line ends up quieter than its target.
+
+## The mix: buses, ducking, one gain
+
+A shot's soundtrack (`studio_core/audio/mix.py`, task 3.6) is three **buses** summed:
+dialogue, sound effects, and music. Each is built sample-exactly with numpy after ffmpeg has
+converted every input to 48 kHz stereo.
+
+- **Sound effects** come from many sources at wildly different levels. Each one is normalized
+  to −20 LUFS before its `volume` scales it. A 50 ms click can't be measured as loudness (the
+  meter needs 400 ms blocks), so very short sounds are peak-normalized instead.
+- **Ducking** lowers the music while someone speaks, so a child can follow the words. Radio
+  does it with a compressor listening to the voice (`sidechaincompress`). We don't need to
+  listen: we *know* when every line plays. So the music gets a computed envelope:
+  - −10 dB under each line
+  - a 150 ms ramp down before the line and a 400 ms ramp back up after it
+  - lines closer together than the two ramps count as one, so the music doesn't swell in
+    short gaps
+
+  Same input, same output, and a test can measure the dip exactly (−10 dB ± 0.5).
+- **One gain** brings the whole mix to −14 LUFS for the web.
+
+## True peaks hide between samples
+
+A limiter that watches samples can still let the *signal* go over. When the waveform is
+rebuilt between two samples (by a DAC, or by an MP3/AAC decoder), it can swing higher than
+either sample. A sharp click showed this: −1.5 dBFS sample peaks, but −0.4 dBTP true peak. The
+fix is the standard one: run the limiter at 4× the sample rate, where those in-between peaks
+become real samples, then measure the result and trim if anything still pokes over.
 
 ## Caching by content
 

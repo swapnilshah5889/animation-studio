@@ -8,10 +8,10 @@ Paths follow the film project layout (docs/ARCHITECTURE.md):
 
     characters/<id>/rig.json            backgrounds/<id>/layers.json
     audio/dialogue/<line_id>.wav        audio/lipsync/<line_id>.json
-    shots/<id>/shot.json → scene.sif, frames/, dialogue.wav, shot.mp4
+    shots/<id>/shot.json → scene.sif, frames/, mix.wav, shot.mp4
 
-Not yet mixed into shot.mp4: sound effects and music (Step 3 brings the sound library and the
-music cues). Dialogue is.
+The soundtrack (dialogue, sound effects, music ducked under the dialogue, at the web loudness
+target) comes from studio_core.audio.mix.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from studio_core.audio.mix import mix_shot
 from studio_core.config import StudioConfig, load_config
 from studio_core.face import face_attachments
 from studio_core.motions import animate
@@ -30,7 +31,7 @@ from studio_core.scene import DESIGN, PlacedCharacter, build_scene, load_backgro
 from studio_core.schema import validate
 from studio_core.sif import Animated, Canvas, Interp, Vec, Waypoint, frames
 from studio_core.sif.lipsync import load_cues, mouth_track
-from studio_core.sif.render import RenderError, encode_mp4, render_frames, run_tool
+from studio_core.sif.render import RenderError, encode_mp4, render_frames
 
 DEFAULT_FPS = 24
 
@@ -174,27 +175,6 @@ def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) 
     return BuiltShot(canvas, fps, n_frames, wavs)
 
 
-def mix_dialogue(
-    lines: list[tuple[Path, float]], out: Path, duration_s: float, cfg: StudioConfig
-) -> Path | None:
-    """Place each line at its start time on one mono 24 kHz track the length of the shot."""
-    if not lines:
-        return None
-    cmd = [str(cfg.path("tools", "ffmpeg")), "-y", "-v", "error"]
-    for wav, _ in lines:
-        cmd += ["-i", str(wav)]
-    chains = [
-        f"[{i}:a]aresample=24000,aformat=channel_layouts=mono,"
-        f"adelay={round(start * 1000)}:all=1[d{i}]"
-        for i, (_, start) in enumerate(lines)
-    ]
-    mix = "".join(f"[d{i}]" for i in range(len(lines)))
-    graph = ";".join([*chains, f"{mix}amix=inputs={len(lines)}:normalize=0,apad[out]"])
-    cmd += ["-filter_complex", graph, "-map", "[out]", "-t", str(duration_s), str(out)]
-    run_tool(cmd)
-    return out
-
-
 def render_shot(
     film_dir: Path,
     shot_id: str,
@@ -217,8 +197,7 @@ def render_shot(
     rendered = render_frames(sif, frames_dir, size=size, cfg=cfg)
     if len(rendered) != built.n_frames:
         raise RenderError(f"expected {built.n_frames} frames, synfig wrote {len(rendered)}")
-    lines = built.dialogue if audio else []
-    mix = mix_dialogue(lines, folder / "dialogue.wav", shot["duration_s"], cfg)
+    mix = mix_shot(film_dir, shot, folder / "mix.wav", cfg) if audio else None
     mp4 = encode_mp4(frames_dir, folder / "shot.mp4", fps, audio=mix, cfg=cfg)
     if not keep_frames:
         shutil.rmtree(frames_dir)

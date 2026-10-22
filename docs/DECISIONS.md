@@ -609,3 +609,30 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   added later took 14 s. 15 queries take ~5 s, mostly the CLAP worker starting.
   - The spot-check passes 15/15.
   - Known gap: no animal sounds (birds, dogs, cats, cows). Rain only finds dripping water.
+
+### D-044: FSD50K's CC0 clips for animal and nature sounds (owner, 2026-10-22)
+- **Approved:** after the spot-check showed no animal sounds, the owner chose to add FSD50K's
+  eval split (6.26 GB download), keeping only CC0 clips.
+- **Child-safe filter:**
+  - Excluded labels: all recordings of people's voices and bodies (speech, singing,
+    laughter, crying, screams, coughs, burps...), on privacy and consent grounds as well as
+    taste, plus gunshots and explosions.
+  - Clips whose title, description or tags contain blocked or adult words are dropped too.
+  - Result: 3,515 of 4,914 CC0 eval clips, including 209 birds, 70 dogs, 67 cats, 94 rain and
+    51 thunder.
+- Only the chosen clips are extracted from the split zip. The archives are then deleted;
+  the extracted CC0 originals are kept. Each clip's manifest URL is its Freesound page.
+
+### D-045: The shot mix (task 3.6)
+- `studio_core/audio/mix.py`: dialogue, sound-effect and music buses, built sample-exactly with
+  numpy after ffmpeg converts every input to 48 kHz stereo.
+- **Sound effects:** normalized to −20 LUFS, then scaled by `volume` (amplitude). Clips too
+  short to measure as loudness are peak-normalized to −6 dBFS instead.
+- **Music:** scaled by `music_volume` and ducked by a computed envelope (−10 dB, 150 ms attack,
+  400 ms release; lines closer than both ramps count as one span), not a sidechain
+  compressor.
+- **Loudness:** one linear gain to −14 LUFS. Then a limiter at 4× oversampling, a true-peak
+  check, and a trim if needed (≤ −1.5 dBTP). The 4× step exists because a click passed a
+  sample-peak limiter at −0.4 dBTP.
+- The numbers live in config `[mix]`. `render_shot` now writes `shots/<id>/mix.wav` in place
+  of the dialogue-only `dialogue.wav`.

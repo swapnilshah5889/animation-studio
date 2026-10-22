@@ -66,7 +66,7 @@ shots/s01_sh01/shot.json   validated (schema + semantic checks)
   → build_character()      bones + parts + face, per character
   → build_scene()          planes + camera + backdrop → scene.sif
   → synfig                 frames/frame.NNNN.png
-  → ffmpeg                 dialogue.wav (each line delayed to its start) + frames → shot.mp4
+  → mix + ffmpeg           mix.wav (dialogue, sound effects, ducked music; task 3.6) + frames → shot.mp4
 ```
 
 Every arrow is deterministic, tested code. The director only writes `shot.json`.

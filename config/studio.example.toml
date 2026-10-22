@@ -83,3 +83,13 @@ kokoro_device = "cpu"   # as fast as MPS for this 82M model, less memory, GPU st
 deferred = {}   # e.g. { synfig_studio = "reason" } for a check that is missing on purpose
 # Services started only when a stage needs them (an idle ComfyUI still holds memory).
 on_demand = ["comfyui"]
+
+[mix]
+# The shot mix (studio_core/audio/mix.py, D-045). Loudness in LUFS, levels in dB.
+target_lufs = -14.0     # finished shot, for the web (EBU R128 broadcast: -23)
+peak_db = -1.5          # true-peak ceiling
+sfx_lufs = -20.0        # a sound effect at volume 1.0
+sfx_peak_db = -6.0      # ... or its peak, if too short to measure as loudness
+duck_db = -10.0         # music under dialogue
+duck_attack_s = 0.15
+duck_release_s = 0.4

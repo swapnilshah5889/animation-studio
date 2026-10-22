@@ -243,8 +243,6 @@ def _check_sounds(
     cue = spec.get("music_cue")
     if cue and not film.music_file(cue).is_file():
         errors.append(f"music cue {cue!r} not found; cues: {_known(film.music_cues())}")
-    if effects or cue:
-        warnings.append("sound effects and music are not mixed into renders until task 3.6")
 
 
 def save(film: FilmFolder, spec: dict[str, Any]) -> list[str]:

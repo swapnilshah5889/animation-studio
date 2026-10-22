@@ -717,6 +717,7 @@ version = "0.0.0"
 source = { editable = "studio_core" }
 dependencies = [
     { name = "jsonschema" },
+    { name = "numpy" },
     { name = "pillow" },
     { name = "qdrant-client" },
     { name = "vtracer" },
@@ -725,6 +726,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "jsonschema", specifier = ">=4.26" },
+    { name = "numpy", specifier = ">=2" },
     { name = "pillow", specifier = ">=11" },
     { name = "qdrant-client", specifier = ">=1.19.1,<1.20" },
     { name = "vtracer", specifier = ">=0.6" },

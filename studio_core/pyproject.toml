@@ -8,6 +8,7 @@ dependencies = [
     "pillow>=11",
     "jsonschema>=4.26",
     "qdrant-client>=1.19.1,<1.20",  # matches the Qdrant server 1.19.2 (sound-effect search)
+    "numpy>=2",  # the shot mix (sample-exact placement, gains, ducking)
 ]
 
 [build-system]
