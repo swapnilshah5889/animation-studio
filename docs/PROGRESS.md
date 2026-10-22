@@ -2,9 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.5 done (3.2b paused for the owner's Hugging Face
-login; music review pending). Next: the owner decides on FSD50K's CC0 clips (animal sounds), then
-3.6 (the mix). Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.6 done; music approved (checkpoint 3); 3.2b
+(Parler Indian voices) deferred by the owner. FSD50K's CC0 clips are downloading for the animal
+sounds. Next: 3.7 (the `audio_mcp` server). Step 2 has one done-when item open (D-035).
 
 ---
 
@@ -18,9 +18,9 @@ The owner approved the Step 3 brief as written (D-036).
 |---|---|
 | 3.1 Audio schemas and file layout | **Done**: `schemas/voice`, `line`, `lipsync`, `music`, `sfx_library`; shot schema gains `sfx[].sound` and `music_volume`; semantic checks (cue order and coverage, unique voices, sounds and audio, line/voice consistency); asset checks in `shot_spec` (line metadata, stale mouth cues, chosen sounds in the library, music cues exist); `studio_core/audio/library.py` (manifest loader); files named by id recognized by folder in `validate_file` (D-037). |
 | 3.2 Voices: `speak` (owner checkpoint 2: casting) | **Done; cast by the owner** (Pip c12, Bunny c03, D-039): `studio_core/audio/voices.py` (text checks, content-hash cache, one Kokoro batch per call, trim + pitch step + linear-gain loudness, line metadata, stale cues removed), `studio_core/audio/ffmpeg.py`, `scripts/audio/kokoro_batch.py`, 4 casting voices fetched; casting page `scripts/audio/voice_casting.py` (14 candidates × 2 lines) (D-038). Note: `docs/learning/voices-and-loudness.md`. |
-| 3.2b Indian voices (Indic Parler-TTS, D-042) | **In progress**: `envs/parler` (pinned; audiotools/protobuf overrides), `scripts/audio/parler_batch.py`, voice.json `engine: parler` + `language` + `speaker`/`pitch`, Parler descriptions written by code, a seed per line, engine dispatch in `speak`, Devanagari text, recognizer by language; Kokoro's 4 Hindi voices work end to end (phonetic cues). **Waiting for the owner's Hugging Face login** to download the gated weights (3.75 GB). |
+| 3.2b Indian voices (Indic Parler-TTS, D-042) | **In progress**: `envs/parler` (pinned; audiotools/protobuf overrides), `scripts/audio/parler_batch.py`, voice.json `engine: parler` + `language` + `speaker`/`pitch`, Parler descriptions written by code, a seed per line, engine dispatch in `speak`, Devanagari text, recognizer by language; Kokoro's 4 Hindi voices work end to end (phonetic cues). **Deferred by the owner (2026-10-22): planned later** together with the Hugging Face login that the gated weights (3.75 GB) need. |
 | 3.3 Lip-sync: `lipsync` | **Done**: `studio_core/audio/lipsync.py` (Rhubarb on the final audio with the text, recognizer by language, cache by validity and length, relative `soundFile`, parallel lines); `speak` lip-syncs by default (D-040). Note: `docs/learning/lip-sync.md`. |
-| 3.4 Music: `compose` (owner checkpoint 3) | **Done, waiting for the owner's review**: memory fixed in place (bf16 + PyTorch DiT and VAE only): **21.0 → 9.6 GB** peak for a 10 s cue, no swap, flat to 60 s; `studio_core/audio/music.py` (9 moods, instrument list, caption in code, seeded, cached by hash, Ollama unloaded and ComfyUI refused first, peak footprint measured per cue, trimmed + faded + −20 LUFS); samples page `scripts/audio/music_samples.py` (D-041). |
+| 3.4 Music: `compose` (owner checkpoint 3) | **Done; samples approved by the owner (checkpoint 3, 2026-10-22)**: memory fixed in place (bf16 + PyTorch DiT and VAE only): **21.0 → 9.6 GB** peak for a 10 s cue, no swap, flat to 60 s; `studio_core/audio/music.py` (9 moods, instrument list, caption in code, seeded, cached by hash, Ollama unloaded and ComfyUI refused first, peak footprint measured per cue, trimmed + faded + −20 LUFS); samples page `scripts/audio/music_samples.py` (D-041). |
 | 3.5 Sound-effect library and search: `find_sfx` | **Done (core); waiting for the owner on FSD50K**: `scripts/fetch_sfx_library.py` (8 Kenney + 10 OpenGameArt CC0 packs → 755 sounds, 16.3 min; BigSoundBank left out per its robots.txt), `envs/clap` + `scripts/audio/clap_embed.py`, `studio_core/audio/sfx.py` (idempotent Qdrant index, hybrid search), `scripts/index_sfx.py`; spot-check 15/15; gap: animal sounds (D-043). Note: `docs/learning/embeddings-and-vector-search.md`. |
 | 3.6 The mix | **Done**: `studio_core/audio/mix.py` (dialogue/sfx/music buses, sfx normalization, computed ducking envelope, −14 LUFS gain, 4×-oversampled limiter with a true-peak check), `[mix]` config, `render_shot` writes `mix.wav`; tests measure ducking (−10 dB ± 0.5), sound timing (±10 ms) and loudness (±1 LU, ≤ −1 dBTP) (D-045). |
 | 3.7 `audio_mcp` server, and shot tools for sound | To do |

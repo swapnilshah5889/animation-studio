@@ -162,9 +162,11 @@ terms forbid copying the database).
 
 ## Proposed addition: Indian voices (task 3.2b), not yet approved
 
-> **Status: proposal for the owner (2026-10-22).** Nothing is installed. The owner asked for
-> Indian-accented English (and Hindi) voices. Research is summarized below; sources are in
-> "Research notes: Indian voices".
+> **Status: approved (D-042); part 1 built; the rest deferred by the owner (2026-10-22).** The
+> Parler engine, env, worker and tests are in, and Kokoro's Hindi voices work. The gated Parler
+> download, its measurements and the Indian-voices casting page wait until the owner plans the
+> Hugging Face login. Research is summarized below; sources are in "Research notes: Indian
+> voices".
 
 **What we have today (probed 2026-10-22):**
 - Kokoro speaks **Hindi** with 4 voices (`hf_alpha`, `hf_beta`, `hm_omega`, `hm_psi`). Its Hindi
