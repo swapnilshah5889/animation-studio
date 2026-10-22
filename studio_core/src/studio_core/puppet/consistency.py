@@ -12,9 +12,9 @@ draws the "three-quarter" figure barely turned. Both are measured here, without 
   one view that the same region of the other view doesn't have (colour histograms, with
   neighbouring shades counted as the same paint). A hat, a bag, a different shirt.
 - **Head size:** head height as a share of the figure's height, per view.
-- **Turn:** how far the drawn nose sits from the head's centre line, as a share of the head's
-  width, compared with what the three-quarter skeleton asked for. 1.0 = turned as asked,
-  0 = a front view.
+- **Turn:** how far the face's marks (eyes, nose, mouth) sit off the head's centre line, as a
+  share of the head's width, compared with what the three-quarter skeleton asked for.
+  1.0 = turned as asked, 0 = a front view, above 1 = turned further (toward a profile).
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from studio_core.puppet.skeleton import Skeleton
 
@@ -46,7 +46,6 @@ class ViewCut:
 
     sk: Skeleton
     parts: dict[str, np.ndarray]  # bone → its pixels in the sheet (before caps)
-    nose_x: float | None  # the drawn nose's centre, if found
 
 
 def _colours(pixels: np.ndarray, k: int = 8) -> list[tuple[np.ndarray, float]]:
@@ -95,21 +94,52 @@ def extra_colours(a: np.ndarray, b: np.ndarray) -> list[dict[str, Any]]:
     return [{"hex": _hex(colour), "share": round(share, 3)}]
 
 
-def _turn(cut: ViewCut) -> float | None:
-    """The drawn nose's offset from the head's centre line, as a share of the head's width
-    at nose level (+ = toward screen-right)."""
-    head = cut.parts["head"]
-    row = head[int(cut.sk.joints["nose"][1])]
-    xs = np.nonzero(row)[0]
-    if cut.nose_x is None or not len(xs):
+def face_offset(img: np.ndarray, head: np.ndarray) -> float | None:
+    """Where the face's marks (eyes, nose, mouth) sit across the head: the centroid of the
+    pixels clearly darker than their surroundings, inside the head's face band (45-92% of its
+    height), as an offset from the head's centre line in shares of its width (+ = right).
+
+    A front face is centred (about 0); a face turned toward screen-right shifts right. Using
+    every mark, not the nose alone, keeps it working when a strongly turned head puts the
+    nose on its outline, where a nose finder can't tell it from the outline."""
+    if not head.any():
         return None
-    return float((cut.nose_x - (xs.min() + xs.max()) / 2) / (xs.max() - xs.min() + 1))
+    ys = np.nonzero(head.any(axis=1))[0]
+    top, bottom = ys.min(), ys.max()
+    mid = int(top + 0.6 * (bottom - top))
+    row = np.nonzero(head[mid])[0]
+    if not len(row):
+        return None
+    width = float(row.max() - row.min() + 1)
+    luma = img @ np.array([0.299, 0.587, 0.114], dtype="float32")
+    around = Image.fromarray(np.clip(luma, 0, 255).astype("uint8")).filter(
+        ImageFilter.BoxBlur(max(4, int(width * 0.04)))
+    )
+    inner = (
+        np.asarray(
+            Image.fromarray((head * 255).astype("uint8")).filter(
+                ImageFilter.MinFilter(2 * max(2, int(width * 0.015)) + 1)
+            )
+        )
+        > 127
+    )  # not the head's own outline
+    # The face band: below the ears' inner shading (dark, and on the far side once the head
+    # turns, so it pulls the wrong way) and above the chin's outline.
+    inner[: int(top + 0.45 * (bottom - top))] = False
+    inner[int(top + 0.92 * (bottom - top)) :] = False
+    marks = inner & (luma < np.asarray(around, dtype="float32") - 40)
+    if marks.sum() < 20:
+        return None
+    centre = (row.min() + row.max()) / 2
+    return float((np.nonzero(marks)[1].mean() - centre) / width)
 
 
 def asked_turn(sk: Skeleton) -> float:
-    """The same measure on the skeleton: nose offset over the skeleton head's width."""
-    width = 2 * abs(sk.joints["r_ear"][0] - sk.joints["neck"][0])
-    return (sk.joints["nose"][0] - sk.joints["neck"][0]) / width
+    """The same measure on the skeleton: the mean of the eyes and nose against the neck, over
+    the skeleton head's width."""
+    j = sk.joints
+    features = (j["r_eye"][0] + j["l_eye"][0] + j["nose"][0]) / 3
+    return (features - j["neck"][0]) / (2 * abs(j["r_ear"][0] - j["neck"][0]))
 
 
 def compare_views(img: np.ndarray, cuts: dict[str, ViewCut]) -> dict[str, Any]:
@@ -139,14 +169,16 @@ def compare_views(img: np.ndarray, cuts: dict[str, ViewCut]) -> dict[str, Any]:
             f"the head is {heads['three_quarter'] / heads['front']:.0%} as tall (relative to the "
             "body) in the three-quarter view as in the front view"
         )
-    measured, asked = _turn(tq), asked_turn(tq.sk)
+    measured, asked = face_offset(img, tq.parts["head"]), asked_turn(tq.sk)
+    front_offset = face_offset(img, front.parts["head"])
     report["turn"] = {
+        "front_offset": None if front_offset is None else round(front_offset, 3),
         "measured": None if measured is None else round(measured, 3),
         "asked": round(asked, 3),
         "fraction": None if measured is None else round(measured / asked, 2),
     }
     if measured is None:
-        report["problems"].append("three-quarter view: no nose found to measure the turn")
+        report["problems"].append("three-quarter view: no face marks found to measure the turn")
     elif measured / asked < MIN_TURN:
         report["problems"].append(
             f"the three-quarter view is barely turned ({measured / asked:.0%} of the turn asked)"

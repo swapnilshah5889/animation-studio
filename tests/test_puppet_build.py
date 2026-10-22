@@ -36,14 +36,14 @@ PANTS, DARK = (70, 90, 170), (40, 30, 30)
 
 
 def face_points(sk: Skeleton) -> dict[str, tuple[float, float]]:
-    (nx, ny), (_, ty) = sk.joints["neck"], sk.joints["head_top"]
+    (_, ny), (_, ty) = sk.joints["neck"], sk.joints["head_top"]
     r = (ny - ty) / 2
     eye_y, nose = sk.joints["r_eye"][1], sk.joints["nose"]
-    return {
-        "eye_l": (nx + 0.3 * r, eye_y),  # the character's left: screen-right
-        "eye_r": (nx - 0.3 * r, eye_y),
-        "nose": nose,
-        "mouth": (nx, nose[1] + 0.2 * r),
+    return {  # where the skeleton puts them: turned with the head in the three-quarter view
+        "eye_l": (sk.joints["l_eye"][0], eye_y),  # the character's left: screen-right
+        "eye_r": (sk.joints["r_eye"][0], eye_y),
+        "nose": (nose[0], nose[1] + 6),  # a little below the eye line: never touching an eye
+        "mouth": (nose[0], nose[1] + 0.2 * r),
         "scarf": (sk.joints["l_shoulder"][0] - 12, ny + 8),
         "tail": (sk.joints["pelvis"][0] - 120, sk.joints["pelvis"][1] + 125),
         # on the tail beside the right thigh: inside the thigh's corridor, not under the leg
@@ -251,8 +251,7 @@ def _consistency(img: np.ndarray) -> dict:
         bones = rig_bones(sk)
         fits = {n: limb_fit(figure, sk, bones[n]) for n in build.LIMBS}
         parts = assign_parts(img, figure, head, bones, fits)
-        _, _, notes = clean_face(img, head, sk)
-        cuts[sk.view] = ViewCut(sk, parts, notes["nose_px"][0] if notes["nose_px"] else None)
+        cuts[sk.view] = ViewCut(sk, parts)
     return compare_views(img, cuts)
 
 

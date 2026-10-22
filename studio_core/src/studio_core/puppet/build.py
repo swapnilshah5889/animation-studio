@@ -404,11 +404,28 @@ def clean_face(
         b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
         b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
     solid = [b for b in found if b["solid"]]
-    nose = (
-        min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
-        if solid
-        else None
-    )
+    # Open eyes are a pair of solid marks at one height; the nose is the solid mark just below
+    # them. With closed (arc) eyes there is no pair: the solid mark nearest the skeleton's nose
+    # line, preferring the centre, is the nose.
+    pairs = [
+        (a, b)
+        for i, a in enumerate(solid)
+        for b in solid[i + 1 :]
+        if abs(a["cy"] - b["cy"]) < 0.08 * row_w and abs(a["cx"] - b["cx"]) > 0.12 * row_w
+    ]
+    nose = None
+    if pairs:
+        # Two eyes match in size and height; a nose next to an eye doesn't.
+        pair = min(
+            pairs,
+            key=lambda ab: abs(math.log(ab[0]["area"] / ab[1]["area"]))
+            + abs(ab[0]["cy"] - ab[1]["cy"]) / (0.08 * row_w),
+        )
+        eye_y = (pair[0]["cy"] + pair[1]["cy"]) / 2
+        below = [b for b in solid if all(b is not e for e in pair) and b["cy"] > eye_y]
+        nose = min(below, key=lambda b: b["cy"]) if below else None
+    elif solid:
+        nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
     marks = [b for b in found if b is not nose]
     nose_y = nose["cy"] if nose else sk.joints["nose"][1]
     above = [b for b in marks if b["cy"] < nose_y - 0.02 * row_w]
@@ -774,8 +791,7 @@ def _cut_view(
     for i, im in enumerate(poses):
         strip.alpha_composite(im, (900 * i, 0))
     strip.convert("RGB").save(debug / "poses.png")
-    nose = face_notes["nose_px"]
-    return _Cut(view, report, ViewCut(sk, parts, nose[0] if nose else None))
+    return _Cut(view, report, ViewCut(sk, parts))
 
 
 def build_puppet(
