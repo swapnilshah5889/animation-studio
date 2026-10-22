@@ -2,11 +2,41 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 is **done** (2026-10-22). **Waiting for the owner to review the Step 4 brief**
-(`docs/steps/STEP-4-comfy-mcp.md`). Open items: Step 2's Claude Code run (D-035) and task 3.2b's
-Parler download (deferred by the owner).
+**Current step:** Step 4 (`comfy_mcp`): brief approved (D-047); task 4.1 (ComfyUI plumbing) done.
+Next: 4.2 (skeleton templates). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
+download (deferred).
 
 ---
+
+## 2026-10-22: Step 4 started: task 4.1 (ComfyUI plumbing) done
+
+The owner approved the Step 4 brief as written (D-047).
+
+**Step 4 task list**
+
+| Task | Status |
+|---|---|
+| 4.1 ComfyUI plumbing | **Done**: `studio_core/comfy_runs.py` (`film_style`, `make_room_for_images` with a music guard, `ensure_comfy` starts ComfyUI on demand, `run_graph` uploads, collects, renames and writes `run.json`, `free_comfy`); 5 approved models installed via the manifest. |
+| 4.2 Skeleton templates | To do |
+| 4.3 `design_character` (owner checkpoint 2) | To do |
+| 4.4 `build_puppet` (owner checkpoint 3) | To do |
+| 4.5 Three-quarter view | To do |
+| 4.6 `generate_background` | To do |
+| 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
+| 4.8 `comfy_mcp` server | To do |
+| 4.9 Prove it | To do |
+| 4.10 Docs, Step 5 brief | To do |
+
+**Verified**
+- Downloads: ProMax ControlNet 2.34 GB, DA3 MONO-LARGE 1.24 GB and SAM 2.1 base+ 0.30 GB from
+  Hugging Face, sha256-checked. Real-ESRGAN ×2 from GitHub, with hashes computed once.
+- ComfyUI started on demand by `ensure_comfy` in 17 s.
+- A smoke graph through `run_graph`: DA3 depth plus a Real-ESRGAN 4× upscale, in 4.5 s. The
+  depth map is right even on the flat placeholder meadow: the sky farthest, the path nearest.
+- API note: dynamic-combo inputs take dotted keys (`"output": "depth"`,
+  `"output.normalization": "min_max"`).
+- 5 plumbing tests, including a real SDXL run with its `run.json`. ComfyUI's memory was freed
+  afterwards.
 
 ## 2026-10-22: Step 3 done; Step 4 brief drafted
 

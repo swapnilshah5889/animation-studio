@@ -673,3 +673,26 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   - cast → speak → lip-sync → compose → search
   - add the sound, set the music, apply the line → preview the mix (−14.6 LUFS, −1.5 dBTP)
   - plus refusals
+
+### D-047: Step 4 design (approved with the brief, 2026-10-22)
+The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
+- **Puppets from text:**
+  - the skeleton is drawn in code and conditions SDXL through the xinsir union ProMax
+    ControlNet (Apache-2.0), so joints are known, not estimated
+  - front and three-quarter views on one turnaround canvas
+  - faceless heads: the prompt, plus a code fill of the face area
+  - parts are cut geometrically (silhouette + nearest bone) with joint caps filled in code
+  - a drafted `rig.json` with its face block, and a palette
+- **Backgrounds from text:**
+  - generated at 1536×576, upscaled with Real-ESRGAN x4plus_anime_6B (BSD-3) to 2880×1080,
+    with a low-denoise refine
+  - split into layers with Depth Anything 3 MONO-LARGE (Apache-2.0, ComfyUI-native)
+  - filled behind each layer with ProMax's repaint mode; parallax factors come from depth
+- **Kept off the path:** non-commercial models (CMU OpenPose, thibaud OpenPose, DAv2
+  Base/Large, DA3 Giant/Nested, FLUX.1 Kontext dev, FLUX.2 klein 9B, MAT, UltraSharp,
+  TiledDiffusion) and unclear ones (LaMa's weights, DWPose's data).
+- **Installs approved:**
+  - ProMax ControlNet (2.51 GB), DA3 MONO-LARGE (1.34 GB), Real-ESRGAN x4plus_anime_6B and
+    x4plus (BSD-3), SAM 2.1 base+ (fp32, 323 MB)
+  - optional: the Fooocus inpaint patch (task 4.4); FLUX.2 klein 4B only if the owner chooses
+    it at task 4.5

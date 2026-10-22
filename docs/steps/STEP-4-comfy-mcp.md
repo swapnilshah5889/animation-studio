@@ -1,7 +1,7 @@
 # Step 4: `comfy_mcp`: character puppets and parallax backgrounds from text
 
-> **Status: draft for the owner's review (2026-10-22).** Nothing in it has been started. Approve
-> it (or edit it), including the installs and the proposed decisions, before work begins.
+> **Status: approved by the owner on 2026-10-22, as written (installs and proposed decisions
+> included, recorded in D-047).** Work started with task 4.1.
 
 **Goal:** an MCP server that turns words into the two kinds of art a shot needs:
 - a **character description** → a rigged cut-out puppet (`rig.json` + parts + a faceless head

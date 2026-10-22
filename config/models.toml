@@ -77,6 +77,50 @@ dest = "sam2/sam2.1_hiera_small.safetensors"
 license = "Apache-2.0"
 commercial = "yes"
 
+[files.controlnet-union-sdxl-promax]
+# Step 4 (D-047): pose conditioning (OpenPose skeletons drawn in code) and inpaint/repaint fills.
+url = "https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors"
+sha256 = "9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc"
+size = 2513342408
+dest = "controlnet/xinsir_controlnet_union_sdxl_promax.safetensors"
+license = "Apache-2.0"
+commercial = "yes"
+
+[files.depth-anything-3-mono-large]
+# Step 4 (D-047): depth for parallax layers; ComfyUI-native (LoadDA3Model). Giant/Nested are NC.
+url = "https://huggingface.co/Comfy-Org/Depth-Anything-3/resolve/main/geometry_estimation/depth_anything_3_mono_large.safetensors"
+sha256 = "9b44eda5bedba5b4e125686fdb79d1db309c1b9785277576eb930f885b008f96"
+size = 1336748056
+dest = "geometry_estimation/depth_anything_3_mono_large.safetensors"
+license = "Apache-2.0"
+commercial = "yes"
+
+[files."sam2.1-hiera-base-plus"]
+# Step 4 (D-047): silhouette refinement. fp32: fp16 has an open MPS bug (D-017).
+url = "https://huggingface.co/Kijai/sam2-safetensors/resolve/main/sam2.1_hiera_base_plus.safetensors"
+sha256 = "eb4b5f725c8b68205aa05bbe6b27efc628b18b4b9c7b9bb8218991b86b9a4932"
+size = 323474320
+dest = "sam2/sam2.1_hiera_base_plus.safetensors"
+license = "Apache-2.0"
+commercial = "yes"
+
+[files.realesrgan-x4plus-anime-6b]
+# Step 4 (D-047): background upscaling, loaded by ComfyUI core (UpscaleModelLoader).
+url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+sha256 = "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da"
+size = 17938799
+dest = "upscale_models/RealESRGAN_x4plus_anime_6B.pth"
+license = "BSD-3-Clause"
+commercial = "yes"
+
+[files.realesrgan-x4plus]
+url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+sha256 = "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1"
+size = 67040989
+dest = "upscale_models/RealESRGAN_x4plus.pth"
+license = "BSD-3-Clause"
+commercial = "yes"
+
 [files.depth-anything-v2-small]
 # Only the Small size is Apache-2.0; Base/Large are CC-BY-NC-4.0 (never add them here).
 url = "https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth"
