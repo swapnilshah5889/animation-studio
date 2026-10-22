@@ -66,6 +66,7 @@ studio_core = { python = ".venv/bin/python", import = "vtracer" }
 comfyui = { python = "~/ai-studio/comfyui/.venv/bin/python", import = "comfyui_manager", cwd = "~/ai-studio/comfyui" }
 kokoro = { python = "envs/kokoro/.venv/bin/python", import = "kokoro" }
 parler = { python = "envs/parler/.venv/bin/python", import = "parler_tts" }  # Indic Parler-TTS (D-042)
+clap = { python = "envs/clap/.venv/bin/python", import = "transformers" }  # CLAP sound search (task 3.5)
 ace_step = { python = "~/ai-studio/ace-step/.venv/bin/python", import = "acestep" }  # ACE-Step 1.5 checkout
 
 [models]

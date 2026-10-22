@@ -578,3 +578,34 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
     `<3.20` pin. The import check passes; inference is checked when the weights are in.
 - **The owner's step:** accept the model's terms on Hugging Face and log in with a free token
   (allowed by CLAUDE.md for gated downloads). Agents never handle the token.
+
+### D-043: Sound-effect library and search (task 3.5)
+- **Sources (CC0 only, checked 2026-10-22):**
+  - all 8 Kenney sound packs (direct zips)
+  - 10 child-friendly OpenGameArt packs, CC0 on each page: footsteps, wind, dripping water,
+    completion sounds, a jump landing, bubble pops, power-ups, swishes, mixed SFX, retro synth.
+    OpenGameArt's 10 s robots crawl delay is respected.
+  - Skipped: one-file montages, a copy of Kenney's jingles, and the games-oriented packs
+    (battle, zombies, firearms).
+- **BigSoundBank is left out of the automated fetch.** Its robots.txt disallows `/UPLOAD/` (the
+  audio) for every robot, and its ai.txt asks that the audio not be used for training. Our use
+  is indexing, not training, but a script still shouldn't fetch what robots.txt forbids. The
+  owner may hand-pick sounds there.
+- **Children's filter by name:** files named for guns, explosions, blood, monsters, ghosts,
+  screams, etc. are excluded at import, as are pack demo reels. "die-throw" (dice) was a false
+  positive and was fixed.
+- **Format:** every sound is converted to 48 kHz mono 16-bit WAV, and the originals are kept in
+  `_downloads/`. The manifest is validated (CC0 const), and duplicate audio is dropped by hash.
+- **Search:** CLAP (`laion/larger_clap_general`, `envs/clap`) audio vectors in Qdrant
+  (collection `sfx`, cosine), with each manifest entry as payload.
+  - Point ids come from the audio hash, so indexing is idempotent and incremental.
+  - Ranking is hybrid: the 40 nearest by vector, plus sounds whose words match the query
+    (rough stemming, prefix matching), re-ranked by similarity + 0.25 × the share of query
+    words matched.
+  - Why hybrid: pure vector search ranked dice throws above tagged footsteps for "footsteps on
+    wood".
+  - An optional duration cap is a Qdrant filter.
+- **Measured:** 755 sounds, 16.3 min, 184 MB. Indexing took 34 s for 581 sounds; the 174
+  added later took 14 s. 15 queries take ~5 s, mostly the CLAP worker starting.
+  - The spot-check passes 15/15.
+  - Known gap: no animal sounds (birds, dogs, cats, cows). Rain only finds dripping water.

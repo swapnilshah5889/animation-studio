@@ -2,8 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.4 done. **Waiting for the owner's music review**
-(checkpoint 3, `renders/music-samples/index.html`). Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.5 done (3.2b paused for the owner's Hugging Face
+login; music review pending). Next: the owner decides on FSD50K's CC0 clips (animal sounds), then
+3.6 (the mix). Step 2 has one done-when item open (D-035).
 
 ---
 
@@ -20,7 +21,7 @@ The owner approved the Step 3 brief as written (D-036).
 | 3.2b Indian voices (Indic Parler-TTS, D-042) | **In progress**: `envs/parler` (pinned; audiotools/protobuf overrides), `scripts/audio/parler_batch.py`, voice.json `engine: parler` + `language` + `speaker`/`pitch`, Parler descriptions written by code, a seed per line, engine dispatch in `speak`, Devanagari text, recognizer by language; Kokoro's 4 Hindi voices work end to end (phonetic cues). **Waiting for the owner's Hugging Face login** to download the gated weights (3.75 GB). |
 | 3.3 Lip-sync: `lipsync` | **Done**: `studio_core/audio/lipsync.py` (Rhubarb on the final audio with the text, recognizer by language, cache by validity and length, relative `soundFile`, parallel lines); `speak` lip-syncs by default (D-040). Note: `docs/learning/lip-sync.md`. |
 | 3.4 Music: `compose` (owner checkpoint 3) | **Done, waiting for the owner's review**: memory fixed in place (bf16 + PyTorch DiT and VAE only): **21.0 → 9.6 GB** peak for a 10 s cue, no swap, flat to 60 s; `studio_core/audio/music.py` (9 moods, instrument list, caption in code, seeded, cached by hash, Ollama unloaded and ComfyUI refused first, peak footprint measured per cue, trimmed + faded + −20 LUFS); samples page `scripts/audio/music_samples.py` (D-041). |
-| 3.5 Sound-effect library and search: `find_sfx` | To do |
+| 3.5 Sound-effect library and search: `find_sfx` | **Done (core); waiting for the owner on FSD50K**: `scripts/fetch_sfx_library.py` (8 Kenney + 10 OpenGameArt CC0 packs → 755 sounds, 16.3 min; BigSoundBank left out per its robots.txt), `envs/clap` + `scripts/audio/clap_embed.py`, `studio_core/audio/sfx.py` (idempotent Qdrant index, hybrid search), `scripts/index_sfx.py`; spot-check 15/15; gap: animal sounds (D-043). Note: `docs/learning/embeddings-and-vector-search.md`. |
 | 3.6 The mix | To do |
 | 3.7 `audio_mcp` server, and shot tools for sound | To do |
 | 3.8 Prove it (owner checkpoint 4) | To do |
@@ -76,6 +77,19 @@ The owner approved the Step 3 brief as written (D-036).
 - 206 tests pass (~90 s with the `models` tests); ruff is clean.
 - Next: the owner reviews the samples (checkpoint 3), then 3.5 (the sound-effect library and
   `find_sfx`).
+
+**Task 3.2b (part 1) and 3.5 (same day)**
+- 3.2b, Indian voices: the Parler engine is built and tested without its weights. Kokoro's 4
+  Hindi voices work end to end with phonetic cues. The Parler download waits for the owner's
+  Hugging Face command-line login, which the owner chose to do later.
+- 3.5, sound-effect library:
+  - Sources: Kenney (581 sounds) and OpenGameArt (174), all CC0, with a children's name filter.
+  - BigSoundBank is left out: its robots.txt forbids robots on its audio.
+  - CLAP in Qdrant with hybrid ranking. The keyword half was needed: pure vectors ranked dice
+    above tagged footsteps.
+  - The spot-check passes 15/15. **Gap: animal sounds** (and real rain). The approved optional
+    fix, FSD50K's CC0 eval clips (6.2 GB), waits for the owner's decision.
+- 216 tests pass (~2 min with the `models` tests); ruff is clean.
 
 ## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
 
