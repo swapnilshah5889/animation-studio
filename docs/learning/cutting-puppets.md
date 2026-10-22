@@ -51,3 +51,18 @@ pixel, which bone carries it.
   claimed, and test that every figure pixel belongs to exactly one part.
 - A wave tuned on a small-headed puppet hides behind a fox's ears. Motions that move a hand
   near the head should check the rig's geometry (`_clear_raise`).
+
+## Two views of one character (task 4.5)
+- **Same cut, different geometry.** In a three-quarter view the far arm and leg overlap the
+  body, and the face isn't symmetric. So the face finder looks for the nose by *solidity*
+  (a filled blob) near the nose line, not at the centre, and the eyes are "the two best
+  marks above it".
+- **Comparing colours across views: histograms beat palettes.** A palette (median cut)
+  summarises an image in a few colours and blends a small object into its neighbours. A
+  10% green hat came out as a khaki that the fur also produced. A coarse 3D colour
+  histogram, with neighbouring cells counted as equal, keeps rare colours rare and
+  findable.
+- **Measure the turn, not just the look.** The skeleton says how far the nose should sit
+  off the head's centre line in a three-quarter view. The drawing says how far it does. A
+  ratio near 0 means SDXL drew another front view, a common failure without a model trained
+  for view changes.

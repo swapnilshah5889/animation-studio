@@ -2,11 +2,77 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.4 done. **Owner checkpoint 3 pending:**
-review Kit's test render (`renders/puppet-preview/step4-demo-kit/puppet_preview.mp4`). Next:
-4.5 (three-quarter view). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
-download (deferred), Docker's memory reservation (owner's call), deleting the pre-Step-4
-scratch files (owner's call), Kit's real voice (placeholder c13).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done (checkpoint 3 approved).
+**Owner decision pending (task 4.5):** Kit's three-quarter view is barely turned and has a hat
+the front lacks. Install FLUX.2 klein 4B (about 16 GB) and trial front → three-quarter edits,
+or keep front-only puppets for now (D-051). Next after that: 4.6 (`generate_background`).
+Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred), Docker's
+memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice (placeholder c13),
+and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-22: Step 4 task 4.5 done: the three-quarter view, and a consistency check
+
+The owner approved checkpoint 3, including the change to Pip's high-energy wave. They also
+asked whether the wave's rigid "rectangle" look and the overall quality will be handled.
+- Answer: mesh bending is planned for Step 6 (OpenToonz Plastic). Wrist and hand swaps,
+  motion principles, secondary motion, cut-edge outlines and a motion-quality eval are not on
+  the roadmap yet.
+- Proposed (owner's call): an "animation quality" step between Steps 4 and 5.
+
+Built in parallel:
+- a subagent: research on the front → three-quarter edit model
+- a subagent: the three-quarter test render
+- this session: the two-view cutter and the consistency check
+
+**Built**
+- `build_puppet` cuts both figures into one rig (`views.front`, `views.three_quarter`; parts
+  in `parts/<view>/`):
+  - a three-quarter draw order
+  - a face finder that doesn't assume symmetry (nose by solidity, eyes as the two best marks
+    above it, pupils filled)
+  - the colour rule on every limb
+  - far-side three-quarter limbs judged on coverage only
+- `puppet/consistency.py`, per region:
+  - paint only one view has, from colour histograms
+  - head size
+  - turn, measured against what the skeleton asked for
+- `scripts/preview_puppet.py --view three_quarter` places the character in that view, facing
+  Pip.
+- Bugs fixed along the way:
+  - wrist outlines left on the torso (dark "sticks" at the hips after the arms hang)
+  - a pupil left inside an eye's ring
+  - a palette comparison that flagged the scarf and missed the hat
+
+**Verified**
+- Kit rebuilt in about 14 s with SAM (IoU 0.954 front, 0.951 three-quarter).
+  - Front: all limbs pass.
+  - Three-quarter: the near thigh carries a piece of tail (drift 0.64, flagged).
+- Consistency on Kit: a hat (#afca70) covers 10% of the three-quarter head only, and the turn
+  is 5% of what was asked. Head share matches (0.331 vs 0.342).
+- Both test renders: 7 s at 1080p in about 35 s each. Kit waves, blinks and talks in both
+  views, and I checked the contact sheets.
+- 282 tests pass, model tests excluded. New tests:
+  - two-view builds: valid rig, the far arm behind, turning the arms back reproduces each
+    figure
+  - SAM accepted or rejected per view
+  - consistency: matching views, a hat in one view, an unturned three-quarter view
+  - the preview script, 6 new tests (from the subagent)
+
+**Front → three-quarter fallback, research only (D-051, sources in the subagent's report)**
+- FLUX.2 [klein] 4B: Apache-2.0 for everything it needs, about 16.1 GB in bf16 (fp8 doesn't
+  run on MPS), native ComfyUI nodes. There is no published evidence that it turns cartoon
+  characters cleanly, and its speed on an M4 is unmeasured.
+- Alternative: Qwen-Image-Edit-2511 Q4 GGUF with a multiple-angles LoRA (tight on memory).
+
+**Open questions for the owner**
+1. Install FLUX.2 klein 4B (about 16 GB) and trial a front → three-quarter edit of Kit, or
+   keep front-only puppets for now?
+2. Add the proposed animation-quality step between Steps 4 and 5?
+
+**Cleaned up:** scratch debug images. The subagents removed their scratch films and
+renders. The dev contact sheet from the three-quarter stand-in was deleted.
 
 ---
 
@@ -169,8 +235,8 @@ The owner approved the Step 4 brief as written (D-047).
 | 4.1 ComfyUI plumbing | **Done**: `studio_core/comfy_runs.py` (`film_style`, `make_room_for_images` with a music guard, `ensure_comfy` starts ComfyUI on demand, `run_graph` uploads, collects, renames and writes `run.json`, `free_comfy`); 5 approved models installed via the manifest. |
 | 4.2 Skeleton templates | **Done**: `studio_core/puppet/skeleton.py` (Pip proportions, A-pose, front + three-quarter turnaround on 1344×768, OpenPose image and rig bones from the same joints); 7 tests: keypoints found in the image within 1.5 px, bone directions within 1°, names, roles, parents, limits and draw order identical to Pip (D-048). |
 | 4.3 `design_character` (owner checkpoint 2) | **Done; owner chose c3**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
-| 4.4 `build_puppet` (owner checkpoint 3) | **Done; waiting for the owner's review**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
-| 4.5 Three-quarter view | To do |
+| 4.4 `build_puppet` (owner checkpoint 3) | **Done; approved by the owner**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
+| 4.5 Three-quarter view | **Done; owner decides on FLUX.2 klein**: both views cut into one rig, `puppet/consistency.py` compares them, `preview_puppet.py --view three_quarter`. Kit's 3/4 fails the check (hat, barely turned) (D-051). |
 | 4.6 `generate_background` | To do |
 | 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
 | 4.8 `comfy_mcp` server | To do |

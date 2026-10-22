@@ -818,3 +818,49 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   - Cut edges have no drawn outline.
   - SAM settings that must stay: fp32 only, and tight boxes with no negative points (see
     `docs/learning/segmentation-sam2.md`).
+
+### D-051: The three-quarter view, and checking it against the front (task 4.5)
+- **One rig, two views:** `build_puppet` cuts both figures of the turnaround the same way
+  (`_cut_view`) into `views.front` and `views.three_quarter`, with parts in
+  `parts/<view>/`.
+  - **Three-quarter draw order:** the far arm and both legs behind the torso, then the near
+    arm, then the head.
+  - **Faces in any view:** the nose is the solid dark blob nearest the skeleton's nose line.
+    The eyes are the two best marks above it (large, and lower rather than higher, so not the
+    brows), far enough apart. Pupils inside an eye's ring are filled before the paint-out.
+  - **Colour rule on every limb:** whole upper arms and thighs, and the top 60% of forearms
+    and shins. Wrist outlines, paws and shoes stay with the limb; tails crossing a shin don't.
+  - **Far-side drift:** in the three-quarter view, far-side limbs (the character's left)
+    overlap the body, so their drift can't be measured from cross-sections. Only coverage
+    is judged there.
+- **Consistency between views** (`puppet/consistency.py`, no model). Measured per region
+  (head, torso, arms, legs):
+  - **Paint:** colour covering ≥ 3% of a region in one view that the same region of the
+    other view lacks. This uses 8×8×8 colour histograms with neighbouring cells counted as
+    the same paint. Palettes gave false alarms, because median cut blends a hat's green with
+    the fur.
+  - **Head size:** head height as a share of the figure's height, within 10% between views.
+  - **Turn:** the drawn nose's offset from the head's centre line, relative to what the
+    three-quarter skeleton asked for. It must reach at least 50%.
+- **Kit (c3) fails:** a hat covers 10% of the three-quarter head only, and the
+  three-quarter figure is barely turned (5% of the turn asked). It renders and animates in
+  that view (`scripts/preview_puppet.py --view three_quarter`, facing Pip), but it is a
+  front view with a hat.
+- **The brief's fallback (owner decides).** FLUX.2 [klein] 4B, from research with sources,
+  not yet tried:
+  - **License:** Apache-2.0 for the weights, the Qwen3-4B text encoder and the VAE. Only the
+    9B is non-commercial.
+  - **Size:** the ComfyUI bf16 files total about 16.1 GB (7.75 + 8.04 + 0.34). The brief's
+    "~13 GB" was a VRAM figure. fp8 doesn't run on MPS, so it has to be bf16.
+  - **ComfyUI:** native core nodes (reference-latent editing), with official templates. Our
+    v0.42.1 is new enough.
+  - **Unknowns:** no published evidence that it turns *cartoon* characters cleanly. Speed on
+    an M4 is unmeasured (estimated 1–2 min per edit).
+  - **Alternative if klein drifts:** Qwen-Image-Edit-2511 (Apache-2.0) as a Q4 GGUF
+    (13.2 GB), with a Qwen2.5-VL-7B text encoder and an Apache-2.0 "multiple angles" LoRA. It
+    is tight on memory.
+  - **Options:**
+    - (a) install klein 4B bf16 (under the 20 GB ask-first line) and trial one front →
+      three-quarter edit of Kit
+    - (b) ship front-only puppets for now, and leave three-quarter to character LoRAs
+      (Step 7)
