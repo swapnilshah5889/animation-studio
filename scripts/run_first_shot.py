@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -47,6 +48,27 @@ Check your work before the final render (the shot's warnings, and a preview fram
 render the final video. Finish with a short summary and the video's path."""
 
 
+def cli_env() -> dict[str, str]:
+    """The environment for `claude`. Started from inside a Claude Code session, it would inherit
+    that session's auth proxy and host-managed token refresh, and fail ("OAuth session expired").
+    Dropping them makes it use the CLI's own login, as when run from a terminal."""
+    return {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("CLAUDE", "ANTHROPIC_", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH"))
+    }
+
+
+def logged_in() -> bool:
+    out = subprocess.run(
+        ["claude", "auth", "status"], env=cli_env(), capture_output=True, text=True
+    ).stdout
+    try:
+        return bool(json.loads(out).get("loggedIn"))
+    except ValueError:
+        return False
+
+
 def run_claude(model: str | None, budget: float | None) -> tuple[list[dict[str, Any]], float]:
     cmd = [
         "claude",
@@ -71,9 +93,10 @@ def run_claude(model: str | None, budget: float | None) -> tuple[list[dict[str, 
     t0 = time.monotonic()
     events = []
     raw = FILM / "transcript.jsonl"
+    env = cli_env()
     with (
         raw.open("w") as log,
-        subprocess.Popen(cmd, cwd=REPO_ROOT, stdout=subprocess.PIPE, text=True) as proc,
+        subprocess.Popen(cmd, cwd=REPO_ROOT, env=env, stdout=subprocess.PIPE, text=True) as proc,
     ):
         assert proc.stdout is not None
         for line in proc.stdout:
@@ -219,6 +242,8 @@ def main() -> int:
     args = ap.parse_args()
     if not DEMO.is_dir():
         sys.exit("films/step2-demo is missing: run scripts/make_demo_film.py first")
+    if not logged_in():
+        sys.exit("the claude CLI is not logged in here: run `claude auth login` in this shell")
     shutil.rmtree(FILM, ignore_errors=True)
     shutil.copytree(DEMO, FILM, ignore=shutil.ignore_patterns("shots"))
 

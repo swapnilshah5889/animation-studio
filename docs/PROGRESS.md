@@ -2,12 +2,12 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.7 done; 2.8 in progress. The done-when run
-(`scripts/run_first_shot.py`) waits for the owner to log the `claude` CLI back in.
+**Current step:** Step 2 (`synfig_mcp`): tasks 2.1–2.8 done. The Claude Code done-when run was
+skipped by the owner (D-035), so that done-when item stays open. Next: 2.9 (docs, Step 3 brief).
 
 ---
 
-## 2026-10-21: Step 2 task 2.8 in progress: the Inspector and Claude Code as clients
+## 2026-10-21/22: Step 2 task 2.8 done: the Inspector and Claude Code as clients
 
 **Done**
 - `.mcp.json` (repo root) registers `synfig_mcp` for Claude Code and the Inspector.
@@ -32,10 +32,17 @@ Update this at the end of every working session. Newest entry at the top.
 - The done-when checks pass on the hand-written demo shot and fail on an empty film.
 - 150 tests pass; ruff is clean.
 
-**Blocked**
-- The done-when run needs the `claude` CLI logged in. The test call failed with "OAuth session
-  expired and could not be refreshed". Owner: run `claude` in a terminal and `/login`. Then the
-  agent runs `uv run scripts/run_first_shot.py`.
+**Skipped by the owner (2026-10-22): the Claude Code done-when run**
+- The run needs the standalone `claude` CLI logged in, and the owner couldn't log it in. Every
+  shell the app reaches (the agent's, sandboxed or not, and the Terminal panel) reports
+  `loggedIn: false`.
+- From inside a Claude Code session, the child `claude` also inherits the session's auth proxy
+  and fails with "OAuth session expired". The script now drops those variables and checks the
+  login first, so it fails with a clear message.
+- **Open done-when item:** "From Claude Code as an MCP client, the LLM builds and renders a
+  10-second shot". To close it later, run `uv run scripts/run_first_shot.py` in any terminal where
+  `claude auth status` says `loggedIn: true`. It writes `docs/learning/mcp-first-shot.md` and the
+  checks. Otherwise, Step 5's director (a local LLM driving these same tools) proves it.
 
 **Notes**
 - Inspector 2.9 asks for Node ≥ 22.19 (installed: 22.13.1). It works with warnings. Upgrading
@@ -161,7 +168,7 @@ The owner approved the Step 2 brief as written (D-028).
 | 2.5 Motion library (owner checkpoint 3) | **Done, approved by the owner (checkpoint 3, 2026-10-21)**: `studio_core/motions/` with 9 motions (idle_breathe, blink, wave, nod, head_tilt, walk_cycle, jump, point, talk_gesture), energy/side/cycles/duration/target params, per-bone override + additive composition, joint-limit clamping, root and joint shifts (`build_character(shifts=...)`); 22 tests (timing, composition, determinism, a rendered jump rising 160 px); preview video `scripts/preview_motions.py`. Bone `role` added to the rig schema (D-029). Note: `docs/learning/motion-library.md`. |
 | 2.6 Parallax + camera | **Done**: `studio_core/scene.py` (parallax planes, camera presets, backdrop, feet placement), `schemas/background.schema.json` + placeholder meadow, `studio_core/shot.py` (spec → `scene.sif` → `shot.mp4` with dialogue), key poses, demo film `scripts/make_demo_film.py`; render tests for parallax rates, zoom, placement and the full shot (D-033). Note: `docs/learning/parallax-and-camera.md`. |
 | 2.7 `synfig_mcp` server | **Done**: `mcp/synfig_mcp/` (workspace member, `mcp` 2.3.0, stdio, `uv run synfig-mcp`) with 14 tools over the engine-neutral editor `studio_core/shot_spec.py`; 18 tests, including a real client in-process and over stdio, fixable errors and renders (D-034). Note: `docs/learning/mcp.md`. |
-| 2.8 Prove it from the Inspector and Claude Code | **In progress**: Inspector check done (`scripts/inspector_check.py`, 19/19 as expected); `.mcp.json` added and headless Claude Code connects (14 tools); the done-when run `scripts/run_first_shot.py` is ready but blocked on the CLI login (D-035). |
+| 2.8 Prove it from the Inspector and Claude Code | **Done, except the Claude Code run (skipped by the owner)**: Inspector check (`scripts/inspector_check.py`, 19/19 as expected); `.mcp.json`; headless Claude Code connects with only our 14 tools; the done-when run `scripts/run_first_shot.py` is ready but not run, because the CLI login isn't available (D-035). |
 | 2.9 Docs, Step 3 brief | To do |
 
 **Verified:** 75 tests pass (`uv run pytest`). The four example files validate; each mistake

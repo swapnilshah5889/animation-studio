@@ -438,3 +438,7 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   Why headless: the transcript is exact and complete, the run can be repeated (later with other
   models, and with the local director in Step 5), and the model can't fall back on shell or file
   tools.
+- **Owner, 2026-10-22: the Claude Code run is skipped for now.** The `claude` CLI can't be logged
+  in on this machine. The script is kept and the done-when item stays open. It closes when the
+  script is run from a logged-in terminal, or through Step 5's director, a local LLM driving the
+  same tools.
