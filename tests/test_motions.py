@@ -1,5 +1,6 @@
 """Motion library: timeline maths, composition rules, and per-motion timing (task 2.5)."""
 
+import copy
 from itertools import pairwise
 from pathlib import Path
 
@@ -124,6 +125,21 @@ def test_energy_scales_amplitude_and_side_picks_the_limb() -> None:
     assert ("angle", "upper_arm_l") in left.channels and max(
         k.value for k in left.channels[("angle", "upper_arm_l")]
     ) > 0
+
+
+def test_a_wave_stays_clear_of_a_big_head() -> None:
+    """The raised hand must stay visible: on a character with a big head (a fox's ears), the
+    wave raises the arm less than on Pip (task 4.4)."""
+    peak = lambda c, bone: max(abs(k.value) for k in c.channels[("angle", bone)])  # noqa: E731
+    for energy, expected in ((0.0, 120), (0.5, 140), (0.75, 150)):
+        wave = MOTIONS["wave"](ctx(params={"energy": energy, "side": "left"}))
+        assert peak(wave, "upper_arm_l") == pytest.approx(expected), energy  # Pip: as approved
+    wide = copy.deepcopy(VIEW)
+    head = wide["parts"]["head"]
+    head["size_px"][0], head["pivot_px"][0] = 700, 350  # a head (with ears) 700 px wide
+    big = MotionContext(view=wide, fps=FPS, start=24, last_frame=239, seed="kit",
+                        params={"energy": 0.5, "side": "left"})  # fmt: skip
+    assert peak(MOTIONS["wave"](big), "upper_arm_l") < 140
 
 
 def test_cycles_and_duration() -> None:

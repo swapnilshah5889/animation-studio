@@ -103,6 +103,39 @@ def _cycles(ctx: MotionContext, default: int, per_cycle: int, overhead: int) -> 
 # --------------------------------------------------------------------------- motions
 
 
+def _clear_raise(
+    ctx: MotionContext, side: str, target: float, swing: float, lowest: float = 90.0
+) -> float:
+    """The largest arm raise ≤ `target` (degrees from rest, 5° steps) at which the raised hand
+    stays clear of the head (its parts' rest box), even with the forearm swung `swing`
+    degrees toward it. A big-headed character's wave would otherwise hide behind its own ears
+    (Kit, task 4.4). Pip keeps the full raise up to energy 0.75; above that his hand also
+    passed behind his head on the inward swing, so it stops at 150°."""
+    if not ctx.has("head"):
+        return target
+    view, head = ctx.view, ctx.bone("head")
+    upper, fore = ctx.bone("upper_arm", side), ctx.bone("forearm", side)
+    rest = world_pose(view)
+    hj = rest[head][0]
+    lefts, rights = [], []
+    for part in view["parts"].values():
+        if part["bone"] == head:
+            lefts.append(hj.x - part["pivot_px"][0])
+            rights.append(hj.x + part["size_px"][0] - part["pivot_px"][0])
+    length = view["bones"][fore]["length_px"]
+    outward = 1.0 if rest[upper][0].x > hj.x else -1.0  # which side of the head the arm is on
+    edge = max(rights) if outward > 0 else min(lefts)
+    raise_deg = target
+    while raise_deg > lowest:
+        pose = world_pose(view, {upper: SIGN[side] * raise_deg, fore: SIGN[side] * swing})
+        joint, direction = pose[fore]
+        hand_x = joint.x + length * math.cos(math.radians(direction))
+        if outward * (hand_x - edge) >= 0:
+            break
+        raise_deg -= 5.0
+    return max(raise_deg, lowest)
+
+
 def wave(ctx: MotionContext) -> Clip:
     """Raise one arm and wave the forearm back and forth, then lower it."""
     side = ctx.params.get("side", "right")
@@ -113,7 +146,8 @@ def wave(ctx: MotionContext) -> Clip:
         ctx.frames(0.5),
     )
     cycles = _cycles(ctx, 3, 2 * swing, up + down)
-    raise_deg, amp = ctx.lerp(120, 160), ctx.lerp(15, 35)
+    amp = ctx.lerp(15, 35)
+    raise_deg = _clear_raise(ctx, side, ctx.lerp(120, 160), swing=amp)
     t0 = ctx.start
     t_up = t0 + up
     fore = [Key(t0, 0.0), Key(t_up, s * amp * 0.3)]
