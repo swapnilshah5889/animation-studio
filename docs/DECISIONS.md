@@ -696,3 +696,24 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     x4plus (BSD-3), SAM 2.1 base+ (fp32, 323 MB)
   - optional: the Fooocus inpaint patch (task 4.4); FLUX.2 klein 4B only if the owner chooses
     it at task 4.5
+
+### D-048: Puppet skeleton templates (task 4.2)
+- **One set of numbers:** `studio_core/puppet/skeleton.py` defines the puppet skeleton once and
+  draws both the OpenPose conditioning image (COCO-18 keypoints, standard colours, thick
+  lines scaled to the figure) and the rig's bones. A test finds each keypoint in the image by
+  its colour and checks it against the rig.
+- **Proportions:** taken from Pip (head ≈ 37% of the height; Pip's shoulder, hip and limb
+  lengths).
+- **Pose:** an A-pose with arms 25° out from hanging and legs 6° apart. Limbs stay clear of the
+  torso for cutting.
+- **Bones:** names, roles, sides, parents, limits and draw order identical to Pip, so the
+  motion library and the face work on generated puppets unchanged.
+- **Turnaround:** front and three-quarter figures on one 1344×768 canvas (an SDXL size), each
+  86% of the height.
+  - The three-quarter view faces screen-right, a 45° turn with cartoon depth: near side ×1.12,
+    far side ×0.72, the far ear hidden.
+  - A plain rotation read as a thin front view.
+- **To check in task 4.4:** generated puppets rest with arms 25° out, not hanging like Pip's.
+  Motions are offsets from rest (D-027), so a wave raises the arm 25° higher than on Pip. If
+  that looks wrong on the first puppet, add a per-bone neutral offset rather than changing
+  the pose.

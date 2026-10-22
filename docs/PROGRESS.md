@@ -2,8 +2,8 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): brief approved (D-047); task 4.1 (ComfyUI plumbing) done.
-Next: 4.2 (skeleton templates). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
+**Current step:** Step 4 (`comfy_mcp`): brief approved (D-047); tasks 4.1 (ComfyUI plumbing) and 4.2
+(skeleton templates) done. Next: 4.3 (`design_character`, owner checkpoint 2). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
 download (deferred).
 
 ---
@@ -17,7 +17,7 @@ The owner approved the Step 4 brief as written (D-047).
 | Task | Status |
 |---|---|
 | 4.1 ComfyUI plumbing | **Done**: `studio_core/comfy_runs.py` (`film_style`, `make_room_for_images` with a music guard, `ensure_comfy` starts ComfyUI on demand, `run_graph` uploads, collects, renames and writes `run.json`, `free_comfy`); 5 approved models installed via the manifest. |
-| 4.2 Skeleton templates | To do |
+| 4.2 Skeleton templates | **Done**: `studio_core/puppet/skeleton.py` (Pip proportions, A-pose, front + three-quarter turnaround on 1344×768, OpenPose image and rig bones from the same joints); 7 tests: keypoints found in the image within 1.5 px, bone directions within 1°, names, roles, parents, limits and draw order identical to Pip (D-048). |
 | 4.3 `design_character` (owner checkpoint 2) | To do |
 | 4.4 `build_puppet` (owner checkpoint 3) | To do |
 | 4.5 Three-quarter view | To do |
