@@ -628,6 +628,11 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   - The spot-check grew to 24 asserted queries (birds, dogs, cats, roosters, frogs, rain,
     thunder, waves, a squeaky door...), all passing, with scores ~0.6–0.7.
   - Remaining gaps: cows, a cartoon boing, a slide whistle.
+- **`avoid` filter (after the owner's review of the done-when shot):** many field recordings
+  carry background noise their labels name. The first birdsong the search chose for the
+  meadow had road traffic in it. `find_sfx(..., avoid=["traffic", "vehicle"])` drops sounds
+  whose tags or description mention those words, and searches a 4x larger pool so k results
+  remain.
 
 ### D-045: The shot mix (task 3.6)
 - `studio_core/audio/mix.py`: dialogue, sound-effect and music buses, built sample-exactly with

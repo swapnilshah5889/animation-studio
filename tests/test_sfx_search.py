@@ -106,3 +106,9 @@ def test_retrieval_spot_check() -> None:
     assert not misses, misses
     with_cap = find_sfx(["a happy jingle"], k=5, max_duration_s=1.0)[0]
     assert all(c.duration_s <= 1.0 for c in with_cap)
+    clean = find_sfx(["birds singing in the morning"], k=5, avoid=["traffic", "vehicle"])[0]
+    assert len(clean) == 5
+    for c in clean:
+        text = f"{c.description} {' '.join(c.tags)}".lower()
+        assert "traffic" not in text and "vehicle" not in text, c.sound_id
+        assert "bird" in text or "chirp" in text, c.sound_id

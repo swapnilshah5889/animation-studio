@@ -167,7 +167,9 @@ def test_find_sfx_through_mcp(tmp_path: Path) -> None:
     (result,) = run(tmp_path, [("find_sfx", {"queries": ["a door opening", "coins"], "k": 3})])
     found = ok(result)["results"]
     assert [r["query"] for r in found] == ["a door opening", "coins"]
-    assert "door" in found[0]["sounds"][0]["sound_id"] and len(found[1]["sounds"]) == 3
+    best = found[0]["sounds"][0]
+    assert "door" in f"{best['description']} {' '.join(best['tags'])}".lower()
+    assert len(found[1]["sounds"]) == 3
 
 
 def test_stdio_transport_lists_the_tools() -> None:

@@ -5,21 +5,21 @@ starts `audio_mcp` and `synfig_mcp` from `.mcp.json` and builds the shot only wi
 tool calls: two voiced, lip-synced lines in the characters' cast voices, a composed
 music cue, a sound effect found by description, then a 1080p render.
 
-- Date: 2026-10-22; 27 tool calls; 109 s.
+- Date: 2026-10-22; 27 tool calls; 103 s.
 - Video: `films/step3-demo/shots/s01_sh01/shot.mp4` (git-ignored).
 
 ## Checks
 
 - [x] 2 voiced lines, each with mouth cues
-- [x] mouth switch animated in scene.sif (38 keys)
+- [x] mouth switch animated in scene.sif (36 keys)
 - [x] music cue set
 - [x] a sound effect placed
 - [x] 1080p video, 240 frames
-- [x] mixed soundtrack: -14.8 LUFS, -1.5 dBTP
+- [x] mixed soundtrack: -14.6 LUFS, -1.5 dBTP
 
 ## Calls
 
-### 1. `audio_mcp.describe_audio` (0.5 s)
+### 1. `audio_mcp.describe_audio` (0.6 s)
 
 ```json
 {"film": "step3-demo"}
@@ -75,7 +75,7 @@ music cue, a sound effect found by description, then a 1080p render.
 …
 ```
 
-### 2. `audio_mcp.speak` (11.4 s)
+### 2. `audio_mcp.speak` (8.6 s)
 
 ```json
 {"film": "step3-demo", "character_id": "pip", "lines": [{"text": "Bunny, look! I found a red kite in the tall grass!"}]}
@@ -98,7 +98,7 @@ music cue, a sound effect found by description, then a 1080p render.
 }
 ```
 
-### 3. `audio_mcp.speak` (8.2 s)
+### 3. `audio_mcp.speak` (7.6 s)
 
 ```json
 {"film": "step3-demo", "character_id": "bunny", "lines": [{"text": "Wow, Pip! Let's fly it together!"}]}
@@ -121,7 +121,7 @@ music cue, a sound effect found by description, then a 1080p render.
 }
 ```
 
-### 4. `audio_mcp.compose` (20.0 s)
+### 4. `audio_mcp.compose` (18.3 s)
 
 ```json
 {"film": "step3-demo", "cue_id": "m01", "mood": "playful", "duration_s": 10.0, "energy": 0.5}
@@ -139,10 +139,10 @@ music cue, a sound effect found by description, then a 1080p render.
 }
 ```
 
-### 5. `audio_mcp.find_sfx` (4.3 s)
+### 5. `audio_mcp.find_sfx` (4.1 s)
 
 ```json
-{"queries": ["birds singing in the morning"], "k": 3}
+{"queries": ["birds singing in the morning"], "k": 3, "avoid": ["traffic", "vehicle"]}
 ```
 
 ```
@@ -152,44 +152,41 @@ music cue, a sound effect found by description, then a 1080p render.
    "query": "birds singing in the morning",
    "sounds": [
     {
-     "sound_id": "fsd50k_423766",
-     "score": 0.4704,
-     "duration_s": 16.692,
-     "description": "Chirp and tweet, Traffic noise and roadway noise, Bird vocalization and bird call and bird song, Bird, Wild animals, Animal, Motor vehicle (road), Vehicle. Birds.mp3",
+     "sound_id": "fsd50k_154824",
+     "score": 0.4571,
+     "duration_s": 20.961,
+     "description": "Chirp and tweet, Bird vocalization and bird call and bird song, Bird, Wild animals, Animal. Bird Chirp City Park.wav",
      "tags": [
-      "ambiance",
-      "ambience",
-      "ambient",
       "and",
       "animal",
       "animals",
-      "atmosphere",
-      "background-sound",
       "bird",
-      "bird-song",
-      "birds",
-      "birdsong",
       "call",
-      "calming",
       "chirp",
-      "field-recording",
-      "forest",
-      "general-noise",
-      "morning",
-      "motor",
-      "nature",
-      "noise",
-      "road",
-      "roadway",
+      "chirping",
+      "city",
+      "park",
       "song",
-      "soundscape",
-      "spring",
-      "traffic",
       "tweet",
-      "vehicle"
+      "vocalization",
+      "wild"
      ]
     },
- 
+    {
+     "sound_id": "fsd50k_125781",
+     "score": 0.408,
+     "duration_s": 26.298,
+     "description": "Chirp and tweet, Bird vocalization and bird call and bird song, Bird, Wild animals, Animal. bird-twitter.aiff",
+     "tags": [
+      "and",
+      "animal",
+      "animals",
+      "bird",
+      "call",
+      "chirp",
+      "song",
+      "tweet",
+      "twi
 …
 ```
 
@@ -447,14 +444,14 @@ music cue, a sound effect found by description, then a 1080p render.
 ### 22. `synfig_mcp.add_sound_effect` (1.1 s)
 
 ```json
-{"film": "step3-demo", "shot_id": "s01_sh01", "sound_id": "fsd50k_423766", "start_s": 0.0, "volume": 0.35, "query": "birds singing in the morning"}
+{"film": "step3-demo", "shot_id": "s01_sh01", "sound_id": "fsd50k_154824", "start_s": 0.0, "volume": 0.35, "query": "birds singing in the morning"}
 ```
 
 ```
 {
  "shot_id": "s01_sh01",
  "spec_path": "films/step3-demo/shots/s01_sh01/shot.json",
- "change": "sound fsd50k_423766 at 0.0s",
+ "change": "sound fsd50k_154824 at 0.0s",
  "warnings": []
 }
 ```
@@ -543,7 +540,7 @@ music cue, a sound effect found by description, then a 1080p render.
 …
 ```
 
-### 25. `synfig_mcp.render_preview_frame` (2.4 s)
+### 25. `synfig_mcp.render_preview_frame` (1.4 s)
 
 ```json
 {"film": "step3-demo", "shot_id": "s01_sh01", "time_s": 1.6}
@@ -560,7 +557,7 @@ music cue, a sound effect found by description, then a 1080p render.
 }
 ```
 
-### 26. `audio_mcp.preview_mix` (2.3 s)
+### 26. `audio_mcp.preview_mix` (2.4 s)
 
 ```json
 {"film": "step3-demo", "shot_id": "s01_sh01"}
@@ -571,13 +568,13 @@ music cue, a sound effect found by description, then a 1080p render.
  "shot_id": "s01_sh01",
  "mix_path": "films/step3-demo/shots/s01_sh01/mix.wav",
  "duration_s": 10.0,
- "integrated_lufs": -14.8,
+ "integrated_lufs": -14.6,
  "true_peak_db": -1.5,
  "warnings": []
 }
 ```
 
-### 27. `synfig_mcp.render_shot` (56.8 s)
+### 27. `synfig_mcp.render_shot` (57.0 s)
 
 ```json
 {"film": "step3-demo", "shot_id": "s01_sh01", "quality": "final"}
@@ -593,6 +590,6 @@ music cue, a sound effect found by description, then a 1080p render.
   1920,
   1080
  ],
- "render_seconds": 56.2
+ "render_seconds": 56.4
 }
 ```

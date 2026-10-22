@@ -81,7 +81,9 @@ async def build(rec: Recorder) -> None:
         bunny = await a("speak", **film, character_id="bunny", lines=[{"text": BUNNY_LINE}])
         bunny = bunny["lines"]
         await a("compose", **film, cue_id="m01", mood="playful", duration_s=DURATION, energy=0.5)
-        birds = await a("find_sfx", queries=["birds singing in the morning"], k=3)
+        birds = await a(
+            "find_sfx", queries=["birds singing in the morning"], k=3, avoid=["traffic", "vehicle"]
+        )
         bird_id = birds["results"][0]["sounds"][0]["sound_id"]
 
         pip_start = 0.6

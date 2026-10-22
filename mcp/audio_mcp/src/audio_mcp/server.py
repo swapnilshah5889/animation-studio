@@ -410,11 +410,22 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         max_duration_s: Annotated[
             float | None, Field(gt=0, description="Only shorter sounds.")
         ] = None,
+        avoid: Annotated[
+            list[Annotated[str, Field(min_length=2, max_length=30)]] | None,
+            Field(
+                max_length=10,
+                description="Skip sounds mentioning these words, e.g. ['traffic', 'vehicle'].",
+            ),
+        ] = None,
     ) -> SearchResults:
         """Search the CC0 sound-effect library by description, best match first. Ask for
-        several sounds in one call. Use a sound_id with add_sound_effect."""
+        several sounds in one call. Many recordings carry background noise their tags name
+        (traffic, people talking); list such words in `avoid`. Use a sound_id with
+        add_sound_effect."""
         with fixable():
-            found = await in_thread(run_find_sfx, list(queries), k=k, max_duration_s=max_duration_s)
+            found = await in_thread(
+                run_find_sfx, list(queries), k=k, max_duration_s=max_duration_s, avoid=avoid
+            )
             return SearchResults(
                 results=[
                     SearchResult(

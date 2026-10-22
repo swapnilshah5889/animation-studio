@@ -157,9 +157,12 @@ def find_sfx(
     *,
     k: int = 5,
     max_duration_s: float | None = None,
+    avoid: list[str] | None = None,
     cfg: StudioConfig | None = None,
 ) -> list[list[Candidate]]:
-    """The k best library sounds for each query (best first). One CLAP call for all queries."""
+    """The k best library sounds for each query (best first). One CLAP call for all queries.
+    `avoid` drops sounds whose tags or description mention any of those words (e.g. a birdsong
+    recorded next to a road: avoid=["traffic", "vehicle"])."""
     from qdrant_client import models
 
     if not queries or any(not q.strip() for q in queries):
@@ -171,6 +174,8 @@ def find_sfx(
     if not client.collection_exists(COLLECTION) or client.count(COLLECTION).count == 0:
         raise SearchError("the sound library isn't indexed yet; run scripts/index_sfx.py")
     library = load_library(cfg.path("paths", "sfx_library"))
+    unwanted = terms(" ".join(avoid or []))
+    pool = CANDIDATES * (4 if unwanted else 1)  # room left after dropping avoided sounds
     duration = []
     if max_duration_s is not None:
         duration = [models.FieldCondition(key="duration_s", range=models.Range(lte=max_duration_s))]
@@ -189,12 +194,14 @@ def find_sfx(
             filters.append(models.Filter(must=[*duration, models.HasIdCondition(has_id=ids)]))
         for flt in filters:
             for hit in client.query_points(
-                COLLECTION, query=vector, limit=CANDIDATES, query_filter=flt, with_payload=True
+                COLLECTION, query=vector, limit=pool, query_filter=flt, with_payload=True
             ).points:
                 hits[hit.id] = hit
         ranked = []
         for hit in hits.values():
             sound = hit.payload
+            if unwanted and matched(unwanted, sound):
+                continue
             share = matched(wanted, sound) / len(wanted) if wanted else 0.0
             ranked.append(
                 Candidate(
