@@ -24,8 +24,9 @@ from studio_core.puppet.build import (
     head_mask,
     limb_fit,
 )
+from studio_core.puppet.consistency import ViewCut, compare_views
 from studio_core.puppet.design import CANVAS
-from studio_core.puppet.skeleton import Skeleton, rig_bones, turnaround
+from studio_core.puppet.skeleton import Skeleton, place, rig_bones, turnaround
 from studio_core.schema import validate_file
 
 FRONT, SIDE = turnaround(CANVAS)
@@ -165,58 +166,113 @@ def test_the_face_is_painted_out_but_the_nose_stays() -> None:
     assert abs(anchors["mouth"]["at"][1] - f["mouth"][1]) < 3
 
 
-def test_build_writes_a_valid_rig_with_hanging_arms(film: Path) -> None:
+def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
     built = build_puppet(film, "kit", name="Kit", sam=False)
     folder = film / "characters" / "kit"
     assert built.rig_path == folder / "rig.json" and validate_file(built.rig_path) == []
-    view = built.rig["views"]["front"]
-    assert {p.name for p in (folder / "parts").iterdir()} == {f"{b}.png" for b in view["bones"]}
-    for name, part in view["parts"].items():
-        w, h = Image.open(folder / part["file"]).size
-        assert [w, h] == part["size_px"]
-        assert 0 <= part["pivot_px"][0] <= w and 0 <= part["pivot_px"][1] <= h, name
-    for arm in ("upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r"):
-        assert view["bones"][arm]["direction_deg"] == pytest.approx(-90, abs=0.5)
-    assert built.report["limbs_ok"] and built.report["silhouette"]["method"] == "colour key"
-    assert view["face"]["part"] == "head" and "kit" in json.loads((film / "film.json").read_text())[
-        "characters"]  # fmt: skip
+    assert set(built.rig["views"]) == {"front", "three_quarter"}
+    for name, view in built.rig["views"].items():
+        report = built.report["views"][name]
+        parts = {p.name for p in (folder / "parts" / name).iterdir()}
+        assert parts == {f"{b}.png" for b in view["bones"]}, name
+        for part_name, part in view["parts"].items():
+            w, h = Image.open(folder / part["file"]).size
+            assert [w, h] == part["size_px"]
+            assert 0 <= part["pivot_px"][0] <= w and 0 <= part["pivot_px"][1] <= h, part_name
+        for arm in ("upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r"):
+            assert view["bones"][arm]["direction_deg"] == pytest.approx(-90, abs=0.5)
+        assert report["limbs_ok"] and report["silhouette"]["method"] == "colour key", name
+        assert report["face"]["nose_found"] and report["face"]["eyes_found"] == ["left", "right"]
+        for image in ("parts.png", "face.png", "poses.png"):
+            assert (folder / "build" / name / image).is_file()
+    tq = built.rig["views"]["three_quarter"]
+    assert tq["draw_order"][:2] == ["upper_arm_l", "forearm_l"]  # the far arm behind
+    assert "kit" in json.loads((film / "film.json").read_text())["characters"]
     palette = json.loads((folder / "palette.json").read_text())["colors"]
     assert {c["hex"] for c in palette[:3]} & {"#e67828", "#e57828", "#e67827"}  # the fur leads
-    for name in ("parts.png", "face.png", "poses.png", "report.json"):
-        assert (folder / "build" / name).is_file()
+    assert (folder / "build" / "report.json").is_file()
+    assert built.report["consistency"]["ok"], built.report["consistency"]["problems"]
 
 
 def test_turning_the_arms_back_reproduces_the_sheet(film: Path) -> None:
     built = build_puppet(film, "kit", sam=False)
-    view = built.rig["views"]["front"]
-    turned = built.report["arms_turned_to_hang_deg"]
-    undo = {b: -turned[b] for b in ("upper_arm_l", "upper_arm_r")}
-    posed = compose(view, film / "characters" / "kit", undo, size=CANVAS,
-                    root_at=tuple(round(v) for v in FRONT.joints["pelvis"]))  # fmt: skip
-    drawn, _ = figure_mask(pixels(), FRONT)
-    alpha = np.asarray(posed)[..., 3] > 127
-    iou = (alpha & drawn).sum() / (alpha | drawn).sum()
-    assert iou > 0.95
+    for sk in (FRONT, SIDE):
+        view = built.rig["views"][sk.view]
+        turned = built.report["views"][sk.view]["arms_turned_to_hang_deg"]
+        undo = {b: -turned[b] for b in ("upper_arm_l", "upper_arm_r")}
+        posed = compose(view, film / "characters" / "kit", undo, size=CANVAS,
+                        root_at=tuple(round(v) for v in sk.joints["pelvis"]))  # fmt: skip
+        drawn, _ = figure_mask(pixels(), sk)
+        alpha = np.asarray(posed)[..., 3] > 127
+        assert (alpha & drawn).sum() / (alpha | drawn).sum() > 0.95, sk.view
 
 
 def test_sam_joins_the_colour_key_unless_it_went_wrong(
     film: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    drawn, _ = figure_mask(pixels(), FRONT)
+    drawn = {sk.view: figure_mask(pixels(), sk)[0] for sk in (FRONT, SIDE)}
+    masks = dict(drawn)
 
     def fake_segment(film_root, sheet_path, skeletons, out_dir, cfg=None):
         out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / "mask_front.png"
-        Image.fromarray((mask * 255).astype("uint8")).save(path)
-        return [path]
+        paths = []
+        for sk in skeletons:
+            paths.append(out_dir / f"mask_{sk.view}.png")
+            Image.fromarray((masks[sk.view] * 255).astype("uint8")).save(paths[-1])
+        return paths
 
     monkeypatch.setattr(build, "segment_sheet", fake_segment)
-    mask = drawn.copy()
-    assert build_puppet(film, "kit").report["silhouette"]["method"] == "colour key + SAM 2.1"
-    mask = np.zeros_like(drawn)
-    mask[:, :672] = True  # SAM returned the whole column
-    notes = build_puppet(film, "kit").report["silhouette"]
-    assert notes["sam_rejected"] and notes["method"] == "colour key"
+    views = build_puppet(film, "kit").report["views"]
+    assert {v["silhouette"]["method"] for v in views.values()} == {"colour key + SAM 2.1"}
+    masks["three_quarter"] = np.zeros_like(drawn["front"])
+    masks["three_quarter"][:, 672:] = True  # SAM returned the whole column
+    views = build_puppet(film, "kit").report["views"]
+    assert views["front"]["silhouette"]["method"] == "colour key + SAM 2.1"
+    assert views["three_quarter"]["silhouette"]["sam_rejected"]
+
+
+def _two_views(tq_skeleton: Skeleton, *, hat: bool = False) -> np.ndarray:
+    """A sheet whose three-quarter figure is drawn from `tq_skeleton`, maybe with a hat."""
+    img = Image.new("RGB", CANVAS, BG)
+    draw = ImageDraw.Draw(img)
+    draw_character(draw, FRONT)
+    draw_character(draw, tq_skeleton)
+    if hat:
+        x, y = tq_skeleton.joints["head_top"]
+        draw.ellipse([x - 40, y + 5, x + 40, y + 55], fill=(90, 60, 200))
+    return np.asarray(img).astype("float32")
+
+
+def _consistency(img: np.ndarray) -> dict:
+    cuts = {}
+    for sk in (FRONT, SIDE):
+        figure, _ = figure_mask(img, sk)
+        head = head_mask(img, figure, sk)
+        bones = rig_bones(sk)
+        fits = {n: limb_fit(figure, sk, bones[n]) for n in build.LIMBS}
+        parts = assign_parts(img, figure, head, bones, fits)
+        _, _, notes = clean_face(img, head, sk)
+        cuts[sk.view] = ViewCut(sk, parts, notes["nose_px"][0] if notes["nose_px"] else None)
+    return compare_views(img, cuts)
+
+
+def test_matching_views_are_consistent() -> None:
+    report = _consistency(_two_views(SIDE))
+    assert report["ok"], report["problems"]
+    assert report["turn"]["fraction"] > 0.5
+
+
+def test_a_hat_in_one_view_only_is_reported() -> None:
+    report = _consistency(_two_views(SIDE, hat=True))
+    assert [p for p in report["problems"] if p.startswith("head:")]
+    assert report["regions"]["head"]["only_three_quarter"][0]["share"] > 0.03
+
+
+def test_an_unturned_three_quarter_view_is_reported() -> None:
+    # The "three-quarter" figure drawn as a front view, as SDXL often does.
+    unturned = place("front", height_px=SIDE.height_px, feet_px=SIDE.joints["sole"])
+    report = _consistency(_two_views(Skeleton("three_quarter", unturned.joints, SIDE.hidden)))
+    assert any("barely turned" in p for p in report["problems"])
 
 
 def test_nothing_chosen_is_refused(film: Path) -> None:

@@ -98,6 +98,17 @@ DRAW_ORDER = (
     "thigh_r", "shin_r", "thigh_l", "shin_l", "torso",
     "upper_arm_r", "forearm_r", "upper_arm_l", "forearm_l", "head",
 )  # fmt: skip
+# Three-quarter (facing screen-right, the character's left is the far side): the far arm and
+# both legs behind the torso, the near arm in front, the head on top.
+THREE_QUARTER_ORDER = (
+    "upper_arm_l", "forearm_l", "thigh_l", "shin_l", "thigh_r", "shin_r", "torso",
+    "upper_arm_r", "forearm_r", "head",
+)  # fmt: skip
+
+
+def draw_order(view: View) -> tuple[str, ...]:
+    return THREE_QUARTER_ORDER if view == "three_quarter" else DRAW_ORDER
+
 
 # Pip's proportions in design units (height = 1, ground = 0, y up). Pip is 767 px tall:
 # hips 240 px up, neck 482, head top 767; shoulders ±78 px; hips ±32 px.
