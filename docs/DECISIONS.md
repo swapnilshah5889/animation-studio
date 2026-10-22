@@ -510,3 +510,26 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   classifier replaces it.
 - **Test marker `models`:** for tests that run a local model (Kokoro here), like `render` for
   Synfig.
+
+### D-039: Voice casting: Pip and Bunny (owner, 2026-10-22)
+- **Pip:** casting page c12: `af_heart`, +2 semitones, 8% faster (child-like, bright).
+- **Bunny:** casting page c03: `af_nicole`, unchanged (soft and close).
+- Stored as `tests/fixtures/characters/<id>/voice.json`, so every film made from the fixtures
+  (the demo film, tests) carries the cast. `scripts/make_demo_film.py` now adds Bunny to the
+  demo film: the placeholder puppet plus Bunny's voice.
+- `build_rig`'s placeholder copy leaves out `voice.json`. The placeholder's voice is Pip's, and a
+  new character gets its own voice at casting.
+
+### D-040: Lip-sync details (task 3.3)
+- `studio_core/audio/lipsync.py` runs Rhubarb on the **final** line audio, with the line's text
+  as `--dialogFile`, extended shapes G, H and X, and `pocketSphinx` for English voices
+  (`phonetic` otherwise).
+- **`speak` lip-syncs by default** (`cues=False` opts out), so every spoken line is ready for
+  `apply_lipsync`.
+- **Cache:** existing cues are reused when they validate and match the audio's length within
+  50 ms. A re-take deletes the old cues, so they're always redone.
+- `metadata.soundFile` is rewritten relative to the cues file (`../dialogue/l001.wav`), so film
+  folders hold no absolute paths and can move (D-032 containers).
+- Lines run in parallel, up to 4 at once.
+- Measured: same audio + same text gives identical cues (Rhubarb is deterministic); 6.3 s for a
+  5.6 s line under Rosetta.

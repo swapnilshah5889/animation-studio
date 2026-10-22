@@ -13,7 +13,10 @@ For each line:
 4. **Post-process** with ffmpeg: trim silence at both ends, apply the voice's pitch step,
    normalize to the voice's speech loudness with a linear gain (true peak ≤ -1.5 dBTP).
 5. **Write** audio/dialogue/<line_id>.wav, .txt and .json (schemas/line.schema.json). Stale
-   mouth cues for a replaced line are removed: lip-sync must be redone on the new audio.
+   mouth cues for a replaced line are removed.
+6. **Lip-sync** (unless `cues=False`): Rhubarb mouth cues for every line of the request
+   (studio_core.audio.lipsync; cached lines with valid cues are not redone), so a spoken line is
+   always ready for the mouth.
 
 `synthesize` is the same pipeline without a film folder, for previews (voice casting).
 """
@@ -31,6 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from studio_core.audio import ffmpeg
+from studio_core.audio.lipsync import lipsync
 from studio_core.config import REPO_ROOT, StudioConfig, expand_path, load_config
 from studio_core.schema import validate
 
@@ -55,6 +59,7 @@ class SpokenLine:
     duration_s: float
     take: int
     cached: bool
+    cues: Path | None = None  # audio/lipsync/<line_id>.json, unless speak(cues=False)
 
 
 # --------------------------------------------------------------------------- text and ids
@@ -213,6 +218,7 @@ def speak(
     lines: list[dict[str, str]],
     *,
     regenerate: bool = False,
+    cues: bool = True,
     cfg: StudioConfig | None = None,
 ) -> list[SpokenLine]:
     """Speak lines ({text, optional line_id}) in the character's voice. See the module docstring."""
@@ -281,6 +287,11 @@ def speak(
             (folder / f"{p['id']}.json").write_text(json.dumps(meta, indent=2) + "\n")
             stale = film_root / "audio" / "lipsync" / f"{p['id']}.json"
             stale.unlink(missing_ok=True)  # cues of the previous take no longer match
+    cue_files = {}
+    if cues:
+        cue_files = {
+            r.line_id: r.cues for r in lipsync(film_root, [p["id"] for p in plan], cfg=cfg)
+        }
     return [
         SpokenLine(
             line_id=p["id"],
@@ -289,6 +300,7 @@ def speak(
             duration_s=ffmpeg.duration(folder / f"{p['id']}.wav"),
             take=p["take"],
             cached=p["cached"],
+            cues=cue_files.get(p["id"]),
         )
         for p in plan
     ]

@@ -27,6 +27,7 @@ from studio_core.schema import validate
 FIXTURES = Path(__file__).parent / "fixtures"
 VOICE = json.loads((FIXTURES / "schemas" / "voice_pip.json").read_text())
 has_kokoro = expand_path(load_config().get("envs", "kokoro")["python"]).exists()
+has_rhubarb = load_config().path("tools", "rhubarb").exists()
 
 
 def film_with_voice(root: Path, voice: dict | None = None) -> Path:
@@ -163,10 +164,11 @@ def test_linear_gain_reaches_the_target(tmp_path: Path) -> None:
 
 
 @pytest.mark.models
-@pytest.mark.skipif(not has_kokoro, reason="no Kokoro env")
+@pytest.mark.skipif(not (has_kokoro and has_rhubarb), reason="no Kokoro env or Rhubarb")
 def test_speak_writes_lines_caches_and_regenerates(tmp_path: Path) -> None:
     film = film_with_voice(tmp_path)
     first = speak(film, "pip", [{"text": "Hi Bunny! Look what I found."}, {"text": "Wow!"}])
+    assert all(r.cues and r.cues.is_file() for r in first)  # speak lip-syncs by default
     assert [(r.line_id, r.take, r.cached) for r in first] == [
         ("l001", 1, False),
         ("l002", 1, False),
@@ -184,8 +186,8 @@ def test_speak_writes_lines_caches_and_regenerates(tmp_path: Path) -> None:
     assert [(r.line_id, r.cached) for r in again] == [("l001", True)]
 
     cues = film / "audio" / "lipsync" / "l002.json"
-    cues.parent.mkdir(parents=True)
-    shutil.copy(FIXTURES / "audio" / "pip_line_01.rhubarb.json", cues)
+    shutil.copy(FIXTURES / "audio" / "pip_line_01.rhubarb.json", cues)  # stale: another take
     redo = speak(film, "pip", [{"line_id": "l002", "text": "Wow!"}], regenerate=True)
     assert [(r.line_id, r.take, r.cached) for r in redo] == [("l002", 2, False)]
-    assert not cues.exists()  # stale cues of the old take are gone
+    fresh = json.loads(cues.read_text())  # the stale cues were replaced by cues for this take
+    assert fresh["metadata"]["duration"] == pytest.approx(redo[0].duration_s, abs=0.05)

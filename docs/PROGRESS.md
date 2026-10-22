@@ -2,13 +2,12 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): tasks 3.1 and 3.2 done. **Waiting for the owner's voice
-casting** (checkpoint 2, `renders/voice-casting/index.html`). Step 2 has one done-when item open
-(D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1–3.3 done; voices cast (D-039). Next: 3.4 (music:
+fix ACE-Step's memory first, then `compose`). Step 2 has one done-when item open (D-035).
 
 ---
 
-## 2026-10-22: Step 3 started: tasks 3.1 (audio schemas) and 3.2 (voices) done
+## 2026-10-22: Step 3 started: tasks 3.1–3.3 (schemas, voices, lip-sync) done
 
 The owner approved the Step 3 brief as written (D-036).
 
@@ -17,8 +16,8 @@ The owner approved the Step 3 brief as written (D-036).
 | Task | Status |
 |---|---|
 | 3.1 Audio schemas and file layout | **Done**: `schemas/voice`, `line`, `lipsync`, `music`, `sfx_library`; shot schema gains `sfx[].sound` and `music_volume`; semantic checks (cue order and coverage, unique voices, sounds and audio, line/voice consistency); asset checks in `shot_spec` (line metadata, stale mouth cues, chosen sounds in the library, music cues exist); `studio_core/audio/library.py` (manifest loader); files named by id recognized by folder in `validate_file` (D-037). |
-| 3.2 Voices: `speak` (owner checkpoint 2: casting) | **Done, waiting for the owner's casting**: `studio_core/audio/voices.py` (text checks, content-hash cache, one Kokoro batch per call, trim + pitch step + linear-gain loudness, line metadata, stale cues removed), `studio_core/audio/ffmpeg.py`, `scripts/audio/kokoro_batch.py`, 4 casting voices fetched; casting page `scripts/audio/voice_casting.py` (14 candidates × 2 lines) (D-038). Note: `docs/learning/voices-and-loudness.md`. |
-| 3.3 Lip-sync: `lipsync` | To do |
+| 3.2 Voices: `speak` (owner checkpoint 2: casting) | **Done; cast by the owner** (Pip c12, Bunny c03, D-039): `studio_core/audio/voices.py` (text checks, content-hash cache, one Kokoro batch per call, trim + pitch step + linear-gain loudness, line metadata, stale cues removed), `studio_core/audio/ffmpeg.py`, `scripts/audio/kokoro_batch.py`, 4 casting voices fetched; casting page `scripts/audio/voice_casting.py` (14 candidates × 2 lines) (D-038). Note: `docs/learning/voices-and-loudness.md`. |
+| 3.3 Lip-sync: `lipsync` | **Done**: `studio_core/audio/lipsync.py` (Rhubarb on the final audio with the text, recognizer by language, cache by validity and length, relative `soundFile`, parallel lines); `speak` lip-syncs by default (D-040). Note: `docs/learning/lip-sync.md`. |
 | 3.4 Music: `compose` (owner checkpoint 3) | To do |
 | 3.5 Sound-effect library and search: `find_sfx` | To do |
 | 3.6 The mix | To do |
@@ -49,8 +48,16 @@ The owner approved the Step 3 brief as written (D-036).
     30 ms; the trim keeps 80/120 ms of air; the linear gain reaches −23 LUFS within 0.3 LU
   - one real Kokoro run (`-m models`)
 - Casting page: 28 takes in 25 s, 1.6 MB self-contained HTML. All 28 embedded clips decode.
-- Next: the owner picks voices for Pip and Bunny. They become
-  `characters/<id>/voice.json`, and then 3.3 (lip-sync).
+- The owner cast Pip as c12 and Bunny as c03 (D-039). Their `voice.json` files are in the
+  fixtures, and the demo film now has Bunny.
+
+**Task 3.3 (same day)**
+- Rhubarb on the Step 0 fixture line reproduces the fixture's 34 cues exactly. It took 6.3 s,
+  and the repeat call is a cache hit.
+- End to end: `speak` in Pip's cast voice → cues → `add_dialogue` → the shot passes every check,
+  with no errors and no warnings.
+- 200 tests pass; ruff is clean. The suite now takes ~60 s, because the `models` tests run
+  Kokoro and Rhubarb. Skip them with `-m "not models"`.
 
 ## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
 
