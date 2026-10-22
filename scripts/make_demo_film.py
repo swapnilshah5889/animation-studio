@@ -4,7 +4,8 @@
     uv run scripts/make_demo_film.py --render             # + shots/s01_sh01/shot.mp4, 1920x1080
     uv run scripts/make_demo_film.py --render --size 640x360   # quick preview
 
-The folder follows the film project layout (docs/ARCHITECTURE.md): Pip's rig and parts, the
+The folder follows the film project layout (docs/ARCHITECTURE.md): Pip's rig, parts and voice, Bunny
+(the placeholder puppet with Bunny's voice), the
 meadow background, dialogue line l001 (its WAV, transcript and Rhubarb cues) and the 10-second
 shot spec s01_sh01 (tests/fixtures/schemas/shot_s01_sh01.json). films/ is git-ignored. Safe to
 re-run: the inputs are copied fresh each time; renders are overwritten.
@@ -19,6 +20,7 @@ import time
 
 from studio_core.config import REPO_ROOT
 from studio_core.shot import render_shot
+from studio_core.shot_spec import FilmFolder, register_rig
 
 FIXTURES = REPO_ROOT / "tests" / "fixtures"
 FILM = REPO_ROOT / "films" / "step2-demo"
@@ -45,6 +47,11 @@ def main() -> int:
             shutil.copytree(src, dst, dirs_exist_ok=True)
         else:
             shutil.copy2(src, dst)
+    # Bunny: the placeholder puppet (real art comes in Step 4) with Bunny's cast voice.
+    film = FilmFolder(FILM)
+    if not film.rig_file("bunny").is_file():
+        register_rig(film, "bunny")
+    shutil.copy2(FIXTURES / "characters" / "bunny" / "voice.json", FILM / "characters" / "bunny")
     print(f"film folder ready: {FILM.relative_to(REPO_ROOT)}")
     if not args.render:
         return 0

@@ -459,7 +459,10 @@ def register_rig(
     if placeholder:
         if film.rig_file(character_id).is_file():
             raise SpecError(f"{character_id!r} already has a rig; pass rig to replace it")
-        shutil.copytree(PLACEHOLDER_RIG, folder, dirs_exist_ok=True)
+        # The puppet only: the placeholder's voice belongs to Pip, not to this character.
+        shutil.copytree(
+            PLACEHOLDER_RIG, folder, dirs_exist_ok=True, ignore=shutil.ignore_patterns("voice.json")
+        )
         rig = json.loads((PLACEHOLDER_RIG / "rig.json").read_text())
         rig["id"], rig["name"] = character_id, character_id.replace("_", " ").title()
     assert rig is not None

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "character": "bunny",
+  "engine": "kokoro",
+  "voices": [{ "id": "af_nicole", "weight": 1 }],
+  "speed": 1.0,
+  "pitch_semitones": 0,
+  "loudness_lufs": -20,
+  "notes": "Cast by the owner on 2026-10-22 (casting page c03): af_nicole. Soft and close."
+}
