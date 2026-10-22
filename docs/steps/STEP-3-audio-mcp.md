@@ -160,6 +160,108 @@ terms forbid copying the database).
 - DECISIONS, PROGRESS, MODELS (every model and the sound library, with licenses), and the Step 4
   brief (`comfy_mcp`).
 
+## Proposed addition: Indian voices (task 3.2b), not yet approved
+
+> **Status: proposal for the owner (2026-10-22).** Nothing is installed. The owner asked for
+> Indian-accented English (and Hindi) voices. Research is summarized below; sources are in
+> "Research notes: Indian voices".
+
+**What we have today (probed 2026-10-22):**
+- Kokoro speaks **Hindi** with 4 voices (`hf_alpha`, `hf_beta`, `hm_omega`, `hm_psi`). Its Hindi
+  pronunciation component (espeak-ng, bundled via pip) is already in `envs/kokoro`.
+- One Hindi voice (`hf_alpha`, 0.5 MB) was fetched for the probe: a Hindi line took 1.3 s.
+  Rhubarb's language-independent recognizer gave 46 mouth cues over 8 shapes.
+- A Hindi voice reading English through Kokoro's English rules is a free, zero-install way to an
+  Indian accent. It is in `renders/indian-voices-probe/` for the owner to judge.
+- Kokoro has **no Indian-English voice**. That needs another model.
+
+**Proposal: Indic Parler-TTS (AI4Bharat) as a second TTS engine.**
+
+| | Indic Parler-TTS |
+|---|---|
+| License | **Apache-2.0** weights. Training data: IndicTTS, LIMMITS, Rasa (CC-BY-4.0) + GLOBE. Commercial use OK |
+| Access | **Gated:** the owner accepts the terms on Hugging Face once and logs in (a free token, allowed by CLAUDE.md). Fully offline after the download |
+| Size | 0.94B params, ~3.7 GB fp32 download (under the 20 GB ask-first limit) |
+| Languages | **Indian English, stated explicitly by its card**, Hindi and ~19 more Indian languages, in one model |
+| Voices | 21 named English speakers (Thoma and Mary recommended) and 4 Hindi speakers (Rohit and Divya recommended). A character = a speaker + a fixed description, so the voice stays the same |
+| Control | Description text: pitch, pace, expressivity, recording quality. No emotion control for English or Hindi. **No child voices** (only "young" or "high-pitched") |
+| Mac | Small enough to sit beside nothing else (one large model at a time). Reported MPS quirks have a CPU fallback. Speed on Mac is unpublished: we measure it |
+| Runtime | `parler-tts` from git, which pins `transformers==4.46.1`, so it gets its own env `envs/parler` (D-016) |
+| Quality | Paper (Interspeech 2025): NORESQA-MOS 4.14, MUSHRA 81.7 vs 89.7 for humans. No English-only score |
+
+**How it fits what we built (est. ~1 day):**
+1. `voice.json`, additive:
+   - `engine: "parler"`
+   - a `language` (`en-in`, `hi`, ...)
+   - Parler voices are a named `speaker` plus structured pitch, pace and expressivity fields.
+     Code writes Parler's description from those fields; the LLM never writes it (rules in
+     code).
+   - Kokoro voices stay as they are.
+2. `scripts/audio/parler_batch.py` in `envs/parler`, with the same JSON-in/JSON-out protocol as
+   the Kokoro worker. A **fixed seed per line**: Parler samples randomly, and the seed goes into
+   the line hash, so takes stay reproducible.
+3. Everything after synthesis is unchanged:
+   - the trim, pitch step and loudness pass (the pitch step is also our route to child-like
+     Indian voices)
+   - the cache by hash and the line files
+   - lip-sync: Rhubarb with the text, the English recognizer for Indian English, the phonetic
+     one for Hindi
+4. The text check learns Devanagari (vowel signs and the danda are refused today). The
+   blocklist stays English-only until the Step 5 safety classifier.
+5. Measure: speed, memory peak and MPS stability on the M4. A test like `speak`'s.
+6. **Casting page:**
+   - Parler's English speakers (Indian English), with and without the pitch step
+   - its Hindi speakers, plus Kokoro's 4 Hindi voices (3 more packs, 1.5 MB)
+   - the probe's "Hindi voice reading English"
+   - The owner picks; that becomes D-0xx.
+
+**Alternatives considered:**
+- **Indic-Speak** (Bodhan AI, Sept 2026, now recommended by AI4Bharat):
+  - better measured quality (MOS 4.46), 44 Indian English voices
+  - but a custom license (Indic Open Model License + Llama 3.2: share-alike derivatives,
+    hosting as an API needs approval, a revenue cap, prohibited uses), gated
+  - 3.8B params (7.6 GB), and slower than real time on a Mac through a community MLX port
+  - Worth a listening comparison only if Parler disappoints, and only after the owner reads its
+    license.
+- **svara-TTS v1** (Apache tag on a Llama 3.2 base): 3B params, explicit Indian English, emotion
+  tags. Untested on a Mac. Second fallback.
+- **Chatterbox Multilingual** (MIT): Hindi yes. Indian English only by cloning a reference
+  clip, and we don't clone real people.
+- **IIT Madras FastSpeech2** (CC-BY-4.0 / IITM EULA): one Indian English voice per gender,
+  robotic, CUDA-oriented.
+- **Not usable:**
+  - Piper has no Indian English, and 2 of its 3 Hindi voices are non-commercial.
+  - MMS-TTS, XTTS-v2 and OmniVoice weights are non-commercial.
+  - A Kokoro fine-tune with Indian English voices (goonj) was trained on audio generated by
+    commercial TTS services: doubtful provenance.
+  - Sarvam's voices are API-only.
+
+**What the owner would approve:**
+1. Task 3.2b, as above.
+2. `envs/parler` and the Indic Parler-TTS download (~3.7 GB).
+3. 3 more Kokoro Hindi voice packs (1.5 MB).
+4. The owner's own step: accept the model's terms on its Hugging Face page and run
+   `hf auth login` in a terminal. Agents never handle tokens.
+
+## Research notes: Indian voices
+
+Web research, 2026-10-22 (nothing downloaded except the 0.5 MB probe voice):
+- [ai4bharat/indic-parler-tts](https://huggingface.co/ai4bharat/indic-parler-tts) (card:
+  "officially supports Indian English accents"; Apache-2.0; gated)
+- Paper: [arXiv 2505.18609](https://arxiv.org/abs/2505.18609)
+- Runtime: [huggingface/parler-tts](https://github.com/huggingface/parler-tts) (0.2.2, pins
+  transformers 4.46.1)
+- Indic-Speak: [bodhan-ai/indic-speak](https://huggingface.co/bodhan-ai/indic-speak); its MLX
+  port: [iniquitous/indic-speak-mlx-bf16](https://huggingface.co/iniquitous/indic-speak-mlx-bf16)
+  (~28 tok/s on an M3 Max)
+- svara-TTS: [kenpath/svara-tts-v1](https://huggingface.co/kenpath/svara-tts-v1)
+- Chatterbox: [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox)
+- IITM: [smtiitm/Fastspeech2_HS](https://huggingface.co/smtiitm/Fastspeech2_HS)
+- Piper English voices:
+  [rhasspy/piper-voices/en](https://huggingface.co/rhasspy/piper-voices/tree/main/en)
+- Unclear until tried: Parler's speed and MPS stability on the M4; exact download sizes behind
+  the gate.
+
 ## Done when
 
 - [ ] Audio schemas approved with this brief's decisions; valid and invalid fixtures tested
