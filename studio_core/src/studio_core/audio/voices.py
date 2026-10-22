@@ -37,12 +37,12 @@ from typing import Any
 from studio_core.audio import ffmpeg
 from studio_core.audio.lipsync import lipsync
 from studio_core.config import REPO_ROOT, StudioConfig, expand_path, load_config
+from studio_core.safety import blocked_words
 from studio_core.schema import validate
 
 SAMPLE_RATE = 24_000
 PEAK_CEILING_DB = -1.5
 WORKER = REPO_ROOT / "scripts" / "audio" / "kokoro_batch.py"  # workers live next to each other
-BLOCKLIST = REPO_ROOT / "config" / "safety_blocklist.txt"
 LINE_ID = re.compile(r"^l([0-9]{3,})$")
 # Letters (any script), digits, spaces and the punctuation speech uses.
 ALLOWED = re.compile(r"[^\W_]|[\s.,!?;:'\"()\-\u2018\u2019\u201c\u201d\u2013\u2014\u2026]")
@@ -66,11 +66,6 @@ class SpokenLine:
 # --------------------------------------------------------------------------- text and ids
 
 
-def _blocklist() -> set[str]:
-    words = BLOCKLIST.read_text().splitlines() if BLOCKLIST.is_file() else []
-    return {w.strip().lower() for w in words if w.strip() and not w.startswith("#")}
-
-
 def _speakable(c: str) -> bool:
     """Letters, digits, spaces, speech punctuation, plus the combining marks of scripts like
     Devanagari (vowel signs, virama) and its danda punctuation."""
@@ -89,7 +84,7 @@ def check_text(text: str) -> list[str]:
     odd = sorted({c for c in text if not _speakable(c)})
     if odd:
         problems.append(f"the text contains characters that can't be spoken: {''.join(odd)!r}")
-    blocked = sorted({w for w in re.findall(r"[a-z']+", text.lower()) if w in _blocklist()})
+    blocked = blocked_words(text)
     if blocked:
         problems.append(f"the text uses {blocked}, not for a children's film; rephrase it")
     return problems
