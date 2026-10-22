@@ -760,3 +760,61 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **One copy of every image:** `run_graph` deletes ComfyUI's own output copies and the
   uploaded conditioning images after each run, when ComfyUI is local. The film folder and its
   `run.json` are the record (the owner asked for no leftover files).
+
+### D-050: Building a puppet from a design (task 4.4)
+- **`build_puppet`** (`studio_core/puppet/build.py`) cuts the chosen candidate's front view
+  (`choose_design` records it in `candidates.json`). The sheet was generated on a known
+  skeleton, so the cut is geometry plus colour; the only model is SAM 2.1. Each step:
+  - **Silhouette:** the colour key with holes filled, united with SAM 2.1's mask
+    (`puppet/segment.py`). The key keeps fur tufts, and SAM keeps pale clothes that touch the
+    background. A SAM mask with IoU < 0.85 against the key is rejected and reported. Kit:
+    0.946, about 3 s.
+  - **Head:** the upper head, plus the pixels below the nose line that are coloured like it
+    and connected to it, with holes filled. A scarf or collar stays with the torso.
+  - **Limbs:** each limb takes the pixels in a corridor along its bone (1.4 limb radii, cut
+    across at the shoulders and hips; the nearest bone wins). Upper arms and thighs only take
+    pixels coloured like their own core, so scarf ends, coat hems and tails stay with the
+    torso. Fur wisps along a limb's outline join the limb.
+  - **Torso:** everything else, including the tail (it doesn't animate in v1).
+  - **Face:** marks clearly darker than their surroundings (eyes, brows, mouth) are painted
+    out by diffusing the surrounding colours inward. The nose stays. Where the marks were
+    becomes the face block, so the vector face (D-007) sits where the artist drew it.
+  - **Joint caps:** elbows and knees get the sheet's own pixels on both parts. At the neck,
+    shoulders and hips, only the part drawn behind gets a disc painted from its own colours.
+    It is hidden at rest and fills the gap when a part turns. A cap on the front part changed
+    the rest look (a pale disc of chin on the scarf).
+  - **Arms hang at rest (D-048's open point):** the motions are offsets tuned on Pip's hanging
+    arms. On the A-pose rest, +150° pointed the arm straight up behind the head. The arm parts
+    are turned 25° about their joints so the rest is -90°, like Pip's. This is D-048's
+    per-bone neutral offset, baked into the art, so the schema, the motions and the engine
+    stay unchanged. The legs keep their 6° splay.
+  - **Edges:** alpha comes from the distance to the background colour over a 3 px band, and
+    the background's share is taken out of the edge colours, so there is no light fringe on
+    a new background.
+  - **Outputs:** `rig.json` with Pip's bone names, roles, limits and draw order, plus
+    `parts/*.png`, `palette.json`, `build/report.json` (limb drift, face notes, silhouette)
+    and debug images (parts, face before/after, three poses).
+- **Limb drift** is measured per limb: how much of the bone line lies on the silhouette,
+  and the offset of the limb's centre line relative to its radius. A limb that fails is
+  flagged. Kit's worst is 0.33 of a radius, so all pass.
+- **The wave keeps the hand clear of the head** (`motions/library.py`). The raise is lowered
+  in 5° steps until the hand, even at the forearm's inward swing, is outside the head's box.
+  Kit's big head and ears hid the arm.
+  - Pip is unchanged up to energy 0.75. Above that he now stops at 150° instead of 160°,
+    because at 160° his hand also went behind his head on the swing.
+  - This is a small change to approved motions.
+- **ComfyUI cache:** a repeated graph is answered from ComfyUI's cache, pointing at outputs
+  that `run_graph` has already deleted. Every run's save prefix now gets a fresh token. The
+  segmentation work found this bug.
+- **Test render:** `scripts/preview_puppet.py` stages the character next to Pip in shot
+  `s00_sh01`. Scene 00 is reserved for test shots, outside any story's numbering. In the shot
+  the character rests, waves, blinks and speaks a lip-synced line. A character without a
+  voice gets a placeholder voice (casting candidate c13, af_bella +1.5 semitones) until the
+  owner casts it.
+- **Known limits:**
+  - The three-quarter view isn't rigged yet (task 4.5).
+  - The tail is torso.
+  - The head split fails if clothes share the head's colours.
+  - Cut edges have no drawn outline.
+  - SAM settings that must stay: fp32 only, and tight boxes with no negative points (see
+    `docs/learning/segmentation-sam2.md`).

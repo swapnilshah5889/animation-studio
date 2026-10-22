@@ -2,10 +2,87 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.3 done; **owner checkpoint 2 pending**
-(review the first design candidates: `films/step4-demo/characters/kit/design/review.html`).
-Next: 4.4 (`build_puppet`) from the chosen candidate. Open items: Step 2's Claude Code run
-(D-035), task 3.2b's Parler download (deferred), Docker's memory reservation (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.4 done. **Owner checkpoint 3 pending:**
+review Kit's test render (`renders/puppet-preview/step4-demo-kit/puppet_preview.mp4`). Next:
+4.5 (three-quarter view). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
+download (deferred), Docker's memory reservation (owner's call), deleting the pre-Step-4
+scratch files (owner's call), Kit's real voice (placeholder c13).
+
+---
+
+## 2026-10-22: Step 4 task 4.4 done: Kit is a rigged puppet
+
+The owner chose candidate c3. Built in parallel:
+- a subagent: the SAM 2.1 segmentation
+- a subagent: the test-render script
+- this session: the cutter
+
+**Built**
+- `puppet/design.py`: `choose_design` records the chosen candidate.
+- `puppet/segment.py` (SAM 2.1 base+ through ComfyUI):
+  - Prompts come from the skeleton: tight boxes sized by the colour key, plus points on
+    the centre line.
+  - fp32 only.
+  - Learning note: `docs/learning/segmentation-sam2.md`.
+- `puppet/build.py`: `build_puppet` cuts the chosen sheet into Pip-compatible parts:
+  - silhouette: colour key ∪ SAM
+  - head split by colour
+  - limb corridors with a colour rule
+  - face painted out, face block from the drawn marks
+  - caps on the back part
+  - arms turned to hang at rest
+  - unmixed edges
+  - writes `rig.json` (registered via `register_rig`), `palette.json`, a build report,
+    debug images, and `compose()` (a PIL forward-kinematics preview)
+  - learning note: `docs/learning/cutting-puppets.md`
+- `scripts/preview_puppet.py` (checkpoint 3): Kit and Pip in shot `s00_sh01`. Kit rests,
+  waves, blinks and speaks a Kokoro line with Rhubarb lip-sync. The script renders through
+  the Synfig backend and writes a contact sheet of key frames found from the tracks.
+- `motions/library.py`: the wave keeps the hand clear of the head (Kit's ears hid it). Pip is
+  unchanged up to energy 0.75, and stops at 150° instead of 160° above that.
+- `comfy_runs.run_graph`: a fresh save-prefix token per run. ComfyUI's cache otherwise
+  answered repeated graphs with files already deleted.
+- Small changes: `comfy_graphs.Graph` is public, `checks.skeleton_box` is public, and
+  `required_files` lists SAM base+.
+
+**Verified**
+- Kit's build: 8 s including SAM (IoU 0.946 with the colour key).
+  - All 8 limbs on their bones (worst drift 0.33 radius).
+  - Face: nose kept, both eyes and the mouth found, 5 marks painted out.
+  - The rig validates.
+- Test render: 35–46 s for 7 s at 1080p, with audio. I checked the contact sheet frame by
+  frame:
+  - rest
+  - a wave clear of the head
+  - eyes closed on the blink
+  - the mouth shapes during the line
+  - Pip standing alongside
+- 274 tests pass, model tests excluded, plus the live model tests (SAM, ComfyUI). New tests:
+  - `test_puppet_build.py`, 7 tests on a synthetic fox: the scarf stays on the torso, the
+    tail doesn't follow the leg, every pixel belongs to exactly one part, the face is
+    painted out with the nose kept, the arms hang, turning the arms back reproduces the
+    sheet (IoU > 0.95), and SAM is joined or rejected
+  - segmentation, 5 tests
+  - the preview timeline, 6 tests
+  - the wave's head clearance, 1 test
+- First-pass bugs found by looking at renders and fixed:
+  - the arm corridors took scarf and tail
+  - the paws dropped off
+  - a chin cap showed on the scarf
+  - fur wisps were left at the shoulders
+  - a white fringe on the outline
+  - the hidden wave
+  - one limb's hole filling took another limb's pixels
+
+**Open questions for the owner**
+1. Checkpoint 3: does Kit look right waving, blinking and talking next to Pip? The face is
+   Pip's vector face style placed on Kit's drawn features.
+2. Kit's voice is a placeholder (c13, af_bella +1.5 semitones). Should we cast Kit properly?
+3. The small change to Pip's high-energy wave (150° instead of 160° above energy 0.75):
+   is that OK?
+
+**Cleaned up:** scratch debug images. The two subagents removed their scratch films and files.
+No ComfyUI copies were left.
 
 ---
 
@@ -91,8 +168,8 @@ The owner approved the Step 4 brief as written (D-047).
 |---|---|
 | 4.1 ComfyUI plumbing | **Done**: `studio_core/comfy_runs.py` (`film_style`, `make_room_for_images` with a music guard, `ensure_comfy` starts ComfyUI on demand, `run_graph` uploads, collects, renames and writes `run.json`, `free_comfy`); 5 approved models installed via the manifest. |
 | 4.2 Skeleton templates | **Done**: `studio_core/puppet/skeleton.py` (Pip proportions, A-pose, front + three-quarter turnaround on 1344×768, OpenPose image and rig bones from the same joints); 7 tests: keypoints found in the image within 1.5 px, bone directions within 1°, names, roles, parents, limits and draw order identical to Pip (D-048). |
-| 4.3 `design_character` (owner checkpoint 2) | **Done; waiting for the owner's review**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
-| 4.4 `build_puppet` (owner checkpoint 3) | To do |
+| 4.3 `design_character` (owner checkpoint 2) | **Done; owner chose c3**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
+| 4.4 `build_puppet` (owner checkpoint 3) | **Done; waiting for the owner's review**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
 | 4.5 Three-quarter view | To do |
 | 4.6 `generate_background` | To do |
 | 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
