@@ -2,13 +2,43 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done (checkpoint 3 approved).
-**Owner decision pending (task 4.5):** Kit's three-quarter view is barely turned and has a hat
-the front lacks. Install FLUX.2 klein 4B (about 16 GB) and trial front → three-quarter edits,
-or keep front-only puppets for now (D-051). Next after that: 4.6 (`generate_background`).
-Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred), Docker's
-memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice (placeholder c13),
-and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done. FLUX.2 klein 4B is installed and
+trialled (D-052): it turns Kit properly and keeps the design, but doesn't hold the rig's arm
+pose. **Owner decision pending:** wire it into `build_puppet` (with arm fitting) or not. Then
+4.6 (`generate_background`). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
+download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files,
+Kit's real voice (placeholder c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-22: FLUX.2 klein 4B installed and trialled for the three-quarter view
+
+The owner approved the install and a trial, with the results to be shown before any wiring.
+
+**Done**
+- Downloaded the three files (16.13 GB, Apache-2.0, sha256-verified) in about three minutes,
+  and recorded them in `config/models.toml` and MODELS.md.
+- `comfy_graphs.flux2_edit` (written by a subagent, in parallel with the download), from
+  Comfy-Org's template. Every node checked against our ComfyUI v0.42.1; 10 unit tests.
+- `scripts/spikes/flux2_three_quarter.py` runs two rounds of four edits, then places,
+  measures and writes `renders/spikes/flux2-three-quarter/step4-demo-kit/review.html`.
+- Fixed the turn measure (now the centroid of the face's marks) and the eye-pair choice.
+  Rebuilt Kit; nothing changed in its rig.
+
+**Results** (D-052)
+- Turn: 56–102% of what was asked, against SDXL's 6%. The same fox in all eight edits, with
+  no hat.
+- Arms: against the body in round 1, nearly horizontal when asked for 25° in round 2. Ground
+  shadows in half of them.
+- Time: about 2.5 min per edit, or 4+ min with a pose reference (which didn't help).
+
+**Verified**
+- 292 tests pass, model tests excluded.
+- The ComfyUI folders kept no copies, and its memory was freed afterwards.
+
+**Open questions for the owner**
+1. Wire klein into `build_puppet` as proposed in D-052 (edit the front into the
+   three-quarter view, pick by the checks, fit the arms before cutting)?
 
 ---
 

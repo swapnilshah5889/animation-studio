@@ -864,3 +864,44 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
       three-quarter edit of Kit
     - (b) ship front-only puppets for now, and leave three-quarter to character LoRAs
       (Step 7)
+
+### D-052: FLUX.2 klein 4B trial for the three-quarter view (task 4.5, owner approved)
+- **Installed:** FLUX.2 [klein] 4B distilled (bf16), its Qwen3-4B text encoder and the FLUX.2
+  VAE.
+  - All three are Apache-2.0.
+  - 16.13 GB from Comfy-Org's repack, sha256-verified. The model file is byte-identical to
+    Black Forest Labs' own.
+  - Recorded in `config/models.toml` and MODELS.md. bf16, because fp8 doesn't run on MPS.
+- **Graph** (`comfy_graphs.flux2_edit`), following Comfy-Org's template:
+  - each reference image goes through VAE encode into a ReferenceLatent on both the positive
+    and the zeroed negative
+  - cfg 1, euler, 4 steps, Flux2Scheduler, explicit output size
+  - at cfg 1 the negative prompt is never used, so kid-safety rests on the prompt and the
+    inputs
+- **Trial** (`scripts/spikes/flux2_three_quarter.py`): Kit's front figure, two prompts (text
+  only, and with the three-quarter mannequin as a second reference), two seeds, two rounds.
+  Each edit is placed where the rig's three-quarter view goes and measured like the SDXL
+  figure.
+  - **Turn: solved.** The edits turned 56–102% of what the skeleton asks, against SDXL's 6%.
+    All eight are the same fox (scarf, jacket, shirt, trousers, paws, tail) with no hat. The
+    line style is a little flatter than the SDXL front.
+  - **Pose: not controlled by words.** In round 1 the arms rested against the body. In
+    round 2, asked for 25° out, they went nearly horizontal. 75–88% of the rig's
+    three-quarter joints land on the figure. The cutter would need to fit the arm bones to
+    the drawing first.
+  - **Ground shadows** in 2 of 4 edits per round, even when asked for none.
+  - **Pose reference:** the mannequin as image 2 didn't steer the pose better, and costs
+    about 100 s more.
+  - **Time:** 138–163 s per edit text-only, 239–260 s with the pose reference, on this
+    machine (swap busy).
+- **Measures fixed on the way:**
+  - The turn is now the centroid of the face's marks within the face band (45–92% of the
+    head's height), not the nose. A strongly turned nose sits on the outline, where it can't
+    be told from it, and the far ear's inner shading pulled the old measure the wrong way.
+  - Eye pairs are chosen by matching size and height. The nose next to an eye had won as a
+    "pair".
+- **Proposed wiring (for the owner's go-ahead):**
+  - `build_puppet` gets an option to replace the sheet's three-quarter figure with a klein
+    edit of the front: the round-2 text prompt, N seeds, the best by the checks.
+  - Before cutting, the arm bones are fitted to the drawn angles, then the arms hang as now.
+  - Ground shadows are cut away by the colour key.
