@@ -1,0 +1,28 @@
+# Words a children's film never says. One per line, matched as whole words, case-insensitively.
+# A deliberately small stand-in: the Step 5 safety classifier replaces this list (D-036).
+# Keep it to profanity and graphic violence; never add names of real people or groups.
+ass
+asshole
+bastard
+bitch
+bloody
+crap
+damn
+dick
+fuck
+fucking
+goddamn
+hell
+piss
+shit
+slut
+whore
+murder
+kill
+killed
+killing
+blood
+gun
+guns
+suicide
+drugs

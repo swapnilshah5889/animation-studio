@@ -35,4 +35,7 @@ known-third-party = ["mcp"]  # the SDK, not our mcp/ folder of servers
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["render: runs the real Synfig CLI (a few seconds); skip with -m 'not render'"]
+markers = [
+    "render: runs the real Synfig CLI (a few seconds); skip with -m 'not render'",
+    "models: runs a local ML model (Kokoro, ...) in its env; skip with -m 'not models'",
+]

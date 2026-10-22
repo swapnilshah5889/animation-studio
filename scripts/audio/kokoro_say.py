@@ -22,7 +22,19 @@ os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 REPO_ID = "hexgrad/Kokoro-82M"
 MODEL_DIR = Path.home() / "ai-studio" / "models" / "kokoro-82m"
 SAMPLE_RATE = 24_000
-VOICES = ["af_heart", "af_bella", "am_michael", "am_puck", "bf_emma", "bm_george"]
+VOICES = [
+    "af_heart",
+    "af_bella",
+    "am_michael",
+    "am_puck",
+    "bf_emma",
+    "bm_george",
+    # voice casting (Step 3, task 3.2)
+    "af_nicole",
+    "af_sky",
+    "af_aoede",
+    "af_kore",
+]
 
 
 def ensure_model(model_dir: Path) -> None:

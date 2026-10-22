@@ -2,12 +2,13 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 3 (`audio_mcp`): brief approved (D-036); task 3.1 done. Next: 3.2 (voices,
-then the owner's voice casting, checkpoint 2). Step 2 has one done-when item open (D-035).
+**Current step:** Step 3 (`audio_mcp`): tasks 3.1 and 3.2 done. **Waiting for the owner's voice
+casting** (checkpoint 2, `renders/voice-casting/index.html`). Step 2 has one done-when item open
+(D-035).
 
 ---
 
-## 2026-10-22: Step 3 started: task 3.1 (audio schemas) done
+## 2026-10-22: Step 3 started: tasks 3.1 (audio schemas) and 3.2 (voices) done
 
 The owner approved the Step 3 brief as written (D-036).
 
@@ -16,7 +17,7 @@ The owner approved the Step 3 brief as written (D-036).
 | Task | Status |
 |---|---|
 | 3.1 Audio schemas and file layout | **Done**: `schemas/voice`, `line`, `lipsync`, `music`, `sfx_library`; shot schema gains `sfx[].sound` and `music_volume`; semantic checks (cue order and coverage, unique voices, sounds and audio, line/voice consistency); asset checks in `shot_spec` (line metadata, stale mouth cues, chosen sounds in the library, music cues exist); `studio_core/audio/library.py` (manifest loader); files named by id recognized by folder in `validate_file` (D-037). |
-| 3.2 Voices: `speak` (owner checkpoint 2: casting) | To do |
+| 3.2 Voices: `speak` (owner checkpoint 2: casting) | **Done, waiting for the owner's casting**: `studio_core/audio/voices.py` (text checks, content-hash cache, one Kokoro batch per call, trim + pitch step + linear-gain loudness, line metadata, stale cues removed), `studio_core/audio/ffmpeg.py`, `scripts/audio/kokoro_batch.py`, 4 casting voices fetched; casting page `scripts/audio/voice_casting.py` (14 candidates × 2 lines) (D-038). Note: `docs/learning/voices-and-loudness.md`. |
 | 3.3 Lip-sync: `lipsync` | To do |
 | 3.4 Music: `compose` (owner checkpoint 3) | To do |
 | 3.5 Sound-effect library and search: `find_sfx` | To do |
@@ -36,10 +37,20 @@ The owner approved the Step 3 brief as written (D-036).
   - an unchosen sound (a warning)
   - an unknown sound id, a broken manifest and a missing music cue (errors)
 
-**Next**
-- 3.2: `speak` with Kokoro (voice blends, speed, pitch step, speech loudness, content-hash
-  cache), then a voice-casting page for the owner (checkpoint 2). It first downloads 4–5 more
-  Kokoro voice packs (~0.5 MB each, approved).
+**Task 3.2 (same day)**
+- `speak` works end to end in a scratch film:
+  - two lines at −20.0 and −19.9 LUFS (target −20), with true peaks −3.7 and −5.0 dBTP
+  - a repeat request is a cache hit in 0 s, even with different spacing
+  - `regenerate` makes take 2 and removes stale cues
+- 9 voice tests:
+  - text checks, the hash, line ids, load errors and refusals (nothing is synthesized when a
+    request is refused)
+  - synthetic tones: a +2 semitone step lands within 2% of 493.9 Hz and keeps the length within
+    30 ms; the trim keeps 80/120 ms of air; the linear gain reaches −23 LUFS within 0.3 LU
+  - one real Kokoro run (`-m models`)
+- Casting page: 28 takes in 25 s, 1.6 MB self-contained HTML. All 28 embedded clips decode.
+- Next: the owner picks voices for Pip and Bunny. They become
+  `characters/<id>/voice.json`, and then 3.3 (lip-sync).
 
 ## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
 

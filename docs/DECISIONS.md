@@ -488,3 +488,25 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   present, it is validated, and it must name the character who speaks the line in the shot.
 - **License is a `const` (`CC0-1.0`)** in the library schema, so the CC0-only rule (D-036) is
   enforced by validation, not just policy.
+
+### D-038: Voice pipeline details (task 3.2)
+- **Two halves:** `scripts/audio/kokoro_batch.py` runs in `envs/kokoro` (one model load per
+  batch; per-line voice overrides). `studio_core/audio/voices.py` does everything else in the
+  workspace: text checks, the cache, ffmpeg post-processing, files and metadata.
+- **Weighted blends:** the worker computes the weighted average of the voice packs itself.
+  Kokoro's own `"a,b"` syntax only averages equally.
+- **Loudness by linear gain, not `loudnorm`'s dynamic mode:** measure once (EBU R128), then apply
+  one gain that reaches the voice's target, limited so the true peak stays ≤ −1.5 dBTP. A line
+  only gets louder or softer, never reshaped, and the result is exactly repeatable. Short lines
+  ("Wow!", 0.5 s) measured fine.
+- **Trim keeps air:** 80 ms before and 120 ms after the speech, so soft onsets and endings
+  aren't clipped. Rhubarb sees the same file.
+- **The cache key** is a sha256 of the whitespace-normalized text, the voice settings (minus
+  notes) and the model string. A line without an id reuses an existing line of the same
+  character with the same hash. Replacing a line's audio deletes its mouth cues, which no longer
+  match.
+- **Text safety for now:** length, speakable characters, no addresses, and a small whole-word
+  blocklist in `config/safety_blocklist.txt` (profanity and graphic violence). The Step 5
+  classifier replaces it.
+- **Test marker `models`:** for tests that run a local model (Kokoro here), like `render` for
+  Synfig.
