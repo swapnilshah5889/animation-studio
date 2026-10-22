@@ -55,7 +55,12 @@ Semantic checks run only after the schema passes, so they can trust the types.
   `items: [..]` tuple form is a different draft.
 - `$ref` across files (`shotlist` → `shot.schema.json`) resolves against each schema's `$id`; our
   validator registers every schema in a `referencing.Registry`, so nothing is fetched from the
-  network.
+  network. A `$ref` can also point into another file's `$defs`: a shot's `sfx[].sound` uses
+  `sfx_library.schema.json#/$defs/sound_id`, so a sound id has one definition everywhere.
+- `const` pins a value: the sound library's `"license": {"const": "CC0-1.0"}` makes the
+  CC0-only decision (D-036) impossible to break by accident.
+- Files named by id (`audio/dialogue/l001.json`) can't be recognized by name, so
+  `validate_file` falls back to the folder (`dialogue` → line, `lipsync`, `music`).
 - `default` in a schema is documentation; validators don't fill it in. Code applies defaults.
 - A schema can't express cross-field rules; don't contort it trying. Write a semantic check with a
   test.

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/lipsync.schema.json",
+  "title": "Mouth cues",
+  "description": "films/<film>/audio/lipsync/<line_id>.json: Rhubarb Lip Sync's JSON export, kept as our format (D-036). Mouth shapes A-H and X (rest) in time order, covering the line's audio without gaps. Times are seconds from the start of the line.",
+  "type": "object",
+  "required": ["metadata", "mouthCues"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["duration"],
+      "additionalProperties": false,
+      "properties": {
+        "soundFile": { "type": "string", "description": "The audio file the cues were computed from." },
+        "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Length of that audio, in seconds." }
+      }
+    },
+    "mouthCues": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["start", "end", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "start": { "type": "number", "minimum": 0 },
+          "end": { "type": "number", "exclusiveMinimum": 0 },
+          "value": { "enum": ["A", "B", "C", "D", "E", "F", "G", "H", "X"], "description": "Rhubarb mouth shape; X = rest." }
+        }
+      }
+    }
+  }
+}

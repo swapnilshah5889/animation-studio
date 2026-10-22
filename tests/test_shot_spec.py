@@ -2,6 +2,7 @@
 fixable message, leaving the saved spec untouched (task 2.7)."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -178,3 +179,58 @@ def test_register_rig_records_the_character_in_film_json(tmp_path: Path) -> None
     film = ss.FilmFolder.open(tmp_path, "kite-day")
     ss.register_rig(film, "pip")
     assert Film.load(film.root).data["characters"] == ["pip"]
+
+
+# --------------------------------------------------------------------------- audio (Step 3)
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_line_metadata_and_mouth_cues_are_checked(shot: ss.FilmFolder) -> None:
+    ss.add_dialogue(shot, SHOT, "pip", "l001", 0)
+    line = json.loads((FIXTURES / "schemas" / "line_l001.json").read_text())
+    voice = {**line["voice"], "character": "bunny"}
+    shot.line_meta("l001").write_text(json.dumps({**line, "character": "bunny", "voice": voice}))
+    errors, _ = ss.check(shot, saved(shot))
+    assert errors == ["line 'l001' was recorded in bunny's voice, but pip says it"]
+    shot.line_meta("l001").write_text(json.dumps(line))
+    assert ss.check(shot, saved(shot))[0] == []
+
+    cues_file = shot.line_files("l001")[1]
+    cues = json.loads(cues_file.read_text())
+    for c in cues["mouthCues"]:  # cues made for a shorter take of the line
+        c["start"], c["end"] = round(c["start"] * 0.9, 3), round(c["end"] * 0.9, 3)
+    cues["metadata"]["duration"] = cues["mouthCues"][-1]["end"]
+    cues_file.write_text(json.dumps(cues))
+    errors, _ = ss.check(shot, saved(shot))
+    assert errors == [
+        "line 'l001' mouth cues were made for 5.04s of audio, but the audio is 5.60s; "
+        "run lipsync on it again"
+    ]
+    cues["mouthCues"][3]["value"] = "Z"
+    cues_file.write_text(json.dumps(cues))
+    assert "mouthCues[3].value" in ss.check(shot, saved(shot))[0][0]
+
+
+def test_sound_effects_and_music_are_checked(shot: ss.FilmFolder, tmp_path: Path) -> None:
+    library = tmp_path / "sfx"
+    library.mkdir()
+    film = ss.FilmFolder(shot.root, sfx_root=library)
+    spec = {**saved(shot), "sfx": [{"query": "a squeaky toy", "start_s": 1}]}
+    errors, warnings = ss.check(film, spec)
+    assert errors == []
+    assert "sound effect 'a squeaky toy' at 1s has no sound chosen yet" in " ".join(warnings)
+
+    spec["sfx"][0]["sound"] = "bsb_toy_squeak_0427"
+    (error,) = ss.check(film, spec)[0]
+    assert "not in the library (0 sounds); search with find_sfx" in error
+    (library / "manifest.json").write_text((FIXTURES / "schemas" / "sfx_library.json").read_text())
+    assert ss.check(film, spec)[0] == []
+    (library / "manifest.json").write_text('{"schema_version": 1}')
+    assert "the sound library is broken" in ss.check(film, spec)[0][0]
+
+    spec = {**saved(shot), "music_cue": "m01"}
+    assert ss.check(film, spec)[0] == ["music cue 'm01' not found; cues: none"]
+    film.music_file("m01").parent.mkdir(parents=True)
+    shutil.copy(FIXTURES / "audio" / "pip_line_01.wav", film.music_file("m01"))
+    assert ss.check(film, spec)[0] == [] and film.music_cues() == ["m01"]

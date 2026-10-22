@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/sfx_library.schema.json",
+  "title": "Sound-effect library manifest",
+  "description": "<sfx_library>/manifest.json (config [paths] sfx_library): every sound the studio may use, with where it came from and its license (D-036: CC0 only). Sound ids are what shot specs store in sfx[].sound.",
+  "type": "object",
+  "required": ["schema_version", "sounds"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "file", "source", "license", "url", "duration_s", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/sound_id" },
+          "file": { "type": "string", "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./ -]*\\.wav$", "description": "Relative to the library folder; always WAV (converted on import)." },
+          "source": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,30}$", "description": "Collection it came from, e.g. 'kenney'." },
+          "pack": { "type": "string", "maxLength": 120 },
+          "license": { "const": "CC0-1.0", "description": "Only CC0 sounds are allowed (D-036)." },
+          "url": { "type": "string", "pattern": "^https://", "description": "Where the license was checked." },
+          "original_name": { "type": "string", "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 500 },
+          "tags": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "maxItems": 30 },
+          "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sound_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]{0,79}$", "description": "Library sound id, e.g. 'kenney_impact_footstep_wood_001'." }
+  }
+}

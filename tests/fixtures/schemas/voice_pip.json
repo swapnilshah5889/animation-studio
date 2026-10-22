@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "character": "pip",
+  "engine": "kokoro",
+  "voices": [
+    {
+      "id": "af_heart",
+      "weight": 0.7
+    },
+    {
+      "id": "af_bella",
+      "weight": 0.3
+    }
+  ],
+  "speed": 1.05,
+  "pitch_semitones": 1.0,
+  "loudness_lufs": -20,
+  "notes": "Example: a bright, friendly voice for a young rabbit."
+}

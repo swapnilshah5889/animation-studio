@@ -442,3 +442,49 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   in on this machine. The script is kept and the done-when item stays open. It closes when the
   script is run from a logged-in terminal, or through Step 5's director, a local LLM driving the
   same tools.
+
+### D-036: Step 3 design (approved with the brief, 2026-10-22)
+The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
+- **Split:** `audio_mcp` makes audio assets (lines, cues, music, sound search). Shot specs
+  reference them by id, through `add_sound_effect` / `set_music` on the animation server.
+- **Process model:** each model runs in its own env as a subprocess (D-016), with batched calls.
+- **Voices:** `characters/<id>/voice.json` per character: voice or blend, speed, pitch step,
+  loudness. Child-like voices come from casting youthful Kokoro voices, blends and speed, and if
+  needed a small ffmpeg pitch step (pitch and formants together).
+- **Files:**
+  - each line is `.wav` + `.txt` + `.json` (metadata with a content hash, for caching)
+  - lip-sync keeps Rhubarb's JSON as our format, computed from the final line audio
+  - music metadata goes in `audio/music/<cue>.json`
+- **Music:** the director gives intent (mood, energy, instruments) and code writes the model
+  caption. Fixed seeds, no lyrics in v1. **Memory budget: peak ≤ 14 GB, no swap.**
+- **Sound effects:** a CC0-only library with a license per file in its manifest. CLAP
+  (`laion/larger_clap_general`) audio embeddings in Qdrant, plus descriptions and tags for
+  hybrid search. The chosen sound id is stored in the shot spec.
+- **Mix:** music ducked by a volume envelope computed from the line times, then two-pass
+  loudnorm to −14 LUFS / −1.5 dBTP.
+- **Safety:** text is checked before speaking; no lyrics.
+- **Installs approved:**
+  - CLAP weights + `envs/clap`, `qdrant-client`, more Kokoro voice packs
+  - CC0 sources: Kenney, OpenGameArt, a curated BigSoundBank list
+  - optional, decided at the named checkpoints: FSD50K's CC0 eval clips, ComfyUI's ACE-Step
+    files, Chatterbox
+
+### D-037: Audio file formats (task 3.1)
+- **Five new schemas:**
+  - `voice` (`characters/<id>/voice.json`)
+  - `line` (`audio/dialogue/<line>.json`)
+  - `lipsync` (Rhubarb's JSON, as is)
+  - `music` (`audio/music/<cue>.json`)
+  - `sfx_library` (`<sfx_library>/manifest.json`)
+- **Shot schema, additive:** `sfx[].sound` (a library id) and `music_volume`.
+- **Voice ranges are deliberately narrow:** speed 0.7–1.4, pitch −3 to +4 semitones, speech
+  loudness −30 to −14 LUFS (default −20). Outside these, voices stop sounding natural.
+- **`expressiveness` (0–1), not Chatterbox's `exaggeration`:** the voice file names the intent,
+  and each TTS backend maps it (the spirit of D-030). Kokoro ignores it.
+- **Mouth cues** must start at 0, run in order with no gaps or overlaps, and end within 50 ms
+  of the audio length (Rhubarb rounds to 10 ms). A shot is refused if a line's cues were made for
+  a different length of audio: they are stale after a re-take.
+- **Line metadata is optional for now:** lines from before Step 3 (the fixture) have none. Once
+  present, it is validated, and it must name the character who speaks the line in the shot.
+- **License is a `const` (`CC0-1.0`)** in the library schema, so the CC0-only rule (D-036) is
+  enforced by validation, not just policy.

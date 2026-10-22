@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/line.schema.json",
+  "title": "Dialogue line",
+  "description": "films/<film>/audio/dialogue/<line_id>.json: metadata of one recorded line, next to <line_id>.wav (the audio) and <line_id>.txt (the text). Written by audio_mcp's speak (D-036). `hash` covers the text, the voice settings and the model, so the same request never synthesizes twice.",
+  "type": "object",
+  "required": ["schema_version", "line_id", "character", "text", "voice", "model", "sample_rate", "duration_s", "hash"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "line_id": { "type": "string", "pattern": "^l[0-9]{3,}$", "description": "e.g. 'l007'." },
+    "character": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "voice": { "$ref": "voice.schema.json", "description": "The character's voice settings at the time of synthesis." },
+    "model": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Model and version, e.g. 'kokoro-82m v1.0'." },
+    "sample_rate": { "type": "integer", "enum": [22050, 24000, 44100, 48000] },
+    "duration_s": { "type": "number", "exclusiveMinimum": 0, "maximum": 60 },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the text, voice settings and model." },
+    "take": { "type": "integer", "minimum": 1, "default": 1, "description": "Incremented when a line is deliberately regenerated." },
+    "created": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "line_id": "l001",
+  "character": "pip",
+  "text": "Hi Bunny! Look what I found in the tall grass. It's a red kite with a long yellow tail!",
+  "voice": {
+    "schema_version": 1,
+    "character": "pip",
+    "engine": "kokoro",
+    "voices": [
+      {
+        "id": "af_heart",
+        "weight": 0.7
+      },
+      {
+        "id": "af_bella",
+        "weight": 0.3
+      }
+    ],
+    "speed": 1.05,
+    "pitch_semitones": 1.0,
+    "loudness_lufs": -20,
+    "notes": "Example: a bright, friendly voice for a young rabbit."
+  },
+  "model": "kokoro-82m v1.0",
+  "sample_rate": 24000,
+  "duration_s": 5.6,
+  "hash": "50d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c",
+  "take": 1,
+  "created": "2026-10-22T10:00:00Z"
+}

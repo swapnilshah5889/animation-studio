@@ -21,9 +21,10 @@
     "dialogue": { "type": "array", "items": { "$ref": "#/$defs/line" } },
     "sfx": { "type": "array", "items": { "$ref": "#/$defs/sfx" } },
     "music_cue": {
-      "description": "Music cue id (audio/music/<id>.wav), or null for none.",
+      "description": "Music cue id (audio/music/<id>.wav), or null for none. Plays from the start of the shot, ducked under dialogue.",
       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }]
     },
+    "music_volume": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "Music level before ducking; 1 = as loud as the dialogue." },
     "notes": { "type": "string", "maxLength": 1000, "description": "Free text for humans and the director; ignored by tools." }
   },
   "$defs": {
@@ -137,7 +138,8 @@
       "required": ["query", "start_s"],
       "additionalProperties": false,
       "properties": {
-        "query": { "type": "string", "minLength": 2, "maxLength": 100, "description": "What it should sound like; matched against the sound library (Step 3)." },
+        "query": { "type": "string", "minLength": 2, "maxLength": 100, "description": "What it should sound like, in words (kept for humans and for re-searching)." },
+        "sound": { "$ref": "sfx_library.schema.json#/$defs/sound_id", "description": "The library sound chosen for the query (find_sfx). Not set yet = silent, with a warning." },
         "start_s": { "$ref": "#/$defs/time_s" },
         "volume": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 }
       }

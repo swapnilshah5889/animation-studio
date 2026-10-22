@@ -3,24 +3,39 @@
 import copy
 import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from studio_core.config import REPO_ROOT
-from studio_core.schema import Issue, validate
+from studio_core.schema import SCHEMAS, Issue, validate, validate_file
 
-FIX = REPO_ROOT / "tests" / "fixtures" / "schemas"
+FIX = REPO_ROOT / "tests" / "fixtures"
 EXAMPLES = {
-    "rig": "rig_pip.json",
-    "shot": "shot_s01_sh01.json",
-    "shotlist": "shotlist_kite_day.json",
-    "film": "film_kite_day.json",
+    "rig": "schemas/rig_pip.json",
+    "shot": "schemas/shot_s01_sh01.json",
+    "shotlist": "schemas/shotlist_kite_day.json",
+    "film": "schemas/film_kite_day.json",
+    "background": "backgrounds/meadow/layers.json",
+    "voice": "schemas/voice_pip.json",
+    "line": "schemas/line_l001.json",
+    "lipsync": "audio/pip_line_01.rhubarb.json",  # real Rhubarb output (Step 0)
+    "music": "schemas/music_m01.json",
+    "sfx_library": "schemas/sfx_library.json",
 }
 
 
 def example(name: str) -> dict[str, Any]:
     return json.loads((FIX / EXAMPLES[name]).read_text())
+
+
+def test_every_schema_has_an_example() -> None:
+    assert set(EXAMPLES) == set(SCHEMAS)
+
+
+def cue(i: int) -> Callable[[dict], dict]:
+    return lambda d: d["mouthCues"][i]
 
 
 @pytest.mark.parametrize("name", list(EXAMPLES))
@@ -167,6 +182,120 @@ CASES: list[tuple[str, str, Mutation, str, str]] = [
         "stages.story",
         "is not one of",
     ),
+    # ----------------------------------------------------------------- audio (Step 3)
+    ("shot", "bad sound id", lambda s: s["sfx"][0].update(sound="Boing!"), "sfx[0].sound", "match"),
+    ("shot", "music too loud", lambda s: s.update(music_volume=2), "music_volume", "maximum"),
+    ("voice", "unknown engine", lambda v: v.update(engine="siri"), "engine", "is not one of"),
+    ("voice", "no voices", lambda v: v.update(voices=[]), "voices", "should be non-empty"),
+    (
+        "voice",
+        "bad voice id",
+        lambda v: v["voices"][0].update(id="Heart"),
+        "voices[0].id",
+        "does not match",
+    ),
+    (
+        "voice",
+        "same voice twice",
+        lambda v: v["voices"].append({"id": "af_heart"}),
+        "voices",
+        "listed twice",
+    ),
+    (
+        "voice",
+        "pitch too high",
+        lambda v: v.update(pitch_semitones=7),
+        "pitch_semitones",
+        "maximum",
+    ),
+    ("line", "bad line id", lambda d: d.update(line_id="line1"), "line_id", "does not match"),
+    ("line", "blank text", lambda d: d.update(text="   "), "text", "blank"),
+    (
+        "line",
+        "someone else's voice",
+        lambda d: d.update(character="bunny"),
+        "voice.character",
+        "belongs to 'pip'",
+    ),
+    ("line", "bad hash", lambda d: d.update(hash="abc"), "hash", "does not match"),
+    (
+        "lipsync",
+        "unknown shape",
+        lambda d: cue(3)(d).update(value="Z"),
+        "mouthCues[3].value",
+        "is not one of",
+    ),
+    (
+        "lipsync",
+        "late first cue",
+        lambda d: cue(0)(d).update(start=0.1),
+        "mouthCues[0].start",
+        "start at 0",
+    ),
+    (
+        "lipsync",
+        "gap between cues",
+        lambda d: cue(2)(d).update(start=cue(2)(d)["start"] + 0.03),
+        "mouthCues[2].start",
+        "a gap",
+    ),
+    (
+        "lipsync",
+        "overlapping cues",
+        lambda d: cue(2)(d).update(start=cue(2)(d)["start"] - 0.03),
+        "mouthCues[2].start",
+        "an overlap",
+    ),
+    (
+        "lipsync",
+        "cues end early",
+        lambda d: d["metadata"].update(duration=7.0),
+        "end",
+        "but the audio lasts 7.0s",
+    ),
+    (
+        "music",
+        "instrument twice",
+        lambda m: m["instruments"].append("ukulele"),
+        "instruments",
+        "listed twice",
+    ),
+    ("music", "odd sample rate", lambda m: m.update(sample_rate=22050), "sample_rate", "one of"),
+    (
+        "sfx_library",
+        "not CC0",
+        lambda d: d["sounds"][0].update(license="CC-BY-4.0"),
+        "sounds[0].license",
+        "'CC0-1.0' was expected",
+    ),
+    (
+        "sfx_library",
+        "not a WAV",
+        lambda d: d["sounds"][0].update(file="kenney/a.ogg"),
+        "sounds[0].file",
+        "does not match",
+    ),
+    (
+        "sfx_library",
+        "license page over http",
+        lambda d: d["sounds"][0].update(url="http://kenney.nl"),
+        "sounds[0].url",
+        "does not match",
+    ),
+    (
+        "sfx_library",
+        "duplicate id",
+        lambda d: d["sounds"][1].update(id=d["sounds"][0]["id"]),
+        "sounds",
+        "the same id appears more than once",
+    ),
+    (
+        "sfx_library",
+        "same audio twice",
+        lambda d: d["sounds"][1].update(sha256=d["sounds"][0]["sha256"]),
+        "sounds",
+        "the same audio appears more than once",
+    ),
 ]
 
 
@@ -191,3 +320,14 @@ def test_issue_text_is_readable() -> None:
 def test_unknown_schema_name() -> None:
     with pytest.raises(ValueError):
         validate("storyboard", {})
+
+
+def test_audio_files_are_recognized_by_folder(tmp_path: Path) -> None:
+    for folder, name in (("dialogue", "line"), ("lipsync", "lipsync"), ("music", "music")):
+        path = tmp_path / folder / "x.json"
+        path.parent.mkdir()
+        path.write_text(json.dumps(example(name)))
+        assert validate_file(path) == [], folder
+    voice = tmp_path / "voice.json"
+    voice.write_text(json.dumps(example("voice")))
+    assert validate_file(voice) == []

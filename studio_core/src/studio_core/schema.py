@@ -22,14 +22,29 @@ from referencing import Registry, Resource
 from studio_core.config import REPO_ROOT
 
 SCHEMA_DIR = REPO_ROOT / "schemas"
-SCHEMAS = ("rig", "shot", "shotlist", "film", "background")
+SCHEMAS = (
+    "rig",
+    "shot",
+    "shotlist",
+    "film",
+    "background",
+    "voice",
+    "line",
+    "lipsync",
+    "music",
+    "sfx_library",
+)
 FILE_KINDS = {
     "rig.json": "rig",
     "shot.json": "shot",
     "shotlist.json": "shotlist",
     "film.json": "film",
     "layers.json": "background",
+    "voice.json": "voice",
+    "manifest.json": "sfx_library",
 }
+# Files named by id (l001.json) are recognized by their folder instead.
+FOLDER_KINDS = {"dialogue": "line", "lipsync": "lipsync", "music": "music"}
 
 
 @dataclass(frozen=True)
@@ -223,7 +238,88 @@ def check_shotlist(data: dict[str, Any]) -> list[Issue]:
     return issues
 
 
-SEMANTIC = {"rig": check_rig, "shot": check_shot, "shotlist": check_shotlist}
+# --------------------------------------------------------------------------- audio (Step 3)
+
+CUE_TOLERANCE_S = 0.05  # Rhubarb rounds times to 10 ms; allow a little slack against audio length
+
+
+def _duplicates(values: list[Any]) -> list[Any]:
+    return sorted({v for v in values if values.count(v) > 1}, key=str)
+
+
+def check_voice(data: dict[str, Any]) -> list[Issue]:
+    ids = [v["id"] for v in data["voices"]]
+    return [Issue("voices", f"voice {d!r} is listed twice") for d in _duplicates(ids)]
+
+
+def check_line(data: dict[str, Any]) -> list[Issue]:
+    issues = []
+    if not data["text"].strip():
+        issues.append(Issue("text", "the text is blank"))
+    if data["voice"]["character"] != data["character"]:
+        issues.append(
+            Issue(
+                "voice.character",
+                f"the voice belongs to {data['voice']['character']!r}, "
+                f"but the line is {data['character']!r}'s",
+            )
+        )
+    return issues
+
+
+def check_lipsync(data: dict[str, Any]) -> list[Issue]:
+    """Cues start at 0, are in order with no gaps or overlaps, and end with the audio."""
+    issues = []
+    cues = data["mouthCues"]
+    if cues[0]["start"] > 1e-6:
+        issues.append(Issue("mouthCues[0].start", "the first cue must start at 0"))
+    for i, cue in enumerate(cues):
+        if cue["end"] <= cue["start"]:
+            issues.append(Issue(f"mouthCues[{i}]", "end must be after start"))
+        if i and abs(cue["start"] - cues[i - 1]["end"]) > 1e-6:
+            gap = "a gap" if cue["start"] > cues[i - 1]["end"] else "an overlap"
+            issues.append(Issue(f"mouthCues[{i}].start", f"{gap} after the previous cue"))
+    duration = data["metadata"]["duration"]
+    if abs(cues[-1]["end"] - duration) > CUE_TOLERANCE_S:
+        issues.append(
+            Issue(
+                f"mouthCues[{len(cues) - 1}].end",
+                f"the cues end at {cues[-1]['end']}s but the audio lasts {duration}s",
+            )
+        )
+    return issues
+
+
+def check_music(data: dict[str, Any]) -> list[Issue]:
+    issues = [
+        Issue("instruments", f"{d!r} is listed twice")
+        for d in _duplicates(data.get("instruments", []))
+    ]
+    if not data["caption"].strip():
+        issues.append(Issue("caption", "the caption is blank"))
+    return issues
+
+
+def check_sfx_library(data: dict[str, Any]) -> list[Issue]:
+    sounds = data["sounds"]
+    issues = []
+    for key, what in (("id", "id"), ("file", "file"), ("sha256", "audio")):
+        for dup in _duplicates([s[key] for s in sounds]):
+            owners = [s["id"] for s in sounds if s[key] == dup]
+            issues.append(Issue("sounds", f"the same {what} appears more than once: {owners}"))
+    return issues
+
+
+SEMANTIC = {
+    "rig": check_rig,
+    "shot": check_shot,
+    "shotlist": check_shotlist,
+    "voice": check_voice,
+    "line": check_line,
+    "lipsync": check_lipsync,
+    "music": check_music,
+    "sfx_library": check_sfx_library,
+}
 
 
 def validate(name: str, data: Any) -> list[Issue]:
@@ -237,7 +333,7 @@ def validate(name: str, data: Any) -> list[Issue]:
 
 
 def validate_file(path: Path, name: str | None = None) -> list[Issue]:
-    name = name or FILE_KINDS.get(path.name)
+    name = name or FILE_KINDS.get(path.name) or FOLDER_KINDS.get(path.parent.name)
     if name is None:
         raise ValueError(f"can't tell the schema for {path.name}; pass name= (one of {SCHEMAS})")
     try:

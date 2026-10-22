@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/music.schema.json",
+  "title": "Music cue",
+  "description": "films/<film>/audio/music/<cue_id>.json: how <cue_id>.wav was made (D-036). The director asks for a mood, an energy and optional instruments; code writes the model caption. Instrumental only in v1. The seed makes a cue reproducible.",
+  "type": "object",
+  "required": ["schema_version", "cue_id", "mood", "energy", "duration_s", "caption", "model", "seed", "sample_rate", "channels", "hash"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "cue_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$", "description": "Referenced by a shot's music_cue, e.g. 'm01'." },
+    "mood": { "type": "string", "pattern": "^[a-z][a-z_]{0,30}$", "description": "One of the moods compose knows (task 3.4), e.g. 'playful'." },
+    "energy": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = gentle and slow, 1 = lively." },
+    "instruments": { "type": "array", "maxItems": 6, "items": { "type": "string", "pattern": "^[a-z][a-z _-]{1,30}$" } },
+    "duration_s": { "type": "number", "exclusiveMinimum": 0, "maximum": 300 },
+    "caption": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "The exact text given to the music model (written by code)." },
+    "model": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "seed": { "type": "integer", "minimum": 0 },
+    "sample_rate": { "type": "integer", "enum": [44100, 48000] },
+    "channels": { "type": "integer", "enum": [1, 2] },
+    "looped": { "type": "boolean", "default": false, "description": "True if a shorter generation was looped to reach duration_s." },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the request (mood, energy, instruments, duration, model, seed)." },
+    "created": { "type": "string", "format": "date-time" }
+  }
+}

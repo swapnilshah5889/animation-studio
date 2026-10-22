@@ -20,11 +20,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from studio_core.audio.library import LibraryError, load_library
 from studio_core.config import REPO_ROOT
 from studio_core.film import Film
 from studio_core.motions import MotionError, animate
 from studio_core.rig import RigError, load_rig
-from studio_core.schema import validate
+from studio_core.schema import CUE_TOLERANCE_S, validate
 from studio_core.sif.units import frames
 
 FPS = 24  # shot lists can choose another rate later; Step 2 shots are all 24 fps
@@ -49,9 +50,10 @@ class FilmFolder:
     """A film project folder (docs/ARCHITECTURE.md "Film project folder")."""
 
     root: Path
+    sfx_root: Path | None = None  # the sound library; None = config [paths] sfx_library
 
     @classmethod
-    def open(cls, films_root: Path, slug: str) -> FilmFolder:
+    def open(cls, films_root: Path, slug: str, *, sfx_root: Path | None = None) -> FilmFolder:
         if not FILM_SLUG.match(slug):
             raise SpecError(f"film {slug!r} is not a film name (lowercase letters, digits, '-')")
         root = films_root / slug
@@ -62,7 +64,7 @@ class FilmFolder:
                 else []
             )
             raise SpecError(f"no film {slug!r}; films: {_known(known)}")
-        return cls(root)
+        return cls(root, sfx_root)
 
     @property
     def slug(self) -> str:
@@ -84,6 +86,16 @@ class FilmFolder:
             audio / "lipsync" / f"{line_id}.json",
             audio / "dialogue" / f"{line_id}.txt",
         )
+
+    def line_meta(self, line_id: str) -> Path:
+        return self.root / "audio" / "dialogue" / f"{line_id}.json"
+
+    def music_file(self, cue_id: str) -> Path:
+        return self.root / "audio" / "music" / f"{cue_id}.wav"
+
+    def music_cues(self) -> list[str]:
+        folder = self.root / "audio" / "music"
+        return sorted(p.stem for p in folder.glob("*.wav")) if folder.is_dir() else []
 
     def _ids(self, folder: str, marker: str) -> list[str]:
         base = self.root / folder
@@ -163,24 +175,76 @@ def check(film: FilmFolder, spec: dict[str, Any]) -> tuple[list[str], list[str]]
         motions = {a["motion"] for a in char.get("actions", [])}
         if "blink" not in motions and "face" in view:
             warnings.append(f"{cid} never blinks; add the 'blink' motion for the whole shot")
+    _check_dialogue(film, spec, errors, warnings)
+    _check_sounds(film, spec, errors, warnings)
+    return errors, warnings
+
+
+def _check_dialogue(
+    film: FilmFolder, spec: dict[str, Any], errors: list[str], warnings: list[str]
+) -> None:
     for line in spec.get("dialogue", []):
-        wav, cues, _ = film.line_files(line["line_id"])
+        lid = line["line_id"]
+        wav, cues, _ = film.line_files(lid)
         if not wav.is_file():
-            errors.append(
-                f"line {line['line_id']!r} has no audio at {wav}; lines: {_known(film.lines())}"
-            )
+            errors.append(f"line {lid!r} has no audio at {wav}; lines: {_known(film.lines())}")
             continue
+        seconds = wav_seconds(wav)
+        meta = film.line_meta(lid)
+        if meta.is_file():  # lines made by speak (Step 3) carry metadata; fixture lines may not
+            data = json.loads(meta.read_text())
+            issues = validate("line", data)
+            if issues:
+                errors.append(f"line {lid!r} metadata: " + "; ".join(map(str, issues)))
+            elif data["character"] != line["character"]:
+                errors.append(
+                    f"line {lid!r} was recorded in {data['character']}'s voice, "
+                    f"but {line['character']} says it"
+                )
         if not cues.is_file():
-            errors.append(f"line {line['line_id']!r} has no mouth cues at {cues}")
-        end = line["start_s"] + wav_seconds(wav)
+            errors.append(f"line {lid!r} has no mouth cues at {cues}; run lipsync on it")
+        else:
+            cue_data = json.loads(cues.read_text())
+            issues = validate("lipsync", cue_data)
+            if issues:
+                errors.append(f"line {lid!r} mouth cues: " + "; ".join(map(str, issues)))
+            elif abs(cue_data["metadata"]["duration"] - seconds) > CUE_TOLERANCE_S:
+                errors.append(
+                    f"line {lid!r} mouth cues were made for {cue_data['metadata']['duration']}s "
+                    f"of audio, but the audio is {seconds:.2f}s; run lipsync on it again"
+                )
+        end = line["start_s"] + seconds
         if end > spec["duration_s"] + 1e-6:
             warnings.append(
-                f"line {line['line_id']} ends at {end:.2f}s, after the {spec['duration_s']}s shot; "
+                f"line {lid} ends at {end:.2f}s, after the {spec['duration_s']}s shot; "
                 "it will be cut off"
             )
-    if spec.get("sfx") or spec.get("music_cue"):
-        warnings.append("sound effects and music are not rendered yet (Step 3)")
-    return errors, warnings
+
+
+def _check_sounds(
+    film: FilmFolder, spec: dict[str, Any], errors: list[str], warnings: list[str]
+) -> None:
+    effects = spec.get("sfx", [])
+    library = None
+    if any("sound" in e for e in effects):  # only read the library when a sound is chosen
+        try:
+            library = load_library(film.sfx_root)
+        except LibraryError as e:
+            errors.append(f"the sound library is broken: {e}")
+    for i, effect in enumerate(effects):
+        where = f"sound effect '{effect['query']}' at {effect['start_s']}s"
+        if "sound" not in effect:
+            warnings.append(f"{where} has no sound chosen yet; it is silent until one is set")
+        elif library is not None and effect["sound"] not in library.sounds:
+            errors.append(
+                f"sfx[{i}]: {where} uses sound {effect['sound']!r}, which is not in the library "
+                f"({len(library.sounds)} sounds); search with find_sfx"
+            )
+    cue = spec.get("music_cue")
+    if cue and not film.music_file(cue).is_file():
+        errors.append(f"music cue {cue!r} not found; cues: {_known(film.music_cues())}")
+    if effects or cue:
+        warnings.append("sound effects and music are not mixed into renders until task 3.6")
 
 
 def save(film: FilmFolder, spec: dict[str, Any]) -> list[str]:

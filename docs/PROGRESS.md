@@ -2,11 +2,44 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 2 (`synfig_mcp`) is done, with one done-when item open: the Claude Code run,
-skipped by the owner (D-035). **Waiting for the owner to review the Step 3 brief**
-(`docs/steps/STEP-3-audio-mcp.md`).
+**Current step:** Step 3 (`audio_mcp`): brief approved (D-036); task 3.1 done. Next: 3.2 (voices,
+then the owner's voice casting, checkpoint 2). Step 2 has one done-when item open (D-035).
 
 ---
+
+## 2026-10-22: Step 3 started: task 3.1 (audio schemas) done
+
+The owner approved the Step 3 brief as written (D-036).
+
+**Step 3 task list**
+
+| Task | Status |
+|---|---|
+| 3.1 Audio schemas and file layout | **Done**: `schemas/voice`, `line`, `lipsync`, `music`, `sfx_library`; shot schema gains `sfx[].sound` and `music_volume`; semantic checks (cue order and coverage, unique voices, sounds and audio, line/voice consistency); asset checks in `shot_spec` (line metadata, stale mouth cues, chosen sounds in the library, music cues exist); `studio_core/audio/library.py` (manifest loader); files named by id recognized by folder in `validate_file` (D-037). |
+| 3.2 Voices: `speak` (owner checkpoint 2: casting) | To do |
+| 3.3 Lip-sync: `lipsync` | To do |
+| 3.4 Music: `compose` (owner checkpoint 3) | To do |
+| 3.5 Sound-effect library and search: `find_sfx` | To do |
+| 3.6 The mix | To do |
+| 3.7 `audio_mcp` server, and shot tools for sound | To do |
+| 3.8 Prove it (owner checkpoint 4) | To do |
+| 3.9 Docs, Step 4 brief | To do |
+
+**Verified**
+- 186 tests pass (`uv run pytest`); ruff is clean.
+- Every schema has a valid example. The lip-sync example is the real Rhubarb output from Step 0.
+- 24 new mistake cases are each reported at the right path, e.g. a non-CC0 license
+  (`sounds[0].license: 'CC0-1.0' was expected`) and a gap between mouth cues.
+- Asset checks are tested on a film folder:
+  - a line recorded in another character's voice
+  - mouth cues made for a shorter take ("run lipsync on it again")
+  - an unchosen sound (a warning)
+  - an unknown sound id, a broken manifest and a missing music cue (errors)
+
+**Next**
+- 3.2: `speak` with Kokoro (voice blends, speed, pitch step, speech loudness, content-hash
+  cache), then a voice-casting page for the owner (checkpoint 2). It first downloads 4–5 more
+  Kokoro voice packs (~0.5 MB each, approved).
 
 ## 2026-10-22: Step 2 closed (task 2.9); Step 3 brief drafted
 

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "cue_id": "m01",
+  "mood": "playful",
+  "energy": 0.6,
+  "instruments": [
+    "ukulele",
+    "glockenspiel"
+  ],
+  "duration_s": 10,
+  "caption": "gentle, playful background music for a preschool cartoon, ukulele, glockenspiel, bright and happy, major key",
+  "model": "ace-step-1.5 turbo",
+  "seed": 1234,
+  "sample_rate": 48000,
+  "channels": 2,
+  "looped": false,
+  "hash": "96426aa20ad08d86accc550343726c411b00a2e44f43534b5cfecba93024e38f",
+  "created": "2026-10-22T10:00:00Z"
+}
