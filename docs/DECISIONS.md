@@ -636,3 +636,29 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
   sample-peak limiter at −0.4 dBTP.
 - The numbers live in config `[mix]`. `render_shot` now writes `shots/<id>/mix.wav` in place
   of the dialogue-only `dialogue.wav`.
+
+### D-046: The audio_mcp server and sound in shots (task 3.7)
+- **`mcp/audio_mcp`** (workspace member `audio-mcp`, stdio, registered in `.mcp.json`).
+  - Same conventions as `synfig_mcp` (D-034): cleaned docstrings, validated arguments,
+    structured results with absolute paths inside the film, ToolError messages saying what to
+    fix, slow work in a worker thread.
+  - Seven tools:
+    - `describe_audio`: voices, lines, cues, installed voices, moods, instruments, library size
+    - `set_voice`: casts with Kokoro voices; Parler is refused while its download is deferred,
+      as is any voice that isn't installed
+    - `speak`: up to 20 lines per call, with cues
+    - `lipsync`
+    - `compose`: moods and instruments as schema enums
+    - `find_sfx`: up to 10 queries per call
+    - `preview_mix`: refuses a shot with errors
+- **The animation server places audio by id:** `add_sound_effect` (the sound must be in the
+  library; `query` defaults to its description), `set_music` (null removes the music), and
+  `remove_from_shot` with kind `sound_effect`. `describe_film` lists the music cues.
+  `shot_spec` gains `add_sound_effect` and `set_music`.
+- **Why two servers:** making audio (models, minutes of work) and editing shots (instant,
+  engine-neutral) are different jobs. Ids are the glue, so either side can change without the
+  other.
+- **Proof:** `scripts/inspector_check.py` now drives both servers from `.mcp.json`, 32 calls:
+  - cast → speak → lip-sync → compose → search
+  - add the sound, set the music, apply the line → preview the mix (−14.6 LUFS, −1.5 dBTP)
+  - plus refusals

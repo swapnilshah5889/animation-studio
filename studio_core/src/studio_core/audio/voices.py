@@ -153,6 +153,63 @@ def _defaults(voice: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------- installed voices
+
+KOKORO_VOICES = Path.home() / "ai-studio" / "models" / "kokoro-82m" / "voices"
+PARLER_WEIGHTS = Path.home() / "ai-studio" / "models" / "indic-parler-tts" / "model.safetensors"
+# Indic Parler-TTS named speakers (model card, D-042); usable once its weights are downloaded.
+PARLER_SPEAKERS = {
+    "en-in": [
+        "Thoma", "Mary", "Swapna", "Dinesh", "Meera", "Jatin", "Aakash", "Sneha", "Kabir",
+        "Tisha", "Chingkhei", "Thoiba", "Priya", "Tarun", "Gauri", "Nisha", "Raghav", "Kavya",
+        "Ravi", "Vikas", "Riya",
+    ],
+    "hi": ["Rohit", "Divya", "Aman", "Rani"],
+}  # fmt: skip
+
+
+def available() -> dict[str, list[str]]:
+    """Voices that can be used right now, per engine."""
+    kokoro = sorted(p.stem for p in KOKORO_VOICES.glob("*.pt")) if KOKORO_VOICES.is_dir() else []
+    parler = [f"{lang}:{name}" for lang, names in PARLER_SPEAKERS.items() for name in names]
+    return {"kokoro": kokoro, "parler": parler if PARLER_WEIGHTS.is_file() else []}
+
+
+def save_voice(film_root: Path, character_id: str, settings: dict[str, Any]) -> Path:
+    """Validate and write characters/<id>/voice.json. The voices it names must be installed."""
+    folder = film_root / "characters" / character_id
+    if not (folder / "rig.json").is_file():
+        known = sorted(p.parent.name for p in (film_root / "characters").glob("*/rig.json"))
+        raise VoiceError(f"no character {character_id!r}; characters: {', '.join(known) or 'none'}")
+    voice = {"schema_version": 1, "character": character_id, **settings}
+    issues = validate("voice", voice)
+    if issues:
+        raise VoiceError("; ".join(map(str, issues)))
+    installed = available()
+    if voice["engine"] == "kokoro":
+        unknown = sorted({v["id"] for v in voice["voices"]} - set(installed["kokoro"]))
+        if unknown:
+            raise VoiceError(
+                f"voices {unknown} aren't installed; "
+                f"kokoro voices: {', '.join(installed['kokoro'])}"
+            )
+    elif voice["engine"] == "parler":
+        if not installed["parler"]:
+            raise VoiceError(
+                "Parler (Indian voices) isn't downloaded yet; the owner deferred it (task 3.2b)"
+            )
+        names = PARLER_SPEAKERS.get(voice["language"], [])
+        if voice["speaker"] not in names:
+            raise VoiceError(
+                f"{voice['speaker']!r} isn't a {voice['language']} speaker; speakers: {names}"
+            )
+    else:
+        model_of(voice)  # refuses engines that aren't installed
+    path = folder / "voice.json"
+    path.write_text(json.dumps(voice, indent=2) + "\n")
+    return path
+
+
 # --------------------------------------------------------------------------- engines
 
 # What each worker reports as its model; part of every line's hash, so a model change re-voices.

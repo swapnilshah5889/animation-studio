@@ -34,7 +34,7 @@ ID = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 # The placeholder puppet (Pip) that build_rig copies when no rig is given, until Step 4
 # generates real puppets.
 PLACEHOLDER_RIG = REPO_ROOT / "tests" / "fixtures" / "characters" / "pip"
-REMOVABLE = ("character", "action", "pose", "expression", "dialogue")
+REMOVABLE = ("character", "action", "pose", "expression", "dialogue", "sound_effect")
 
 
 class SpecError(ValueError):
@@ -412,6 +412,45 @@ def set_camera(
     return save(film, spec)
 
 
+def add_sound_effect(
+    film: FilmFolder,
+    shot_id: str,
+    sound_id: str,
+    start_s: float,
+    *,
+    volume: float = 0.5,
+    query: str | None = None,
+) -> list[str]:
+    """Play a library sound (found with find_sfx) at start_s. `query` is the description it
+    answers (kept for humans and re-searching); it defaults to the sound's own description."""
+    library = load_library(film.sfx_root)
+    if sound_id not in library.sounds:
+        raise SpecError(
+            f"no sound {sound_id!r} in the library ({len(library.sounds)} sounds); "
+            "search with find_sfx"
+        )
+    if query is None:
+        sound = library.sounds[sound_id]
+        query = (sound.get("description") or sound_id)[:100]
+    spec = load(film, shot_id)
+    effect = {"query": query, "sound": sound_id, "start_s": start_s, "volume": volume}
+    spec["sfx"] = sorted([*spec.get("sfx", []), effect], key=lambda e: e["start_s"])
+    return save(film, spec)
+
+
+def set_music(
+    film: FilmFolder, shot_id: str, cue_id: str | None, *, volume: float | None = None
+) -> list[str]:
+    """The shot's music cue (made with compose), or None for no music."""
+    spec = load(film, shot_id)
+    spec["music_cue"] = cue_id
+    if cue_id is None:
+        spec.pop("music_volume", None)
+    elif volume is not None:
+        spec["music_volume"] = volume
+    return save(film, spec)
+
+
 def remove_item(
     film: FilmFolder,
     shot_id: str,
@@ -420,13 +459,15 @@ def remove_item(
     character_id: str | None = None,
     index: int | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
-    """Remove a character (and its dialogue), or one action/pose/expression/dialogue line by its
-    index in describe_shot. Returns (what was removed, warnings)."""
+    """Remove a character (and its dialogue), or one action/pose/expression/dialogue line/sound
+    effect by its index in describe_shot. Returns (what was removed, warnings)."""
     if kind not in REMOVABLE:
         raise SpecError(f"unknown kind {kind!r}; known: {', '.join(REMOVABLE)}")
     spec = load(film, shot_id)
     if kind == "dialogue":
         items = spec.get("dialogue", [])
+    elif kind == "sound_effect":
+        items = spec.get("sfx", [])
     elif character_id is None:
         raise SpecError(f"removing a {kind} needs character_id")
     elif kind == "character":

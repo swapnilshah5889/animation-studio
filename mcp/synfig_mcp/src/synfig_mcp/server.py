@@ -71,9 +71,12 @@ Animation tools for a children's cut-out film. A shot is a spec (shots/<id>/shot
 build up with small edits, check, then render.
 
 Typical order: describe_film (what exists: characters, bones, backgrounds, recorded lines,
-motions) → create_scene → add_character → apply_motion / set_expression / apply_lipsync /
-pose_at / camera_move → describe_shot (spec + warnings) → render_preview_frame at a few key
-times → render_shot.
+music cues, motions) → create_scene → add_character → apply_motion / set_expression /
+apply_lipsync / pose_at / camera_move → add_sound_effect / set_music → describe_shot (spec +
+warnings) → render_preview_frame at a few key times → render_shot.
+
+Lines, music and sounds are made on the audio server (audio_mcp: speak, compose, find_sfx);
+these tools place them in a shot by id.
 
 Conventions: times are seconds from the start of the shot. Positions are frame fractions,
 [0, 0] top-left to [1, 1] bottom-right; a character's position is where its feet touch the
@@ -120,6 +123,7 @@ class FilmDescription(BaseModel):
     motions: dict[str, str] = Field(description="Motion name → what it does.")
     expressions: list[str]
     camera_moves: list[str]
+    music_cues: list[str] = Field(description="Music cue ids made with compose (set_music).")
 
 
 class ShotDescription(BaseModel):
@@ -173,8 +177,9 @@ def _motion_help() -> dict[str, str]:
     }
 
 
-def create_server(films_root: Path | None = None) -> MCPServer:
-    """The server, with every tool registered. `films_root` defaults to config [paths] films."""
+def create_server(films_root: Path | None = None, sfx_root: Path | None = None) -> MCPServer:
+    """The server, with every tool registered. `films_root` defaults to config [paths] films,
+    `sfx_root` (the sound library) to config [paths] sfx_library."""
     root = films_root or load_config().path("paths", "films")
     server = MCPServer(
         "synfig_mcp",
@@ -193,7 +198,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         return register
 
     def open_film(film: str) -> shot_spec.FilmFolder:
-        return shot_spec.FilmFolder.open(root, film)
+        return shot_spec.FilmFolder.open(root, film, sfx_root=sfx_root)
 
     def update(
         film: shot_spec.FilmFolder, shot_id: str, change: str, warnings: list[str]
@@ -254,6 +259,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 motions=_motion_help(),
                 expressions=list(EXPRESSIONS),
                 camera_moves=list(CAMERA_MOVES),
+                music_cues=f.music_cues(),
             )
 
     @tool()
@@ -469,6 +475,62 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             return update(f, shot_id, f"camera: {move}", warnings)
 
     @tool()
+    def add_sound_effect(
+        film: FilmArg,
+        shot_id: ShotArg,
+        sound_id: Annotated[
+            str,
+            Field(
+                pattern=r"^[a-z0-9][a-z0-9_]{0,79}$",
+                description="A library sound id, from audio_mcp's find_sfx.",
+            ),
+        ],
+        start_s: Seconds,
+        volume: Annotated[
+            float, Field(ge=0, le=1, description="0.5 = a normal effect level; 1 = loud.")
+        ] = 0.5,
+        query: Annotated[
+            str | None,
+            Field(
+                min_length=2,
+                max_length=100,
+                description="What the sound is for, in words (defaults to its description).",
+            ),
+        ] = None,
+    ) -> ShotUpdate:
+        """Play a sound effect from the library at start_s. Find sounds by describing them with
+        audio_mcp's find_sfx, then pass the chosen sound_id here."""
+        with fixable():
+            f = open_film(film)
+            warnings = shot_spec.add_sound_effect(
+                f, shot_id, sound_id, start_s, volume=volume, query=query
+            )
+            return update(f, shot_id, f"sound {sound_id} at {start_s}s", warnings)
+
+    @tool()
+    def set_music(
+        film: FilmArg,
+        shot_id: ShotArg,
+        cue_id: Annotated[
+            str | None,
+            Field(
+                pattern=r"^[a-z][a-z0-9_]{0,39}$",
+                description="A music cue made with audio_mcp's compose; null for no music.",
+            ),
+        ],
+        volume: Annotated[
+            float | None,
+            Field(ge=0, le=1, description="Music level before ducking; default 0.5."),
+        ] = None,
+    ) -> ShotUpdate:
+        """Set the shot's background music. It plays from the start of the shot and dips
+        automatically while anyone speaks."""
+        with fixable():
+            f = open_film(film)
+            warnings = shot_spec.set_music(f, shot_id, cue_id, volume=volume)
+            return update(f, shot_id, f"music: {cue_id or 'none'}", warnings)
+
+    @tool()
     def remove_from_shot(
         film: FilmArg,
         shot_id: ShotArg,
@@ -480,7 +542,8 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         ] = None,
     ) -> ShotUpdate:
         """Undo part of a shot: remove a character (with its dialogue), or one of a character's
-        actions, poses or expressions, or one dialogue line, by its index in describe_shot."""
+        actions, poses or expressions, or one dialogue line or sound effect, by its index in
+        describe_shot."""
         with fixable():
             f = open_film(film)
             removed, warnings = shot_spec.remove_item(

@@ -3,6 +3,7 @@ errors, renders, and the stdio transport (task 2.7)."""
 
 import asyncio
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,8 @@ TOOLS = {
     "build_rig",
     "render_preview_frame",
     "render_shot",
+    "add_sound_effect",
+    "set_music",
 }
 needs_synfig = pytest.mark.skipif(
     not load_config().path("tools", "synfig").exists(), reason="no synfig CLI"
@@ -200,3 +203,51 @@ def test_stdio_transport_lists_the_tools() -> None:
             return {t.name for t in (await client.list_tools()).tools}
 
     assert asyncio.run(go()) == TOOLS
+
+
+def test_sound_effects_and_music_in_a_shot(tmp_path: Path) -> None:
+    root = films(tmp_path)
+    library = tmp_path / "sfx"
+    library.mkdir()
+    (library / "manifest.json").write_text(
+        (Path(__file__).parent / "fixtures" / "schemas" / "sfx_library.json").read_text()
+    )
+    music = root / "demo" / "audio" / "music"
+    music.mkdir(parents=True)
+    shutil.copy(Path(__file__).parent / "fixtures" / "audio" / "pip_line_01.wav", music / "m01.wav")
+    shot = {"film": "demo", "shot_id": "s01_sh01"}
+    sound = {**shot, "sound_id": "bsb_toy_squeak_0427", "start_s": 2.0, "volume": 0.6}
+
+    async def go() -> list[Any]:
+        async with Client(create_server(root, sfx_root=library)) as client:
+            calls = [
+                ("create_scene", {**shot, "duration_s": 6, "background": "meadow"}),
+                ("add_sound_effect", sound),
+                ("add_sound_effect", {**sound, "sound_id": "kenney_boing"}),
+                ("set_music", {**shot, "cue_id": "m01", "volume": 0.3}),
+                ("set_music", {**shot, "cue_id": "m09"}),
+                ("describe_shot", shot),
+                ("remove_from_shot", {**shot, "kind": "sound_effect", "index": 0}),
+                ("set_music", {**shot, "cue_id": None}),
+                ("describe_film", {"film": "demo"}),
+            ]
+            return [await client.call_tool(name, args) for name, args in calls]
+
+    r = asyncio.run(go())
+    ok(r[1])
+    assert "no sound 'kenney_boing' in the library (2 sounds)" in error(r[2])
+    ok(r[3])
+    assert "music cue 'm09' not found; cues: m01" in error(r[4])
+    spec = ok(r[5])["spec"]
+    assert spec["sfx"] == [
+        {
+            "query": "A squeaky toy pressed once.",
+            "sound": "bsb_toy_squeak_0427",
+            "start_s": 2.0,
+            "volume": 0.6,
+        }
+    ]
+    assert spec["music_cue"] == "m01" and spec["music_volume"] == 0.3
+    assert "removed sound_effect" in ok(r[6])["change"]
+    ok(r[7])
+    assert ok(r[8])["music_cues"] == ["m01"]

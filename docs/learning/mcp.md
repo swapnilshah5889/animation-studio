@@ -123,6 +123,24 @@ whole manual for the tool, so every word in a docstring is paid for on every req
   (no shell, no file edits). `scripts/run_first_shot.py` uses this for Step 2's done-when and
   saves the transcript to `mcp-first-shot.md`.
 
+## Two servers, one film
+
+From Step 3 there are two servers: `synfig_mcp` edits and renders shots, and `audio_mcp` makes
+sound (voices, music, sound-effect search). A client like Claude Code or our director connects
+to both, and the model sees one list of tools. The servers never call each other. They share
+the film folder and pass **ids** through the model:
+
+```
+audio_mcp.speak(...)         → line_id "l007"   → synfig_mcp.apply_lipsync(line_id="l007")
+audio_mcp.compose(...)       → cue_id "m01"     → synfig_mcp.set_music(cue_id="m01")
+audio_mcp.find_sfx("a door") → sound_id "..."   → synfig_mcp.add_sound_effect(sound_id=...)
+```
+
+Splitting by *kind of work* keeps each server's tool list short and its failure modes
+separate. Making sound can take a minute and needs models; editing a shot is instant and
+engine-neutral. Each server's instructions mention the other, so the model knows where to get
+an id.
+
 ## Testing without a model
 
 The SDK's `Client` connects to a server object in-process, or launches it over stdio:

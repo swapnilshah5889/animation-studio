@@ -1,0 +1,16 @@
+[project]
+name = "audio-mcp"
+version = "0.0.0"
+description = "MCP server: the director's sound tools (voices, lip-sync, music, sound effects, mix)"
+requires-python = "==3.12.*"
+dependencies = ["studio-core", "mcp>=2.3,<3"]
+
+[project.scripts]
+audio-mcp = "audio_mcp.server:main"
+
+[tool.uv.sources]
+studio-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"

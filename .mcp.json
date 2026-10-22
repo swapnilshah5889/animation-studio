@@ -3,7 +3,20 @@
     "synfig_mcp": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "--quiet", "synfig-mcp"]
+      "args": [
+        "run",
+        "--quiet",
+        "synfig-mcp"
+      ]
+    },
+    "audio_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "audio-mcp"
+      ]
     }
   }
 }
