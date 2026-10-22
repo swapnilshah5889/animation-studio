@@ -2,6 +2,7 @@
 
     uv run scripts/preview_puppet.py                          # Kit in films/step4-demo
     uv run scripts/preview_puppet.py --film my-film --character fox --size 960x540
+    uv run scripts/preview_puppet.py --view three_quarter     # the same shot in the 3/4 view
 
 One short shot through the engine-neutral path that synfig_mcp uses. The shot_spec edits
 (create_shot, place_character, add_action, add_expression, add_dialogue) write
@@ -18,6 +19,12 @@ The timeline (`Timeline`; the shot runs 6-9 s, depending on the line):
 Pip stands beside it, scaled to the same standing height, breathing and blinking, and nods once
 the line is over.
 
+`--view three_quarter` runs the same staging with the puppet placed in its three-quarter view
+(refused if its rig has none). The three-quarter art faces screen-right (D-048), so the puppet,
+standing left of Pip, is placed `facing: right`, which is the art as drawn, and looks toward Pip.
+The wave, the scale match and the face close-up all use that view's own rig: its bones, its part
+sizes and its `face` block. Pip stays in his front view.
+
 Talking takes the real path: `speak` (Kokoro in envs/kokoro, then Rhubarb) in the character's
 voice.json. If the character has no voice yet, the script casts a placeholder from casting page
 c13 (`af_bella`, +1.5 semitones, 5% faster). It writes that to characters/<id>/voice.json, the
@@ -26,7 +33,8 @@ only file it writes in the character's folder, so recast it at voice casting.
 Only what's missing is set up: the film (storybook style), Pip (the placeholder puppet, via
 `register_rig`) and the background (the meadow fixture).
 
-Outputs (renders/ is git-ignored, and every run overwrites them):
+Outputs (renders/ is git-ignored, and every run overwrites them; the front view keeps its
+folder name, other views add theirs, e.g. <film>-<character>-three_quarter):
     renders/puppet-preview/<film>-<character>/puppet_preview.mp4
     renders/puppet-preview/<film>-<character>/contact_sheet.png
 The contact sheet shows four key frames (rest, wave peak, eyes closed, mouth open), each with a
@@ -57,7 +65,7 @@ from studio_core.config import REPO_ROOT, StudioConfig, load_config
 from studio_core.film import Film
 from studio_core.models import load_manifest
 from studio_core.motions import MotionContext, animate, sample
-from studio_core.rig import ground_offset_px, load_rig, world_pose
+from studio_core.rig import Rig, RigError, ground_offset_px, load_rig, world_pose
 from studio_core.scene import DESIGN
 from studio_core.shot import render_shot
 from studio_core.shot_spec import (
@@ -80,6 +88,7 @@ SHOT = "s00_sh01"
 REFERENCE = "pip"  # the hand-drawn placeholder puppet every generated puppet is compared with
 LINE = "Hi Pip! Do you want to play in the meadow?"
 SUBJECT_AT, PIP_AT = (0.36, 0.92), (0.66, 0.92)  # feet, as fractions of the frame
+VIEWS = ("front", "three_quarter")  # rig.schema.json view names
 STYLE = "storybook"  # only used when the film doesn't exist yet
 FIXTURE_BACKGROUND = REPO_ROOT / "tests" / "fixtures" / "backgrounds" / "meadow"
 # Casting page c13 (scripts/audio/voice_casting.py): heard by the owner, not given to Pip or Bunny.
@@ -135,6 +144,35 @@ def plan_actions(
     return subject, pip
 
 
+def pick_view(rig: Rig, name: str) -> dict[str, Any]:
+    """One view of the rig, or a refusal that says which views the rig has."""
+    if name not in rig.data["views"]:
+        have = ", ".join(sorted(rig.data["views"]))
+        raise SpecError(
+            f"{rig.id} has no {name} view (its views: {have}); rig that view first "
+            "(Step 4, task 4.5), or preview a view it has"
+        )
+    return rig.view(name)
+
+
+def output_name(film: str, character: str, view: str) -> str:
+    """The folder under renders/puppet-preview/: the front view keeps its plain name."""
+    return f"{film}-{character}" if view == "front" else f"{film}-{character}-{view}"
+
+
+def facing_toward(at: tuple[float, float], other: tuple[float, float]) -> str:
+    """The shot spec `facing` that turns a character at `at` toward `other`. Both views are drawn
+    facing screen-right, so 'right' is the art as drawn and 'left' mirrors it (scene.py)."""
+    return "right" if other[0] >= at[0] else "left"
+
+
+def arm_toward(facing: str) -> str:
+    """The character's own side that is on the viewer's right. In the art as drawn (front, and
+    three-quarter facing screen-right) that is its left (the far side in three-quarter); mirrored,
+    its right."""
+    return "left" if facing == "right" else "right"
+
+
 def wave_side(view: dict[str, Any], toward: str = "left") -> str:
     """The arm to wave with: `toward` Pip (the character's left = the viewer's right) if that
     side has an upper arm and a forearm, else the other side."""
@@ -175,14 +213,21 @@ def matched_scale(view: dict[str, Any], reference: dict[str, Any], ref_scale: fl
 
 
 def screen_box(
-    view: dict[str, Any], feet: tuple[float, float], scale: float, part: str | None = None
+    view: dict[str, Any],
+    feet: tuple[float, float],
+    scale: float,
+    part: str | None = None,
+    facing: str = "right",
 ) -> Box:
     """Where the rest art lands in the 1920x1080 design frame, as (left, top, right, bottom)
-    pixels, y down, for a character facing right with its feet at `feet` (frame fractions).
-    The same placement rule as studio_core.scene: the lowest art pixel sits on the feet."""
+    pixels, y down, with the character's feet at `feet` (frame fractions). `facing` 'left'
+    mirrors the art about the root joint. The same placement rule as studio_core.scene: the
+    lowest art pixel sits on the feet."""
     left, bottom, right, top = rest_box(view, part)
     root_x = feet[0] * DESIGN.width
     root_y = feet[1] * DESIGN.height - ground_offset_px(view) * scale
+    if facing == "left":
+        left, right = -right, -left
     x0, x1 = root_x + left * scale, root_x + right * scale
     return (x0, root_y - top * scale, x1, root_y - bottom * scale)
 
@@ -308,6 +353,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--film", default="step4-demo")
     ap.add_argument("--character", default="kit")
+    ap.add_argument(
+        "--view",
+        choices=VIEWS,
+        default="front",
+        help="the rig view to place; three_quarter faces Pip (default: front)",
+    )
     ap.add_argument("--out", type=Path, help="output folder (default: renders/puppet-preview/)")
     ap.add_argument("--background", default="meadow", help="a background of the film")
     ap.add_argument("--line", default=LINE, help="what the puppet says")
@@ -318,7 +369,8 @@ def main() -> int:
     if cid == REFERENCE:
         sys.exit("Pip is the reference puppet; preview another character")
     size = tuple(int(v) for v in args.size.split("x")) if args.size else None
-    out = args.out or REPO_ROOT / "renders" / "puppet-preview" / f"{args.film}-{cid}"
+    folder = output_name(args.film, cid, args.view)
+    out = args.out or REPO_ROOT / "renders" / "puppet-preview" / folder
     cfg = load_config()
     tl = Timeline()
     t0 = time.monotonic()
@@ -330,14 +382,16 @@ def main() -> int:
                 f"{cid} has no rig at {film.rig_file(cid)}; build the puppet first "
                 f"(characters: {', '.join(film.characters()) or 'none'})"
             )
+        rig = load_rig(film.rig_file(cid))
+        view = pick_view(rig, args.view)  # refuse before touching the film any further
+        if "face" not in view:
+            sys.exit(f"{cid}'s {args.view} view has no face block: it can't blink or talk")
         if not film.rig_file(REFERENCE).is_file():
             register_rig(film, REFERENCE)
             print("added Pip (the placeholder puppet)")
         ensure_background(film, args.background)
-        view = load_rig(film.rig_file(cid)).view()
-        pip_view = load_rig(film.rig_file(REFERENCE)).view()
-        if "face" not in view:
-            sys.exit(f"{cid}'s rig has no face block: it can't blink or talk")
+        pip_view = load_rig(film.rig_file(REFERENCE)).view("front")
+        facing = facing_toward(SUBJECT_AT, PIP_AT)
         scale = args.scale or matched_scale(view, pip_view)
 
         voice = ensure_voice(film, cid)
@@ -347,25 +401,30 @@ def main() -> int:
         print(f"line {line.line_id} ({voice}, {line.duration_s:.2f} s, cached: {line.cached})")
 
         duration = tl.duration(line.duration_s)
-        subject, pip = plan_actions(tl, line.duration_s, wave_side(view))
+        subject, pip = plan_actions(tl, line.duration_s, wave_side(view, arm_toward(facing)))
         # Every edit checks and saves the whole spec, like the director's tool calls.
         create_shot(film, SHOT, duration, args.background, replace=True)
-        place_character(film, SHOT, cid, list(SUBJECT_AT), scale=scale)
-        place_character(film, SHOT, REFERENCE, list(PIP_AT))
+        place_character(
+            film, SHOT, cid, list(SUBJECT_AT), view=args.view, scale=scale, facing=facing
+        )
+        place_character(film, SHOT, REFERENCE, list(PIP_AT), view="front")
         for who, actions in ((cid, subject), (REFERENCE, pip)):
             add_expression(film, SHOT, who, "happy", 0.0)
             for a in actions:
                 add_action(film, SHOT, who, a["motion"], a["start_s"], params=a.get("params"))
         add_dialogue(film, SHOT, cid, line.line_id, tl.talk_s)
-    except (SpecError, VoiceError) as e:
+    except (SpecError, VoiceError, RigError) as e:
         sys.exit(f"refused: {e}")
     for w in check(film, load(film, SHOT))[1]:  # warnings about the finished shot only
         print(f"warning: {w}")
-    print(f"shot {SHOT}: {duration} s; {cid} at scale {scale}, Pip at 1")
+    print(
+        f"shot {SHOT}: {duration} s; {cid} ({args.view} view, facing {facing}) at scale {scale}, "
+        "Pip at 1"
+    )
 
     rendered = render_shot(film.root, SHOT, size=size, cfg=cfg)  # type: ignore[arg-type]
     keys = key_frames(view, subject, load_cues(line.cues), tl, len(rendered.frames))
-    face = screen_box(view, SUBJECT_AT, scale, part=view["face"]["part"])
+    face = screen_box(view, SUBJECT_AT, scale, part=view["face"]["part"], facing=facing)
     sheet = contact_sheet(rendered.frames, keys, face, out / "contact_sheet.png")
     mp4 = out / "puppet_preview.mp4"
     shutil.copy2(rendered.mp4, mp4)
