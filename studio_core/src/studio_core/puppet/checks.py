@@ -137,7 +137,7 @@ def _limbs_clear(mask: np.ndarray, sk: Skeleton) -> bool:
     return True
 
 
-def _box(sk: Skeleton, margin: float) -> tuple[float, float, float, float]:
+def skeleton_box(sk: Skeleton, margin: float) -> tuple[float, float, float, float]:
     xs = [x for x, _ in sk.joints.values()]
     ys = [y for _, y in sk.joints.values()]
     pad = sk.height_px * margin
@@ -160,7 +160,7 @@ def check_sheet(image: Image.Image, skeletons: list[Skeleton]) -> SheetCheck:
     for sk in skeletons:
         check = FigureCheck(sk.view, found=False)
         report.figures.append(check)
-        x0, y0, x1, y1 = _box(sk, 0.15)
+        x0, y0, x1, y1 = skeleton_box(sk, 0.15)
         mine = [i for i, (cx, cy) in enumerate(centres) if x0 <= cx <= x1 and y0 <= cy <= y1]
         claimed.update(mine)
         if not mine:

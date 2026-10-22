@@ -1,0 +1,797 @@
+"""Cut a chosen design sheet into a rigged cut-out puppet (task 4.4, D-050).
+
+    built = build_puppet(film_root, "kit", name="Kit")   # the sheet chosen in candidates.json
+    built.rig_path, built.report["limbs"]["forearm_l"]   # rig.json, and how well the limb fits
+
+The sheet was generated *on* a known skeleton (puppet/skeleton.py), so cutting it is geometry,
+not guessing:
+
+1. **Silhouette** of the front figure: the colour key with holes filled (puppet/checks.py),
+   united with SAM 2.1's mask (puppet/segment.py), which keeps pale clothes that touch the
+   background. A SAM mask far from the colour key (IoU < 0.85) is rejected and reported.
+2. **Head:** the upper head, plus everything between the nose line and the neck that is
+   coloured like it and connected to it. A scarf or collar stays with the torso, so turning
+   the head doesn't drag the clothes along.
+3. **Limbs by corridor:** a pixel belongs to a limb when it lies along that bone (between its
+   joints, within about 1.4 limb radii of the bone line); the nearest bone wins. At the
+   shoulders and hips the cut is the line through the joint, across the limb.
+4. **Torso:** everything else (body, clothes, tail).
+5. **Face:** dark marks in the face zone (eyes, brows, mouth) are painted over from the
+   surrounding colours, and the nose stays. Where the marks were becomes the face block, so the
+   vector face (face.py) sits where the artist drew it.
+6. **Joint caps:** discs over the joints, so a bent elbow or a turned head shows no gap.
+   Elbows and knees: both parts keep the sheet's own pixels (it is the same limb). Neck,
+   shoulders and hips: the part drawn behind gets a disc painted from its own colours (hidden
+   at rest), so a raised arm shows coat behind it, not background.
+7. **Crop, pivots and attach points** in part pixels. Bones come from the skeleton, with Pip's
+   names, roles, limits and draw order (D-048), so the motion library works unchanged.
+8. **Arms hang at rest:** the arm parts are turned from the sheet's A-pose (25° out) to
+   hanging straight down, Pip's rest, because motions are offsets tuned on that rest.
+
+Also measured: **limb drift**, how far the drawn limb runs from its bone (the share of the
+bone line inside the silhouette, and the offset of the limb's centre line). A limb that
+drifts by more than its own radius would turn about the wrong point, and the report flags it.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import shutil
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from PIL import Image, ImageFilter
+
+from studio_core.puppet.checks import (
+    FG_THRESHOLD,
+    SCALE,
+    background,
+    components,
+    fill_holes,
+    silhouette,
+    skeleton_box,
+)
+from studio_core.puppet.design import CANVAS, DesignError, design_dir, load_candidates
+from studio_core.puppet.segment import segment_sheet
+from studio_core.puppet.skeleton import DRAW_ORDER, Skeleton, rig_bones, turnaround
+from studio_core.rig import world_pose
+from studio_core.shot_spec import FilmFolder, register_rig
+
+LIMBS = (
+    "upper_arm_l", "forearm_l", "upper_arm_r", "forearm_r",
+    "thigh_l", "shin_l", "thigh_r", "shin_r",
+)  # fmt: skip
+END_LIMBS = {"forearm_l", "forearm_r", "shin_l", "shin_r"}  # hands and feet run past the joint
+CORRIDOR = 1.4  # limb radii either side of the bone line
+DARK_LUMA = 100  # outline pixels are darker than this (0-255)
+MARK_CONTRAST = 40  # face marks are this much darker than their surroundings (luma, 0-255)
+NEIGHBOURS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+
+
+class BuildError(ValueError):
+    """The puppet can't be built. The message says what to fix."""
+
+
+@dataclass
+class Built:
+    rig: dict[str, Any]
+    rig_path: Path
+    report: dict[str, Any] = field(default_factory=dict)
+
+
+# ----------------------------------------------------------------------------- pixel helpers
+
+
+def _shift(a: np.ndarray, dy: int, dx: int) -> np.ndarray:
+    """`a` moved by (dy, dx), zero-filled: out[y, x] = a[y - dy, x - dx]."""
+    out = np.zeros_like(a)
+    h, w = a.shape[:2]
+    out[max(dy, 0) : h + min(dy, 0), max(dx, 0) : w + min(dx, 0)] = a[
+        max(-dy, 0) : h + min(-dy, 0), max(-dx, 0) : w + min(-dx, 0)
+    ]
+    return out
+
+
+def _grow(mask: np.ndarray, px: int) -> np.ndarray:
+    pil = Image.fromarray((mask * 255).astype("uint8")).filter(ImageFilter.MaxFilter(2 * px + 1))
+    return np.asarray(pil) > 127
+
+
+def _shrink(mask: np.ndarray, px: int) -> np.ndarray:
+    pil = Image.fromarray((mask * 255).astype("uint8")).filter(ImageFilter.MinFilter(2 * px + 1))
+    return np.asarray(pil) > 127
+
+
+def _bbox(mask: np.ndarray, pad: int = 0) -> tuple[int, int, int, int]:
+    ys, xs = np.nonzero(mask)
+    h, w = mask.shape
+    return (
+        max(0, int(xs.min()) - pad),
+        max(0, int(ys.min()) - pad),
+        min(w, int(xs.max()) + 1 + pad),
+        min(h, int(ys.max()) + 1 + pad),
+    )
+
+
+def paint_from(rgb: np.ndarray, known: np.ndarray, target: np.ndarray) -> np.ndarray:
+    """Fill `target` pixels by spreading colours inward from `known` ones, one pixel ring per
+    step (each new pixel = the mean of its known neighbours). A simple diffusion inpaint: right
+    for flat cartoon colours, where it continues the surrounding fill smoothly."""
+    out = rgb.astype("float32").copy()
+    todo = target & ~known
+    if not todo.any():
+        return out
+    x0, y0, x1, y1 = _bbox(todo, pad=2)
+    sub, have, need = out[y0:y1, x0:x1], known[y0:y1, x0:x1].copy(), todo[y0:y1, x0:x1].copy()
+    while need.any():
+        total = np.zeros_like(sub)
+        count = np.zeros(sub.shape[:2], dtype="float32")
+        weighted = sub * have[..., None]
+        for dy, dx in NEIGHBOURS:
+            total += _shift(weighted, dy, dx)
+            count += _shift(have.astype("float32"), dy, dx)
+        ready = need & (count > 0)
+        if not ready.any():
+            break  # target pixels with no path to a known one stay as they were
+        sub[ready] = total[ready] / count[ready][:, None]
+        have |= ready
+        need &= ~ready
+    out[y0:y1, x0:x1] = sub
+    return out
+
+
+def _upscale(small: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+    big = np.repeat(np.repeat(small, SCALE, axis=0), SCALE, axis=1)
+    out = np.zeros(shape, dtype=bool)
+    h, w = min(shape[0], big.shape[0]), min(shape[1], big.shape[1])
+    out[:h, :w] = big[:h, :w]
+    return out
+
+
+# ------------------------------------------------------------------------------- silhouette
+
+
+def figure_mask(img: np.ndarray, sk: Skeleton) -> tuple[np.ndarray, np.ndarray]:
+    """The view's figure (colour key, enclosed holes filled) and the background colour."""
+    bg, _ = background(img)
+    mask = silhouette(img, bg)
+    small = fill_holes(mask[::SCALE, ::SCALE])
+    mask |= _upscale(small, mask.shape)
+    x0, y0, x1, y1 = skeleton_box(sk, 0.15)
+    keep = np.zeros_like(small)
+    for blob in components(small):
+        ys, xs = np.nonzero(blob)
+        if x0 <= xs.mean() * SCALE <= x1 and y0 <= ys.mean() * SCALE <= y1:
+            keep |= blob
+    if not keep.any():
+        raise BuildError(f"no {sk.view} figure where the skeleton is")
+    return mask & _grow(_upscale(keep, mask.shape), 2), bg
+
+
+# -------------------------------------------------------------------------------- the head
+
+
+def _palette(pixels: np.ndarray, colors: int, min_share: float = 0.0) -> np.ndarray:
+    """The main colours of a set of RGB pixels (median cut), dropping colours used by fewer
+    than `min_share` of them (a few stray pixels of something else)."""
+    strip = Image.fromarray(pixels.reshape(1, -1, 3).astype("uint8"))
+    quantized = strip.quantize(colors, method=Image.Quantize.MEDIANCUT)
+    counts = np.bincount(np.asarray(quantized).ravel(), minlength=colors)
+    flat = quantized.getpalette()
+    keep = [i for i, n in enumerate(counts) if n and n >= min_share * len(pixels)]
+    return np.array([flat[3 * i : 3 * i + 3] for i in keep], dtype="float32")
+
+
+def head_mask(img: np.ndarray, mask: np.ndarray, sk: Skeleton) -> np.ndarray:
+    """Upper head (above the nose line) plus the head-coloured pixels below it, down to the
+    neck, connected to it, with enclosed holes filled. Thin strands (a scarf's outline) are
+    dropped by an opening."""
+    nose_y, neck_y = sk.joints["nose"][1], sk.joints["neck"][1]
+    rows = np.arange(mask.shape[0])[:, None]
+    upper = mask & (rows < nose_y)
+    band = mask & (rows >= nose_y) & (rows < neck_y)
+    colors = _palette(img[upper], 10)
+    near = np.full(mask.shape, np.inf, dtype="float32")
+    for c in colors:
+        near = np.minimum(near, np.linalg.norm(img - c, axis=2))
+    candidate = upper | (band & (near < 38))
+    candidate = _grow(_shrink(candidate, 3), 3) | upper
+    x0, y0, x1, y1 = _bbox(candidate)
+    head = np.zeros_like(mask)
+    sub = candidate[y0:y1, x0:x1]
+    top = upper[y0:y1, x0:x1]
+    for blob in components(sub):
+        if (blob & top).any():
+            head[y0:y1, x0:x1] |= blob
+    # Eyes, nose and mouth are darker than any head colour and thin strokes vanish in the
+    # opening: they come back as holes, which belong to the head.
+    head[y0:y1, x0:x1] = fill_holes(head[y0:y1, x0:x1])
+    return head & mask
+
+
+# ---------------------------------------------------------------------------------- limbs
+
+
+def _coords(shape: tuple[int, int], a: tuple[float, float], b: tuple[float, float]):
+    """For every pixel: position along a→b (t, 0 at a, 1 at b) and signed distance from it."""
+    ys, xs = np.mgrid[0 : shape[0], 0 : shape[1]].astype("float32")
+    vx, vy = b[0] - a[0], b[1] - a[1]
+    length2 = vx * vx + vy * vy
+    t = ((xs - a[0]) * vx + (ys - a[1]) * vy) / length2
+    d = ((xs - a[0]) * vy - (ys - a[1]) * vx) / math.sqrt(length2)
+    return t, d
+
+
+def _walk(mask: np.ndarray, x: float, y: float, nx: float, ny: float, limit: int) -> int | None:
+    """Steps from (x, y) along (nx, ny) to the first background pixel; None if none in reach."""
+    h, w = mask.shape
+    for k in range(limit):
+        px, py = round(x + nx * k), round(y + ny * k)
+        if not (0 <= px < w and 0 <= py < h) or not mask[py, px]:
+            return k
+    return None
+
+
+def limb_fit(mask: np.ndarray, sk: Skeleton, bone: dict[str, Any]) -> dict[str, Any]:
+    """How the drawn limb sits on its bone: radius, centre-line offset, coverage."""
+    (ax, ay), (bx, by) = bone["joint_px"], bone["end_px"]
+    length = math.hypot(bx - ax, by - ay)
+    ux, uy = (bx - ax) / length, (by - ay) / length
+    nx, ny = -uy, ux
+    limit = int(sk.height_px * 0.15)
+    radii, offsets, inside = [], [], []
+    for t in np.linspace(0.0, 1.0, 21):
+        x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+        inside.append(bool(mask[int(y), int(x)]) if 0 <= int(y) < mask.shape[0] else False)
+        if not 0.2 <= t <= 0.9:
+            continue
+        plus, minus = _walk(mask, x, y, nx, ny, limit), _walk(mask, x, y, -nx, -ny, limit)
+        if plus is not None and minus is not None:
+            radii.append((plus + minus) / 2)
+            offsets.append((plus - minus) / 2)
+        elif plus is not None or minus is not None:  # one side runs into the body
+            radii.append(plus if plus is not None else minus)
+    # The lower quartile: a scarf end or a tail behind the limb widens some cross-sections,
+    # never narrows them.
+    lo, hi = sk.height_px * 0.025, sk.height_px * 0.1
+    radius = float(np.clip(np.percentile(radii, 25) if radii else lo, lo, hi))
+    offset = float(np.median(offsets)) if offsets else 0.0
+    coverage = float(np.mean(inside))
+    drift = abs(offset) / radius
+    return {
+        "radius_px": round(radius, 1),
+        "offset_px": round(offset, 1),
+        "coverage": round(coverage, 3),
+        "drift": round(drift, 2),
+        "ok": coverage >= 0.85 and drift <= 0.6,
+    }
+
+
+def assign_parts(
+    img: np.ndarray,
+    mask: np.ndarray,
+    head: np.ndarray,
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+) -> dict[str, np.ndarray]:
+    """bone name → its pixels (before caps). An upper arm or a thigh only takes pixels
+    coloured like its own core (the lower half of the limb, close to the bone line): a scarf
+    end over the shoulder, a coat hem over the hip or a tail behind the leg stays with the
+    torso. A limb keeps only the pieces that touch its bone line, with enclosed holes filled
+    (shading the colour rule missed)."""
+    best = np.full(mask.shape, np.inf, dtype="float32")
+    owner = np.full(mask.shape, -1, dtype="int8")
+    lines = {}
+    for i, name in enumerate(LIMBS):
+        bone, r = bones[name], fits[name]["radius_px"]
+        t, d = _coords(mask.shape, bone["joint_px"], bone["end_px"])
+        t_min = 0.0 if bone["parent"] == "torso" else -0.2
+        t_max = 1.35 if name in END_LIMBS else 1.15
+        corridor = mask & ~head & (t >= t_min) & (t <= t_max) & (np.abs(d) <= CORRIDOR * r + 2)
+        if bone["parent"] == "torso":
+            core = corridor & (t >= 0.55) & (t <= 0.9) & (np.abs(d) <= 0.6 * r)
+            if core.any():
+                colors = _palette(img[core], 6, min_share=0.05)
+                near = np.min([np.linalg.norm(img - c, axis=2) for c in colors], axis=0)
+                corridor &= (near < 40) | (t > 1.0)
+        score = np.abs(d) / r
+        better = corridor & (score < best)
+        best[better], owner[better] = score[better], i
+        lines[name] = (np.abs(d) <= 0.5 * r) & (t >= t_min) & (t <= t_max)
+    parts = {}
+    claimed = owner >= 0  # holes may only take pixels no limb owns
+    for i, name in enumerate(LIMBS):
+        mine = owner == i
+        keep = np.zeros_like(mine[::2, ::2])
+        for piece in components(mine[::2, ::2]) if mine.any() else []:
+            if (piece & lines[name][::2, ::2]).any():
+                keep |= piece
+        full = _grow(np.repeat(np.repeat(keep, 2, axis=0), 2, axis=1), 1)
+        dropped = mine & ~full[: mine.shape[0], : mine.shape[1]]
+        mine &= ~dropped
+        claimed &= ~dropped
+        if mine.any():
+            x0, y0, x1, y1 = _bbox(mine, pad=1)
+            holes = np.zeros_like(mine)
+            holes[y0:y1, x0:x1] = fill_holes(mine[y0:y1, x0:x1])
+            holes &= mask & ~head & ~claimed
+            mine |= holes
+            claimed |= holes
+        parts[name] = mine
+    parts["head"] = head
+    taken = np.any([parts[n] for n in LIMBS], axis=0) | head
+    torso = mask & ~taken
+    # Fur wisps along a limb's outline fall just outside its corridor and would stay on the
+    # torso, where they show once the arm moves. Thin torso pixels near a limb go to it.
+    thin = torso & ~_grow(_shrink(torso, 3), 3)
+    for name in LIMBS:
+        bone, r = bones[name], fits[name]["radius_px"]
+        t, d = _coords(mask.shape, bone["joint_px"], bone["end_px"])
+        near = thin & (t >= -0.1) & (t <= 1.2) & (np.abs(d) <= 2.2 * r)
+        parts[name] |= near
+        thin &= ~near
+        torso &= ~near
+    parts["torso"] = torso
+    return parts
+
+
+# ----------------------------------------------------------------------------------- face
+
+
+def _blobs(mask: np.ndarray, min_px: int = 6) -> list[dict[str, Any]]:
+    out = []
+    for b in components(mask):
+        ys, xs = np.nonzero(b)
+        if len(xs) < min_px:
+            continue
+        out.append(
+            {
+                "mask": b,
+                "area": len(xs),
+                "cx": float(xs.mean()),
+                "cy": float(ys.mean()),
+                "w": int(xs.max() - xs.min() + 1),
+                "h": int(ys.max() - ys.min() + 1),
+                "bottom": int(ys.max()),
+            }
+        )
+    return out
+
+
+def clean_face(
+    rgb: np.ndarray, head: np.ndarray, sk: Skeleton
+) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
+    """Paint out the drawn eyes, brows and mouth; keep the nose. Returns the new pixels, the
+    face anchors in canvas pixels, and notes on what was found."""
+    hx0, hy0, hx1, hy1 = _bbox(head)
+    cx = sk.joints["neck"][0]
+    row = head[int(sk.joints["nose"][1])]
+    row_w = float(np.count_nonzero(row)) or (hx1 - hx0)
+    zone = _shrink(head, max(3, int(row_w * 0.05)))
+    zone[: int(hy0 + 0.35 * (hy1 - hy0))] = False
+    zone[:, : int(cx - 0.36 * row_w)] = False
+    zone[:, int(cx + 0.36 * row_w) :] = False
+    luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
+    # A mark is clearly darker than its surroundings (a light brow stroke on a cream muzzle
+    # counts; the shading of orange fur doesn't).
+    around = Image.fromarray(np.clip(luma, 0, 255).astype("uint8")).filter(
+        ImageFilter.BoxBlur(max(4, int(row_w * 0.04)))
+    )
+    dark = zone & (luma < np.asarray(around, dtype="float32") - MARK_CONTRAST)
+    x0, y0, x1, y1 = _bbox(zone)
+    found = _blobs(dark[y0:y1, x0:x1])
+    for b in found:
+        b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
+    centred = [b for b in found if abs(b["cx"] - cx) < 0.07 * row_w]
+    nose = max(centred, key=lambda b: b["area"]) if centred else None
+    marks = [b for b in found if b is not nose]
+    nose_y = nose["cy"] if nose else sk.joints["nose"][1]
+    eyes = {}
+    for side, sign in (("left", 1), ("right", -1)):  # the character's left is screen-right
+        cands = [b for b in marks if b["cy"] < nose_y and sign * (b["cx"] - cx) > 0.08 * row_w]
+        if cands:
+            eyes[side] = max(cands, key=lambda b: b["area"] * (1 + b["cy"] / 1000))
+    mouth = [b for b in marks if b["cy"] > nose_y and abs(b["cx"] - cx) < 0.2 * row_w]
+
+    remove = np.zeros_like(head)
+    for b in marks:
+        remove[y0:y1, x0:x1] |= b["mask"]
+    remove = _grow(remove, 3) & head
+    cleaned = paint_from(rgb, head & ~remove, remove)
+
+    skel = {"left": sk.joints["l_eye"], "right": sk.joints["r_eye"]}
+    if len(eyes) == 1:  # mirror the one we found across the centre line
+        ((side, b),) = eyes.items()
+        other = "right" if side == "left" else "left"
+        eyes[other] = {**b, "cx": 2 * cx - b["cx"]}
+    at = {s: (eyes[s]["cx"], eyes[s]["cy"]) if s in eyes else skel[s] for s in ("left", "right")}
+    eye_dist = abs(at["left"][0] - at["right"][0])
+    if eyes:
+        e = eyes["left"]
+        drawn = e["h"] * 1.1 if e["h"] > 0.6 * e["w"] else e["w"] * 0.9  # open eye or closed arc
+    else:
+        drawn = 0.45 * eye_dist
+    eye_size = float(np.clip(drawn, 0.35 * eye_dist, 0.55 * eye_dist))
+    if mouth:
+        mx = float(np.mean([b["cx"] for b in mouth]))
+        my = float(np.mean([b["cy"] for b in mouth]))
+        mw = max(b["cx"] + b["w"] / 2 for b in mouth) - min(b["cx"] - b["w"] / 2 for b in mouth)
+    else:
+        mx, my = cx, (nose["bottom"] if nose else nose_y) + 0.2 * eye_dist
+        mw = 0.5 * eye_dist
+    outline = head & ~zone & (luma < DARK_LUMA)
+    line = np.median(rgb[outline], axis=0) if outline.any() else np.array([70, 52, 48])
+    anchors = {
+        "eyes": {"left": at["left"], "right": at["right"], "size": eye_size},
+        "brows": {
+            "left": (at["left"][0], at["left"][1] - 0.95 * eye_size),
+            "right": (at["right"][0], at["right"][1] - 0.95 * eye_size),
+            "width": 0.55 * eye_dist,
+        },
+        "mouth": {"at": (mx, my), "width": float(np.clip(mw, 0.3 * eye_dist, 0.8 * eye_dist))},
+        "line": "#{:02x}{:02x}{:02x}".format(*(int(v) for v in line)),
+    }
+    notes = {
+        "nose_found": nose is not None,
+        "eyes_found": sorted(k for k in eyes if "mask" in eyes[k]),
+        "mouth_marks": len(mouth),
+        "marks_painted_over": len(marks),
+    }
+    return cleaned, anchors, notes
+
+
+# ----------------------------------------------------------------------------------- caps
+
+
+def _disc(shape: tuple[int, int], centre: tuple[float, float], r: float) -> np.ndarray:
+    ys, xs = np.ogrid[0 : shape[0], 0 : shape[1]]
+    return (xs - centre[0]) ** 2 + (ys - centre[1]) ** 2 <= r * r
+
+
+def add_caps(
+    rgb: np.ndarray,
+    mask: np.ndarray,
+    parts: dict[str, np.ndarray],
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+    height_px: float,
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    """Each part's final mask and pixels, with discs over the joints.
+
+    - Elbows and knees (one limb): both parts get the sheet's own pixels in a disc.
+    - Neck, shoulders and hips: only the part drawn *behind* gets a disc, painted from its own
+      colours (the torso behind the head and arms, the thighs behind the torso). It is hidden
+      at rest, and fills the gap when either part turns. A disc on the front part would
+      change the rest look (a pale circle of chin on the scarf)."""
+    masks = {name: m.copy() for name, m in parts.items()}
+    pixels = {name: rgb.copy() for name in parts}
+    order = {name: i for i, name in enumerate(DRAW_ORDER)}
+    for child, bone in bones.items():
+        parent = bone["parent"]
+        if parent is None:
+            continue
+        joint = bone["joint_px"]
+        if child != "head" and parent != "torso":
+            r = max(fits[child]["radius_px"], fits[parent]["radius_px"])
+            for name in (parent, child):
+                masks[name] |= _disc(mask.shape, joint, r) & mask
+            continue
+        behind = min((parent, child), key=order.__getitem__)
+        r = 0.09 * height_px if child == "head" else 1.1 * fits[child]["radius_px"]
+        disc = _disc(mask.shape, joint, r) & mask & ~parts[behind]
+        pixels[behind] = paint_from(pixels[behind], parts[behind], disc)
+        masks[behind] |= disc
+    return masks, pixels
+
+
+# ------------------------------------------------------------------------------ the rig
+
+
+def _alpha(img: np.ndarray, figure: np.ndarray, bg: np.ndarray) -> np.ndarray:
+    """1 inside; near the figure's outer edge (3 px), how far each pixel is from the background
+    colour. Antialiased outline pixels are part background, and the silhouette's clean-up
+    traps a few background pixels in the nooks between fur tufts: both would show as a light
+    fringe on another background."""
+    edge = figure & ~_shrink(figure, 3)
+    alpha = np.ones(figure.shape, dtype="float32")
+    dist = np.linalg.norm(img - bg, axis=2)
+    alpha[edge] = np.clip((dist[edge] - 0.5 * FG_THRESHOLD) / (2.5 * FG_THRESHOLD), 0.0, 1.0)
+    return alpha * figure
+
+
+def _unmix(rgb: np.ndarray, alpha: np.ndarray, bg: np.ndarray) -> np.ndarray:
+    """Take the background's share out of semi-transparent edge pixels (no light halo)."""
+    a = np.maximum(alpha, 1e-3)[..., None]
+    return np.clip((rgb - (1 - a) * bg) / a, 0, 255)
+
+
+def palette(img: np.ndarray, figure: np.ndarray, colors: int = 6) -> list[dict[str, Any]]:
+    """The puppet's main colours with their share of the figure, most used first."""
+    pixels = img[figure]
+    centres = _palette(pixels, colors)
+    nearest = np.argmin(np.stack([np.linalg.norm(pixels - c, axis=1) for c in centres]), axis=0)
+    shares = np.bincount(nearest, minlength=len(centres)) / len(pixels)
+    order = np.argsort(-shares)
+    return [
+        {"hex": "#{:02x}{:02x}{:02x}".format(*(int(v) for v in centres[i])), "share": round(
+            float(shares[i]), 3)}
+        for i in order
+    ]  # fmt: skip
+
+
+def _rotate_point(
+    x: float, y: float, c: tuple[float, float], c2: tuple[float, float], deg: float
+) -> tuple[float, float]:
+    """Where image pixel (x, y) lands when the image turns `deg` counter-clockwise about its
+    centre `c` and the result (expanded) has centre `c2`. Image coordinates, y down."""
+    r = math.radians(deg)
+    dx, dy = x - c[0], y - c[1]
+    return (
+        c2[0] + dx * math.cos(r) + dy * math.sin(r),
+        c2[1] - dx * math.sin(r) + dy * math.cos(r),
+    )
+
+
+def hang_arms(folder: Path, view: dict[str, Any]) -> dict[str, float]:
+    """Turn each arm's parts so the arm rests hanging straight down (-90°), like Pip's.
+
+    The sheet's A-pose holds the arms 25° out so they can be cut cleanly (D-048), but the
+    motions are offsets from rest tuned on hanging arms: a wave's +150° would point an A-pose
+    arm straight up behind the head. Baking the turn into the art keeps the rig format, the
+    motions and the engine unchanged. Returns the turn applied per arm bone."""
+    turned = {}
+    for side in ("l", "r"):
+        upper, fore = view["bones"][f"upper_arm_{side}"], view["bones"][f"forearm_{side}"]
+        delta = -90.0 - upper["direction_deg"]
+        for name in (f"upper_arm_{side}", f"forearm_{side}"):
+            part = view["parts"][name]
+            path = folder / part["file"]
+            art = Image.open(path)
+            c = (art.width / 2, art.height / 2)
+            out = art.rotate(delta, Image.Resampling.BICUBIC, expand=True)
+            c2 = (out.width / 2, out.height / 2)
+            out.save(path)
+            px, py = _rotate_point(*part["pivot_px"], c, c2, delta)
+            part["pivot_px"], part["size_px"] = (
+                [round(px, 1), round(py, 1)],
+                [out.width, out.height],
+            )
+            if name.startswith("upper_arm"):
+                ax, ay = _rotate_point(*fore["attach"]["at_px"], c, c2, delta)
+                fore["attach"]["at_px"] = [round(ax, 1), round(ay, 1)]
+            view["bones"][name]["direction_deg"] = round(
+                view["bones"][name]["direction_deg"] + delta, 2
+            )
+            turned[name] = round(delta, 2)
+    return turned
+
+
+def _add_sam(
+    film_root: Path, sheet: Path, sk: Skeleton, key: np.ndarray, folder: Path
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """The colour key's figure plus SAM 2.1's (puppet/segment.py). The union keeps both the
+    fur tufts SAM trims and the pale clothes the colour key loses against the background.
+    If the two disagree badly, SAM's prompt went wrong: keep the colour key and say so."""
+    (path,) = segment_sheet(film_root, sheet, [sk], folder / "build" / "segment")
+    mask = np.asarray(Image.open(path)) > 127
+    iou = float((mask & key).sum() / max(1, (mask | key).sum()))
+    if iou < 0.85:
+        return key, {"method": "colour key", "sam_iou": round(iou, 3), "sam_rejected": True}
+    figure = key | (mask & _grow(key, int(sk.height_px * 0.05)))
+    return figure, {"method": "colour key + SAM 2.1", "sam_iou": round(iou, 3)}
+
+
+def build_puppet(
+    film_root: Path,
+    character_id: str,
+    *,
+    name: str | None = None,
+    candidate: str | None = None,
+    sam: bool = True,
+) -> Built:
+    """Cut the chosen candidate's front view into parts, write parts/*.png, rig.json (validated
+    and registered through shot_spec.register_rig), palette.json and build/report.json."""
+    data = load_candidates(film_root, character_id)
+    if data is None:
+        raise BuildError(f"{character_id!r} has no design candidates; run design_character")
+    candidate = candidate or data.get("chosen")
+    if not candidate:
+        raise BuildError(f"no design chosen for {character_id!r}; choose one first")
+    sheet = design_dir(film_root, character_id) / candidate / "sheet.png"
+    if not sheet.is_file():
+        raise DesignError(f"no sheet for candidate {candidate!r}")
+    img = np.asarray(Image.open(sheet).convert("RGB")).astype("float32")
+    front, _ = turnaround(CANVAS)
+    figure, bg = figure_mask(img, front)
+    folder = film_root / "characters" / character_id
+    silhouette_notes: dict[str, Any] = {"method": "colour key"}
+    if sam:
+        figure, silhouette_notes = _add_sam(film_root, sheet, front, figure, folder)
+    bones = rig_bones(front)
+    fits = {limb: limb_fit(figure, front, bones[limb]) for limb in LIMBS}
+    for limb in LIMBS:  # a front view is symmetric: no limb much thicker than its mirror
+        mirror = fits[limb[:-1] + ("r" if limb.endswith("l") else "l")]
+        fits[limb]["radius_px"] = min(fits[limb]["radius_px"], round(1.3 * mirror["radius_px"], 1))
+    head = head_mask(img, figure, front)
+    parts = assign_parts(img, figure, head, bones, fits)
+    rgb, anchors, face_notes = clean_face(img, head, front)
+    masks, pixels = add_caps(rgb, figure, parts, bones, fits, front.height_px)
+    alpha = _alpha(img, figure, bg)
+
+    parts_dir = folder / "parts"
+    if parts_dir.exists():
+        shutil.rmtree(parts_dir)
+    parts_dir.mkdir(parents=True)
+    origins: dict[str, tuple[int, int]] = {}
+    rig_parts: dict[str, dict] = {}
+    for bone_name in DRAW_ORDER:
+        m = masks[bone_name]
+        x0, y0, x1, y1 = _bbox(m, pad=2)
+        # The image must hold its pivot and its children's joints, even where the art stops
+        # short of them (the head ends at the chin, above the neck joint): transparent margin.
+        joints = [bones[bone_name]["joint_px"]] + [
+            b["joint_px"] for b in bones.values() if b["parent"] == bone_name
+        ]
+        x0 = max(0, min(x0, *(int(x) - 2 for x, _ in joints)))
+        y0 = max(0, min(y0, *(int(y) - 2 for _, y in joints)))
+        x1 = min(m.shape[1], max(x1, *(int(x) + 3 for x, _ in joints)))
+        y1 = min(m.shape[0], max(y1, *(int(y) + 3 for _, y in joints)))
+        a = np.where(m, alpha, 0)[y0:y1, x0:x1]
+        color = _unmix(pixels[bone_name][y0:y1, x0:x1], a, bg)
+        rgba = np.dstack([color, a * 255]).round().astype("uint8")
+        Image.fromarray(rgba, "RGBA").save(parts_dir / f"{bone_name}.png")
+        jx, jy = bones[bone_name]["joint_px"]
+        origins[bone_name] = (x0, y0)
+        rig_parts[bone_name] = {
+            "file": f"parts/{bone_name}.png",
+            "size_px": [x1 - x0, y1 - y0],
+            "pivot_px": [round(jx - x0, 1), round(jy - y0, 1)],
+            "bone": bone_name,
+        }
+    rig_bones_out: dict[str, dict] = {}
+    for bone_name, bone in bones.items():
+        entry = {
+            "role": bone["role"],
+            "parent": bone["parent"],
+            "direction_deg": bone["direction_deg"],
+            "length_px": bone["length_px"],
+            "side": bone["side"],
+            "limits_deg": bone["limits_deg"],
+        }
+        if bone["parent"]:
+            px, py = origins[bone["parent"]]
+            jx, jy = bone["joint_px"]
+            entry["attach"] = {
+                "part": bone["parent"],
+                "at_px": [round(jx - px, 1), round(jy - py, 1)],
+            }
+        rig_bones_out[bone_name] = entry
+
+    hx, hy = origins["head"]
+
+    def local(p: tuple[float, float]) -> list[float]:
+        return [round(p[0] - hx, 1), round(p[1] - hy, 1)]
+
+    face = {
+        "part": "head",
+        "eyes": {
+            "left_px": local(anchors["eyes"]["left"]),
+            "right_px": local(anchors["eyes"]["right"]),
+            "size_px": round(anchors["eyes"]["size"], 1),
+        },
+        "brows": {
+            "left_px": local(anchors["brows"]["left"]),
+            "right_px": local(anchors["brows"]["right"]),
+            "width_px": round(anchors["brows"]["width"], 1),
+        },
+        "mouth": {
+            "at_px": local(anchors["mouth"]["at"]),
+            "width_px": round(anchors["mouth"]["width"], 1),
+        },
+        "colors": {"line": anchors["line"], "iris": anchors["line"]},
+    }
+    rig = {
+        "schema_version": 1,
+        "id": character_id,
+        "name": name or character_id.replace("_", " ").title(),
+        "style": data["style"],
+        "default_view": "front",
+        "views": {
+            "front": {
+                "root": "torso",
+                "bones": rig_bones_out,
+                "parts": rig_parts,
+                "draw_order": list(DRAW_ORDER),
+                "face": face,
+            }
+        },
+    }
+    hung = hang_arms(folder, rig["views"]["front"])
+    rig_path, _ = register_rig(FilmFolder(film_root), character_id, rig)
+
+    colors = palette(img, figure)
+    (folder / "palette.json").write_text(json.dumps({"colors": colors}, indent=1) + "\n")
+    report = {
+        "candidate": candidate,
+        "silhouette": silhouette_notes,
+        "limbs": fits,
+        "limbs_ok": all(f["ok"] for f in fits.values()),
+        "face": face_notes,
+        "parts_px": {n: p["size_px"] for n, p in rig_parts.items()},
+        "arms_turned_to_hang_deg": hung,
+    }
+    build_dir = folder / "build"
+    build_dir.mkdir(exist_ok=True)
+    (build_dir / "report.json").write_text(json.dumps(report, indent=1) + "\n")
+    _debug_images(build_dir, img, rgb, parts, head)
+    view = rig["views"]["front"]
+    sheet_poses = [compose(view, folder, offsets) for offsets in POSES.values()]
+    strip = Image.new("RGBA", (900 * len(sheet_poses), 900), (250, 248, 244, 255))
+    for i, im in enumerate(sheet_poses):
+        strip.alpha_composite(im, (900 * i, 0))
+    strip.convert("RGB").save(build_dir / "poses.png")
+    return Built(rig, rig_path, report)
+
+
+def compose(
+    view: dict[str, Any],
+    folder: Path,
+    offsets: dict[str, float] | None = None,
+    size: tuple[int, int] = (900, 900),
+    root_at: tuple[int, int] | None = None,
+) -> Image.Image:
+    """The puppet posed with forward kinematics (rig.world_pose), drawn with PIL: each part
+    rotated about its pivot by its bone's turn from rest. A quick check of pivots, attach
+    points and joint caps without Synfig (the real renders go through the Synfig backend)."""
+    pose = world_pose(view, offsets)
+    rx, ry = root_at or (size[0] // 2, int(size[1] * 0.62))
+    out = Image.new("RGBA", size, (0, 0, 0, 0))
+    for name in view["draw_order"]:
+        part = view["parts"][name]
+        (joint, direction) = pose[part["bone"]]
+        turn = direction - view["bones"][part["bone"]]["direction_deg"]
+        jx, jy = rx + joint.x, ry - joint.y
+        layer = Image.new("RGBA", size, (0, 0, 0, 0))
+        art = Image.open(folder / part["file"]).convert("RGBA")
+        px, py = part["pivot_px"]
+        layer.paste(art, (round(jx - px), round(jy - py)))
+        out.alpha_composite(layer.rotate(turn, Image.Resampling.BICUBIC, center=(jx, jy)))
+    return out
+
+
+POSES = {  # build/poses.png: rest, a wave, a turned head with bent knees
+    "rest": {},
+    "wave": {"upper_arm_l": 120, "forearm_l": 30, "upper_arm_r": -20},
+    "turn": {"head": 20, "torso": -8, "thigh_l": 20, "shin_l": 40, "forearm_r": -60},
+}
+
+
+TINTS = {
+    "torso": (230, 160, 60), "head": (90, 160, 230),
+    "upper_arm_l": (220, 70, 70), "forearm_l": (240, 150, 150),
+    "upper_arm_r": (70, 170, 70), "forearm_r": (150, 230, 150),
+    "thigh_l": (160, 80, 200), "shin_l": (210, 160, 240),
+    "thigh_r": (60, 160, 160), "shin_r": (150, 220, 220),
+}  # fmt: skip
+
+
+def _debug_images(
+    folder: Path,
+    img: np.ndarray,
+    cleaned: np.ndarray,
+    parts: dict[str, np.ndarray],
+    head: np.ndarray,
+) -> None:
+    """build/parts.png: each part tinted; build/face.png: the head before and after the fill."""
+    tinted = img.copy()
+    for name, m in parts.items():
+        tinted[m] = 0.45 * img[m] + 0.55 * np.array(TINTS[name], dtype="float32")
+    figure = np.any(list(parts.values()), axis=0)
+    x0, y0, x1, y1 = _bbox(figure, pad=10)
+    Image.fromarray(tinted[y0:y1, x0:x1].astype("uint8")).save(folder / "parts.png")
+    x0, y0, x1, y1 = _bbox(head, pad=10)
+    before, after = img[y0:y1, x0:x1], cleaned[y0:y1, x0:x1]
+    Image.fromarray(np.hstack([before, after]).astype("uint8")).save(folder / "face.png")

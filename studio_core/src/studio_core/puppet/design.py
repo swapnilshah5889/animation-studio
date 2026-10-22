@@ -149,6 +149,21 @@ def recheck(film_root: Path, character_id: str) -> dict[str, Any]:
     return data
 
 
+def choose_design(film_root: Path, character_id: str, candidate_id: str) -> Path:
+    """Record which candidate the puppet is built from (task 4.4). Returns its sheet. A
+    candidate whose checks failed can still be chosen: the owner's eye outranks the checks."""
+    data = load_candidates(film_root, character_id)
+    if data is None:
+        raise DesignError(f"{character_id!r} has no design candidates; run design_character")
+    ids = [c["id"] for c in data["candidates"]]
+    if candidate_id not in ids:
+        raise DesignError(f"no candidate {candidate_id!r} for {character_id!r}; known: {ids}")
+    data["chosen"] = candidate_id
+    folder = design_dir(film_root, character_id)
+    _save(folder, data)
+    return folder / f"{candidate_id}/sheet.png"
+
+
 def design_character(
     film_root: Path,
     character_id: str,

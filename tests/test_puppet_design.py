@@ -13,7 +13,13 @@ from studio_core.comfy_runs import RunRecord, free_comfy
 from studio_core.config import expand_path, load_config
 from studio_core.puppet import design
 from studio_core.puppet.checks import check_sheet
-from studio_core.puppet.design import DesignError, design_character, load_candidates, recheck
+from studio_core.puppet.design import (
+    DesignError,
+    choose_design,
+    design_character,
+    load_candidates,
+    recheck,
+)
 from studio_core.puppet.skeleton import Skeleton, mannequin_image, place, turnaround
 from studio_core.schema import validate_file
 
@@ -182,6 +188,16 @@ def test_rounds_add_candidates(fake_runs: list, tmp_path: Path) -> None:
     data = load_candidates(root, "kit")
     assert [(c["id"], c["seed"]) for c in data["candidates"]] == [("c1", 1), ("c2", 2), ("c3", 9)]
     assert data["candidates"][2]["description"] == "a small fox in a blue coat"
+
+
+def test_choose_design(fake_runs: list, tmp_path: Path) -> None:
+    root = film(tmp_path)
+    design_character(root, "kit", "a small fox", n=2, seed=1)
+    sheet_path = choose_design(root, "kit", "c2")
+    assert sheet_path == root / "characters/kit/design/c2/sheet.png" and sheet_path.is_file()
+    assert load_candidates(root, "kit")["chosen"] == "c2"
+    with pytest.raises(DesignError, match="no candidate 'c7'"):
+        choose_design(root, "kit", "c7")
 
 
 def test_recheck_updates_the_records(fake_runs: list, tmp_path: Path) -> None:
