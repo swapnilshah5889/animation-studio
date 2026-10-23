@@ -8,6 +8,9 @@ The graph is: checkpoint → (VAE) → style LoRAs → (speed LoRA) → prompts 
 Node ids are assigned in order, so the same inputs always produce the same JSON (golden-tested
 against comfy_workflows/txt2img_sdxl*.json, which scripts/export_workflows.py regenerates).
 
+`finish_plate` shares that style front half: it upscales a chosen background draft with
+Real-ESRGAN and refines it with the style at low denoise (task 4.6).
+
 `flux2_edit` is the other builder: FLUX.2 [klein] 4B redrawing reference images from a prompt
 (front → three-quarter view trials, task 4.5, D-052). It doesn't use the style presets.
 """
@@ -57,26 +60,32 @@ def join_prompt(*parts: str) -> str:
     return ", ".join(p.strip() for p in parts if p and p.strip())
 
 
-def txt2img(
-    manifest: Manifest,
-    style_id: str,
-    prompt: str,
-    *,
-    fast: bool = False,
-    negative: str = "",
-    seed: int = 42,
-    width: int = 1024,
-    height: int = 1024,
-    filename_prefix: str = "txt2img",
-    controls: list[Control] | None = None,
-    batch_size: int = 1,
-) -> dict[str, dict[str, Any]]:
-    """A text-to-image workflow for one style. `fast` uses the style's few-step settings.
-    `controls` condition the image (ControlNet), e.g. a pose skeleton drawn in code."""
+# A link in an API-format graph: [node_id, output_slot] of the node whose output feeds an input.
+Link = list[Any]
+
+
+@dataclass(frozen=True)
+class StyleLinks:
+    """What a style's front half hands to the rest of a graph: the (LoRA-patched) model for the
+    sampler, the VAE for encoding and decoding, and the encoded positive/negative prompts."""
+
+    model: Link
+    vae: Link
+    positive: Link
+    negative: Link
+
+
+def _add_style(
+    g: Graph, manifest: Manifest, style_id: str, prompt: str, *, fast: bool, negative: str
+) -> StyleLinks:
+    """Add a style's checkpoint → (VAE) → style LoRAs → (speed LoRA) → prompts to `g`.
+
+    Shared by every SDXL builder so a style means the same thing everywhere: the same files,
+    LoRA strengths, prompt prefix/suffix and kid-safe negative. The nodes are added in a fixed
+    order, which keeps txt2img's JSON (and its golden files) unchanged."""
     style = manifest.styles[style_id]
     files = manifest.files
     settings = style.settings(fast)
-    g = Graph()
 
     ckpt = g.add(
         "CheckpointLoaderSimple",
@@ -115,7 +124,30 @@ def txt2img(
     negative_text = join_prompt(style.data.get("negative", ""), negative, KID_SAFE_NEGATIVE)
     positive = g.add("CLIPTextEncode", "positive", clip=clip, text=positive_text)
     negative_node = g.add("CLIPTextEncode", "negative", clip=clip, text=negative_text)
-    pos, neg = [positive, 0], [negative_node, 0]
+    return StyleLinks(model=model, vae=vae, positive=[positive, 0], negative=[negative_node, 0])
+
+
+def txt2img(
+    manifest: Manifest,
+    style_id: str,
+    prompt: str,
+    *,
+    fast: bool = False,
+    negative: str = "",
+    seed: int = 42,
+    width: int = 1024,
+    height: int = 1024,
+    filename_prefix: str = "txt2img",
+    controls: list[Control] | None = None,
+    batch_size: int = 1,
+) -> dict[str, dict[str, Any]]:
+    """A text-to-image workflow for one style. `fast` uses the style's few-step settings.
+    `controls` condition the image (ControlNet), e.g. a pose skeleton drawn in code."""
+    files = manifest.files
+    settings = manifest.styles[style_id].settings(fast)
+    g = Graph()
+    style = _add_style(g, manifest, style_id, prompt, fast=fast, negative=negative)
+    pos, neg = style.positive, style.negative
     loaded: dict[str, str] = {}  # one loader per ControlNet file, shared by its conditions
     for c in controls or []:
         if c.model not in loaded:
@@ -136,13 +168,13 @@ def txt2img(
             strength=c.strength,
             start_percent=c.start,
             end_percent=c.end,
-            vae=vae,
+            vae=style.vae,
         )
         pos, neg = [applied, 0], [applied, 1]
     latent = g.add("EmptyLatentImage", width=width, height=height, batch_size=batch_size)
     sampled = g.add(
         "KSampler",
-        model=model,
+        model=style.model,
         positive=pos,
         negative=neg,
         latent_image=[latent, 0],
@@ -153,8 +185,105 @@ def txt2img(
         scheduler=settings["scheduler"],
         denoise=1.0,
     )
-    image = g.add("VAEDecode", samples=[sampled, 0], vae=vae)
+    image = g.add("VAEDecode", samples=[sampled, 0], vae=style.vae)
     g.add("SaveImage", images=[image, 0], filename_prefix=filename_prefix)
+    return g.nodes
+
+
+def finish_plate(
+    manifest: Manifest,
+    style_id: str,
+    prompt: str,
+    *,
+    image: str,
+    seed: int,
+    width: int = 2880,
+    height: int = 1080,
+    denoise: float = 0.3,
+    steps: int = 10,
+    negative: str = "",
+    upscaler: str = "realesrgan-x4plus-anime-6b",
+    filename_prefix: str = "plate",
+) -> dict[str, dict[str, Any]]:
+    """Finish a chosen background draft into a plate: upscale it, then let SDXL redraw the detail.
+
+    `image` is a LoadImage input value (an uploaded name, or a placeholder such as "@draft"
+    that run_graph substitutes): the 1536x576 txt2img draft, task 4.6. The plate is
+    `width` x `height` (2880x1080: the 1920x1080 frame plus room for the camera to pan).
+
+    The chain: draft → Real-ESRGAN x4 (`upscaler`, a file id in config/models.toml; 1536x576
+    becomes 6144x2304) → lanczos down to the plate size → VAE-encode → KSampler with the
+    style's checkpoint, LoRAs and prompts at its *normal* settings and `denoise` → decode → save.
+
+    Why both steps: SDXL can't compose a good 2880x1080 picture directly (it was trained near
+    1 MP, and far beyond that it repeats subjects across the frame), so the composition comes
+    from the draft at a native bucket. Real-ESRGAN enlarges it cleanly but invents no detail
+    (flat areas and edges look soft and plasticky). The refine pass adds that detail.
+
+    Why low denoise: img2img starts from the encoded upscale with only `denoise` worth of noise
+    added, so the model can only make small changes. ~0.3 redraws texture, line and shading in
+    the style while keeping every shape where the draft put it; the human chose the draft for
+    its layout, and the depth split (task 4.7) and the characters' ground line depend on it.
+    From about 0.5 up, SDXL starts recomposing at this size: duplicated objects, a moved
+    horizon. Note ComfyUI runs the full `steps` either way: it builds a schedule of
+    steps/denoise steps and runs the last `steps` of them (25 at 0.3), so low denoise is gentler
+    but not faster.
+
+    Memory and time (Mac): 2880x1080 is ~3.1 MP, about 3x the pixels of a 1024x1024 image,
+    and attention cost grows faster than that, so expect one plate to take several times the
+    ~222 s of a 25-step 1024x1024 image (docs/benchmarks.md) and more memory than a draft. On
+    the 24 GB M4 unload Ollama first. ComfyUI falls back to tiled VAE encode/decode if those run
+    out of memory; the UNet pass has no such fallback.
+
+    The draft should have the plate's aspect ratio (8:3 by default): ImageScale stretches to
+    the exact size (crop "disabled") rather than cutting the edges off. `width` and `height`
+    must be multiples of 8 (the SDXL latent is 1/8 of the image; VAEEncode would crop the
+    rest, shifting the plate against the draft)."""
+    for name, size in (("width", width), ("height", height)):
+        if size < 8 or size % 8:
+            raise ValueError(f"{name} must be a positive multiple of 8, got {size}")
+    if not 0.0 < denoise <= 1.0:
+        raise ValueError(f"denoise must be in (0, 1], got {denoise}")
+    files = manifest.files
+    if upscaler not in files or not files[upscaler].dest.startswith("upscale_models/"):
+        raise ValueError(f"{upscaler!r} is not an upscale model in config/models.toml")
+    settings = manifest.styles[style_id].settings(fast=False)
+    g = Graph()
+    style = _add_style(g, manifest, style_id, prompt, fast=False, negative=negative)
+
+    draft = g.add("LoadImage", "draft", image=image)
+    esrgan = g.add("UpscaleModelLoader", "upscaler", model_name=files[upscaler].comfy_name)
+    upscaled = g.add(
+        "ImageUpscaleWithModel", "upscale x4", upscale_model=[esrgan, 0], image=[draft, 0]
+    )
+    sized = g.add(
+        "ImageScale",
+        "plate size",
+        image=[upscaled, 0],
+        upscale_method="lanczos",
+        width=width,
+        height=height,
+        crop="disabled",
+    )
+    latent = g.add("VAEEncode", pixels=[sized, 0], vae=style.vae)
+    sampled = g.add(
+        "KSampler",
+        "refine",
+        model=style.model,
+        positive=style.positive,
+        negative=style.negative,
+        latent_image=[latent, 0],
+        seed=seed,
+        # ComfyUI runs every step at any denoise; a light refine needs few (the default 10,
+        # against the style's 25), which keeps a ~3 MP pass on this Mac to a few minutes.
+        steps=steps,
+        cfg=settings["cfg"],
+        sampler_name=settings["sampler"],
+        scheduler=settings["scheduler"],
+        denoise=denoise,
+    )
+    decoded = g.add("VAEDecode", samples=[sampled, 0], vae=style.vae)
+    g.add("SaveImage", images=[decoded, 0], filename_prefix=filename_prefix)
     return g.nodes
 
 
