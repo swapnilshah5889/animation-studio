@@ -434,25 +434,47 @@ def clean_face(
     for b in found:
         b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
         b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
-    # The nose: the lowest solid, near-black mark around the nose line, looked for anywhere in
+    # The nose: the biggest solid, near-black mark around the nose line, looked for anywhere in
     # the head, because a turned head's nose sits on its outline, outside the face zone. Eyes
-    # sit higher, outlines are thin, mouths are rarely black and never compact.
+    # are smaller, outlines are thin, mouths are rarely black and never compact. (It was the
+    # lowest such mark until Bo, task 4.9, whose open mouth is a black blob under the nose.)
     band = head.copy()
     band[: max(0, int(nose_row - 0.25 * row_w))] = False
     band[int(nose_row + 0.3 * row_w) :] = False
-    blacks = []
+    blacks: list[dict[str, Any]] = []
     if band.any():
         bx0, by0, bx1, by1 = _bbox(band)
-        for b in _blobs((band & (luma < 60))[by0:by1, bx0:bx1]):
-            compact = max(b["w"], b["h"]) <= 3 * min(b["w"], b["h"])  # not a mouth line
-            if (
-                compact
-                and b["area"] / (b["w"] * b["h"]) >= 0.45
-                and b["area"] >= (0.03 * row_w) ** 2
-            ):
-                b["cx"], b["cy"], b["bottom"] = b["cx"] + bx0, b["cy"] + by0, b["bottom"] + by0
-                blacks.append(b)
-    nose = max(blacks, key=lambda b: b["cy"]) if blacks else None
+        black = (band & (luma < 60))[by0:by1, bx0:bx1]
+
+        def noses(found_blobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            out = []
+            for b in found_blobs:
+                compact = max(b["w"], b["h"]) <= 3 * min(b["w"], b["h"])  # not a mouth line
+                if (
+                    compact
+                    and b["area"] / (b["w"] * b["h"]) >= 0.45
+                    and b["area"] >= (0.03 * row_w) ** 2
+                ):
+                    out.append(b)
+            return out
+
+        blacks = noses(_blobs(black))
+        # A nose drawn on the outline joins it into one long blob (Bo's three-quarter view,
+        # whose eye was then taken for the nose and kept). Without the thin strokes it stands
+        # free; pieces that overlap a mark already found add nothing.
+        stroke = max(2, int(0.015 * row_w))
+        freed = _grow(_shrink(black, stroke), stroke) & black
+        blacks += [
+            b
+            for b in noses(_blobs(freed))
+            if not any((b["mask"] & k["mask"]).any() for k in blacks)
+        ]
+        for b in blacks:
+            b["cx"], b["cy"], b["bottom"] = b["cx"] + bx0, b["cy"] + by0, b["bottom"] + by0
+    nose = max(blacks, key=lambda b: b["area"]) if blacks else None
+    nose_px = np.zeros_like(head)  # the nose's own pixels, on the canvas
+    if nose is not None:
+        nose_px[by0:by1, bx0:bx1] = nose["mask"]
     solid = [b for b in found if b["solid"]]
     if nose is None:
         # No black nose. Open eyes are a pair of solid marks at one height and the nose is the
@@ -480,10 +502,15 @@ def clean_face(
             nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
 
     def on_nose(b: dict[str, Any]) -> bool:
-        return nose is not None and (
-            abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2
-            and abs(b["cy"] - nose["cy"]) <= nose["h"] / 2 + 2
-        )
+        """The nose's mark: at the nose, or sharing pixels with it (a nose joined to the
+        outline is one mark here, its centre off the nose)."""
+        if nose is None:
+            return False
+        if abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2 and (
+            abs(b["cy"] - nose["cy"]) <= nose["h"] / 2 + 2
+        ):
+            return True
+        return bool((b["mask"] & nose_px[y0:y1, x0:x1]).any())
 
     marks = [b for b in found if b is not nose and not on_nose(b)]
     nose_y = nose["cy"] if nose else sk.joints["nose"][1]

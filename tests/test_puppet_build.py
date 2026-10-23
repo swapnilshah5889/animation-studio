@@ -184,6 +184,31 @@ def test_the_face_is_painted_out_but_the_nose_stays() -> None:
     assert abs(anchors["mouth"]["at"][1] - f["mouth"][1]) < 3
 
 
+def test_a_nose_on_the_outline_is_still_the_nose() -> None:
+    """Bo's three-quarter view (task 4.9): the nose touches the head's outline, so the two
+    make one long black blob, and an open mouth below it is a smaller black blob. The nose
+    must still be found and kept, and the eyes painted out (not one taken for the nose)."""
+    img = sheet()
+    draw = ImageDraw.Draw(img)
+    (nx, ny), (_, ty) = FRONT.joints["neck"], FRONT.joints["head_top"]
+    r = (ny - ty) / 2
+    head_box = [nx - 0.8 * r, ty, nx + 0.8 * r, ny + 0.1 * r]
+    draw.ellipse(head_box, outline=DARK, width=4)
+    f = face_points(FRONT)
+    mx, my = f["nose"]
+    draw.line([(mx, my), (head_box[2], my)], fill=DARK, width=4)  # nose joined to the outline
+    draw.ellipse([mx - 6, my + 13, mx + 6, my + 21], fill=DARK)  # an open mouth
+    img = np.asarray(img).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    head = head_mask(img, figure, FRONT)
+    cleaned, _, notes = clean_face(img, head, FRONT)
+    luma = cleaned @ np.array([0.299, 0.587, 0.114])
+    assert notes["nose_found"] and abs(notes["nose_px"][1] - my) < 4
+    assert luma[int(my), int(mx)] < 60  # the nose stays
+    for eye in ("eye_l", "eye_r"):
+        assert luma[int(f[eye][1]), int(f[eye][0])] > 120, eye  # painted out
+
+
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
     built = build_puppet(film, "kit", name="Kit", sam=False, three_quarter="sheet")
     folder = film / "characters" / "kit"
