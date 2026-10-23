@@ -73,7 +73,7 @@ starting point: refine them while building, and record changes in DECISIONS.md.
 | Server | Wraps | Example tools | Integration level |
 |---|---|---|---|
 | `synfig_mcp` (may become `animation_mcp` once there are two backends, D-030) | **Synfig Studio** now, **OpenToonz** from Step 6 | `create_scene`, `build_rig`, `pose_at`, `apply_motion`, `apply_lipsync`, `add_parallax_background`, `camera_move`, `render_preview_frame`, `render_shot`. Names and arguments stay engine-neutral. | Synfig: generate `.sif`, render with the `synfig` CLI. OpenToonz: generate `.tnz`, render with `tcomposer`. |
-| `comfy_mcp` | **ComfyUI** (image generation, SAM 2, depth) | `generate_character_sheet`, `cut_into_parts`, `generate_background`, `split_depth_layers`, `inpaint` | ComfyUI HTTP API plus saved workflows in `comfy_workflows/` |
+| `comfy_mcp` | **ComfyUI** (image generation, SAM 2, depth) | `describe_art`, `design_character`, `choose_design`, `build_puppet`, `preview_puppet`, `generate_background`, `choose_background`, `split_depth_layers`, `preview_background` (D-056) | ComfyUI HTTP API, with graphs built in code from `config/models.toml` (`studio_core/comfy_graphs.py`) |
 | `audio_mcp` | **Kokoro / Chatterbox** (TTS), **Rhubarb** (lip-sync), **ACE-Step** (music), CC0 sound library | `speak`, `lipsync`, `compose`, `find_sfx`, `mix` | Python and CLI. Sound effect search uses audio embeddings (CLAP) in Qdrant. |
 | `edit_mcp` | **Kdenlive / MLT** | `assemble`, `add_titles`, `export` | Generate MLT XML and render with `melt`. The owner can open the project in Kdenlive. |
 | `qa_mcp` | Local vision model (Ollama) | `check_frame`, `kid_safety_check` | Ollama API |

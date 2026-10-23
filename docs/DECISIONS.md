@@ -1019,3 +1019,45 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   backdrop and counting magenta pixels, plus a geometric check of layer edges; it exits
   non-zero on a hole. In development it caught unfilled cut-outs, narrow layers, over-fast
   foregrounds and zoom-outs.
+
+### D-056: The comfy_mcp server (task 4.8)
+- **`mcp/comfy_mcp`** (workspace member `comfy-mcp`, stdio, registered in `.mcp.json`): a thin
+  layer over `studio_core` (`puppet/`, `place/`, `preview/`), with the same conventions as
+  `synfig_mcp` and `audio_mcp` (D-034, D-046). Nine tools:
+  - `describe_art`: the film's style and the styles there are (label, commercial use), every
+    character (candidates with their checks, the chosen one, the rig's views, whether the views
+    are consistent, whether it has a voice) and every place (drafts, the chosen one, plate,
+    layers). Each comes with a `next_step` worked out from the files, so the server keeps no
+    state.
+  - `design_character` (n 1–8, seed) and `choose_design`. Fast mode isn't offered: it ignored
+    the negative prompt in task 4.3, and the scripts still have it.
+  - `build_puppet` (only `name`): from the chosen design, with the three-quarter view redrawn
+    from the front (D-053). The candidate override and the redraw switches stay in the scripts.
+  - `preview_puppet`: **refuses a character without a voice** instead of casting the
+    placeholder, because casting is the sound server's job (D-046). The script still casts it.
+  - `generate_background`, `choose_background` (always finishes the plate; denoise fixed at
+    0.3, D-054) and `split_depth_layers`.
+  - `preview_background`: returns `ok` and the holes, and takes `quality` (preview 640x360 or
+    final 1920x1080) like `render_shot`.
+- **The previews moved into `studio_core/preview/`** (`preview_puppet`, `preview_background`,
+  `PreviewError`; written by a subagent). With no `out` folder, their video and contact sheet
+  stay in the test shot's folder inside the film, as a tool result must (D-034). The scripts
+  are thin command-line wrappers and keep their `renders/` outputs.
+- **Long jobs** (2–16 min) run in a worker thread and send MCP progress notifications:
+  - the progress value is the elapsed seconds, so it always increases
+  - the message is the latest news, e.g. "c2 drawn: ok"
+  - a heartbeat goes out at least every 15 s
+  - Art jobs share one lock per server (one large model at a time); a waiting call says so.
+  - Each preview has its own lock, because each replaces one test shot. Previews don't wait
+    for art jobs, since Synfig renders on the CPU.
+  - Cancelling waits for the worker thread, so the lock is held until the GPU work ends.
+- **Refuse before the GPU:** request checks (id pattern, description length, the word list, n)
+  run before the lock, so a typo isn't queued behind a ten-minute job. A hand-made puppet (a
+  rig with no design candidates, like Pip) can't be redesigned under its own id, so
+  `build_puppet` can never overwrite it.
+- **No engine or model names** in tool names, descriptions or schemas (no Synfig, OpenToonz,
+  ComfyUI, SDXL or FLUX). A test guards this. The server is called `comfy_mcp` after the app it
+  wraps, like `synfig_mcp`.
+- **Inspector check:** `describe_art`, `choose_design` and both previews run for real. The GPU
+  jobs only get requests they must refuse, because each takes minutes. Task 4.9's scripted
+  client runs them end to end.

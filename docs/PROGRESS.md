@@ -2,12 +2,62 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.7 done. **Owner checkpoint 4 pending:**
-the meadow, split into layers, during a slow pan with Kit
-(`renders/background-preview/step4-demo-meadow/`). Next: 4.8 (the `comfy_mcp` server).
-Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred),
-Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice
-(placeholder c13), and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.8 done. Owner checkpoint 4 passed.
+Next: 4.9 (prove it: a scripted MCP client goes from text to a new character and a new place,
+then a shot through all three servers). Open items: Step 2's Claude Code run (D-035), task
+3.2b's Parler download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch
+files, Kit's real voice (placeholder c13), and the proposed animation-quality step (owner's
+call).
+
+---
+
+## 2026-10-23: Step 4 task 4.8 done: the `comfy_mcp` server
+
+The owner passed checkpoint 4 (the meadow pan). A subagent moved the two checkpoint previews
+into `studio_core`; this session wrote the server, its tests and the Inspector calls (D-056).
+
+**Built**
+- `mcp/comfy_mcp` (workspace member `comfy-mcp`, in `.mcp.json`), with nine tools:
+  - `describe_art`: style, characters and places, each with its next step
+  - `design_character`, `choose_design`, `build_puppet`, `preview_puppet`
+  - `generate_background`, `choose_background`, `split_depth_layers`, `preview_background`
+- Long jobs run in a worker thread behind one art lock, with MCP progress notifications
+  (elapsed seconds plus the latest news, a heartbeat every 15 s). The previews have a lock each.
+- `studio_core/preview/` (subagent): `preview_puppet` and `preview_background` as library
+  functions returning results and raising `PreviewError`. Every refusal comes before anything
+  is written. The scripts are thin command lines with unchanged outputs.
+- `preview_puppet` through MCP refuses a character with no voice (casting belongs to the
+  sound server); the script still casts the placeholder.
+- New learning section: "Tools that take minutes" in `docs/learning/mcp.md`.
+
+**Verified**
+- `tests/test_comfy_mcp.py`, 10 tests through a real MCP client:
+  - the tool list, with no engine or model names in what the model sees
+  - describe_art's next steps, from a fresh film to a built puppet
+  - design and background rounds through the real round code, with ComfyUI faked at
+    `run_graph`
+  - build, layers and previews mapped to results
+  - twelve refusals, none of which reach the GPU
+  - two art jobs run one after the other, with increasing heartbeats and a "waiting" message
+  - the stdio transport
+- The preview refactor: 38 preview tests pass, and both scripts render with exit 0. Kit's
+  preview took 15 s at 640x360; the meadow pan found no hole in 21 frames.
+- The full suite: 456 passed, model tests excluded (1 min 53 s).
+- The Inspector check over all three servers: 45/45 calls as expected, exit 0.
+  - comfy_mcp: `describe_art`, `choose_design`, `preview_puppet` (Kit) and
+    `preview_background` (no holes) ran for real.
+  - Eight requests that must be refused were refused, with messages that name the fix.
+  - The first run caught one regression in the check itself: copying Kit into the scratch
+    film turned an old "unknown character" refusal into a success. That call now uses an id
+    that doesn't exist.
+
+**Not covered yet**
+- The GPU tools (design, build, generate, choose_background, split) have only run through MCP
+  with fakes or as refusals. Task 4.9 runs them end to end through a scripted client.
+- Progress notifications were tested in-process. Whether Claude Code shows them is left for
+  4.9.
+- The background prompt always asks for a lawn of short grass along the bottom (task 4.6),
+  so a beach or a kitchen would get grass. It is worth a look before 4.9 picks a new place.
 
 ---
 

@@ -141,6 +141,61 @@ separate. Making sound can take a minute and needs models; editing a shot is ins
 engine-neutral. Each server's instructions mention the other, so the model knows where to get
 an id.
 
+Step 4 adds the third, `comfy_mcp`, for art. Its ids are the character and background ids
+themselves: `build_puppet("kit")` → `add_character(character_id="kit")`, and
+`split_depth_layers("lake")` → `create_scene(background="lake")`.
+
+## Tools that take minutes (task 4.8)
+
+A tool call is one JSON-RPC request, and the client waits for the answer. Most of our tools
+answer in under a second; `comfy_mcp`'s art jobs take 2 to 16 minutes (drawing four candidate
+sheets, building a puppet, layering a plate). Two things make that workable.
+
+**Progress notifications.** A client that wants progress puts a `progressToken` in the call's
+`_meta`. While the tool runs, the server may send `notifications/progress` with that token, a
+`progress` number that must increase, an optional `total`, and a `message`. Clients use them
+to show a status line, and some reset their timeout on each one (the Inspector has an option
+for that). A call without a token gets no notifications; the tool runs the same.
+
+In the Python SDK a tool asks for the request context by declaring a parameter typed
+`Context`. The SDK injects it and leaves it out of the input schema, so the model never sees
+it:
+
+```python
+async def build_puppet(ctx: Context, film: FilmArg, character_id: CharArg) -> PuppetResult:
+    ...
+    await ctx.report_progress(elapsed_s, None, "c2 drawn: ok (95 s)")
+```
+
+Our pattern (`job()` in `comfy_mcp/server.py`):
+- `progress` is the elapsed seconds, so it always increases even when the news is irregular.
+- `message` is the latest news: "c2 drawn: ok", "waiting for the running art job".
+- A heartbeat sends one at least every 15 s, so a long silent step (an 8-minute redraw) still
+  shows the job is alive.
+- The work runs in a worker thread (`anyio.to_thread.run_sync`). Code there reports through
+  `anyio.from_thread.run(...)`, which hands the coroutine back to the event loop.
+
+**One job at a time.** The Mac holds one large model at a time, so the server keeps an
+`anyio.Lock` for art jobs. A second call waits, and says so in its progress message, rather
+than loading a second model next to the first. The lock only spans one server process. Two
+clients would start two processes, but they would still share one ComfyUI, whose queue runs
+one graph at a time. The lock keeps a whole multi-graph job (a design round, a build) together
+and its progress honest.
+
+**Gotchas we hit:**
+- An exception raised inside an anyio task group (the heartbeat runs in one) comes out wrapped
+  in an `ExceptionGroup`. Then `except ValueError` no longer catches it, and a fixable refusal
+  becomes a crash. `job()` catches the exception inside the group and re-raises it after.
+- Cancelling the call doesn't stop the worker thread. anyio waits for the thread to finish, so
+  the lock stays held until the GPU work really ends, and a cancelled job can't overlap the next
+  one.
+- Check the request (ids, lengths, the word list) before taking the lock. Otherwise a typo
+  waits ten minutes behind another job just to be refused.
+
+Newer versions of the MCP spec add *tasks*: the server answers at once with a handle, and the
+client polls it for the result. That suits jobs that outlive a connection, such as the
+Windows render node later. One client waiting with progress is enough for now.
+
 ## Testing without a model
 
 The SDK's `Client` connects to a server object in-process, or launches it over stdio:
