@@ -171,7 +171,7 @@ def figure_mask(img: np.ndarray, sk: Skeleton) -> tuple[np.ndarray, np.ndarray]:
     """The view's figure (colour key, enclosed holes filled) and the background colour."""
     bg, _ = background(img)
     mask = silhouette(img, bg)
-    small = fill_holes(mask[::SCALE, ::SCALE])
+    small = fill_holes(mask[::SCALE, ::SCALE], img[::SCALE, ::SCALE], bg)
     mask |= _upscale(small, mask.shape)
     x0, y0, x1, y1 = skeleton_box(sk, 0.15)
     keep = np.zeros_like(small)
@@ -201,7 +201,8 @@ def _palette(pixels: np.ndarray, colors: int, min_share: float = 0.0) -> np.ndar
 def head_mask(img: np.ndarray, mask: np.ndarray, sk: Skeleton) -> np.ndarray:
     """Upper head (above the nose line) plus the head-coloured pixels below it, down to the
     neck, connected to it, with enclosed holes filled. Thin strands (a scarf's outline) are
-    dropped by an opening."""
+    dropped by an opening. A muzzle in another colour below the nose line (Bo's cream one,
+    task 4.9) joins too: see _between_the_cheeks."""
     nose_y, neck_y = sk.joints["nose"][1], sk.joints["neck"][1]
     rows = np.arange(mask.shape[0])[:, None]
     upper = mask & (rows < nose_y)
@@ -222,7 +223,33 @@ def head_mask(img: np.ndarray, mask: np.ndarray, sk: Skeleton) -> np.ndarray:
     # Eyes, nose and mouth are darker than any head colour and thin strokes vanish in the
     # opening: they come back as holes, which belong to the head.
     head[y0:y1, x0:x1] = fill_holes(head[y0:y1, x0:x1])
-    return head & mask
+    return _between_the_cheeks(head & mask, mask, int(nose_y), int(neck_y))
+
+
+def _between_the_cheeks(head: np.ndarray, mask: np.ndarray, top: int, bottom: int) -> np.ndarray:
+    """The rest of the face below the nose line, which the colour rule misses when it has its
+    own colour (Bo's cream muzzle, task 4.9): figure pieces in the band from the nose line to
+    the neck that lie between head pixels, along their row (a muzzle between the cheeks) or
+    their column (a chin in a notch at the profile's edge, with head above and below), and
+    form a real region (1% of the head or more). A scarf below the chin has neither cheeks
+    beside it nor head below it. Without this, the muzzle was cut onto the torso and stayed
+    behind when the head turned. Kit's head is unchanged: his pale face reaches above the nose
+    line."""
+    top, bottom = max(0, top), min(bottom, mask.shape[0])
+    between = np.zeros_like(mask)
+    for y in range(top, bottom):
+        xs = np.nonzero(head[y])[0]
+        if len(xs) >= 2:
+            between[y, xs.min() : xs.max() + 1] = True
+    for x in range(mask.shape[1]):
+        ys = np.nonzero(head[top:bottom, x])[0]
+        if len(ys) >= 2:
+            between[top + ys.min() : top + ys.max() + 1, x] = True
+    out = head.copy()
+    for blob in components(between & mask & ~head):
+        if blob.sum() >= 0.01 * head.sum():
+            out |= blob
+    return out
 
 
 # ---------------------------------------------------------------------------------- limbs

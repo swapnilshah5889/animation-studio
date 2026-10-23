@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageOps
 from studio_core.comfy_runs import RunRecord, free_comfy
 from studio_core.config import expand_path, load_config
 from studio_core.puppet import design
-from studio_core.puppet.checks import check_sheet
+from studio_core.puppet.checks import check_sheet, fill_holes, silhouette
 from studio_core.puppet.design import (
     DesignError,
     choose_design,
@@ -71,6 +71,25 @@ def test_light_clothes_split_the_silhouette_not_the_figure() -> None:
     ImageDraw.Draw(img).rectangle(shirt, fill=(244, 244, 240))  # near the background colour
     report = check_sheet(img, [FRONT, SIDE])
     assert report.problems == [] and report.figures[0].joints_inside > 0.85
+
+
+def test_background_seen_through_the_figure_stays_open() -> None:
+    """Legs whose feet touch enclose a gap of background: it isn't figure. A pale chest (cream
+    on a cream background, like Kit's white fur) is enclosed too, and it is figure."""
+    bg = np.array([250, 245, 238], dtype="float32")
+    img = np.full((120, 100, 3), bg, dtype="float32")
+    img[10:60, 20:80] = (200, 120, 60)  # the body
+    img[25:45, 35:65] = (226, 212, 196)  # a pale chest, about 40 from the background
+    img[60:110, 20:35] = img[60:110, 65:80] = (200, 120, 60)  # two legs
+    img[100:110, 35:65] = (200, 120, 60)  # the feet touch
+    img[70:95, 45:55] = bg + 4  # a speck of the gap in a slightly different tone
+    img[12:22, 62:76] = bg  # a face as pale as the background, with an eye in it
+    img[16:18, 66:68] = (30, 30, 30)
+    mask = silhouette(img, bg)
+    filled = fill_holes(mask, img, bg)
+    assert filled[35, 50] and not filled[80, 50]  # the chest is figure, the gap is not
+    assert filled[13, 64]  # the pale face surrounds its eye: figure
+    assert fill_holes(mask)[80, 50]  # without the colours, every enclosed region fills
 
 
 def test_a_busy_background_is_reported() -> None:

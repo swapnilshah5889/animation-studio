@@ -35,6 +35,7 @@ from studio_core.puppet.skeleton import OPENPOSE, Skeleton
 
 BG_TOLERANCE = 30.0  # RGB distance still counted as background
 FG_THRESHOLD = 45.0  # RGB distance from the background that counts as figure
+BG_HOLE = 15.0  # an enclosed region this close to the background (median) is background
 SCALE = 4  # components are found on a 1/4-size mask (fast, plenty for figure-sized blobs)
 MIN_SHAPE = 0.0005  # share of the image; smaller pieces are specks (about 23x23 px at 1344x768)
 
@@ -106,13 +107,29 @@ def components(mask: np.ndarray) -> list[np.ndarray]:
     return [labels == i + 1 for i in order]
 
 
-def fill_holes(mask: np.ndarray) -> np.ndarray:
+def _background_coloured(pixels: np.ndarray, bg: np.ndarray) -> bool:
+    return float(np.median(np.linalg.norm(pixels - bg, axis=1))) < BG_HOLE
+
+
+def fill_holes(
+    mask: np.ndarray, img: np.ndarray | None = None, bg: np.ndarray | None = None
+) -> np.ndarray:
     """The mask plus every region the border can't reach: a white shirt inside a dark outline
-    is figure, not background."""
+    is figure, not background. Given the image (at the mask's size) and its background colour,
+    a region of the background's own colour that surrounds no part of the figure stays open:
+    that is background seen through the figure, e.g. between legs whose feet touch (under 10
+    from the background on Bo, task 4.9). Pale parts of a figure stay filled: a cream face or
+    a white chest sits 30 or more from the background (Kit), and a face as pale as the
+    background still surrounds its eyes."""
     outside = np.zeros_like(mask)
     for region in components(~mask):
         if region[0].any() or region[-1].any() or region[:, 0].any() or region[:, -1].any():
-            outside |= region
+            outside |= region  # touches the border
+            continue
+        if img is None or bg is None or not _background_coloured(img[region], bg):
+            continue
+        if not (fill_holes(region) & mask).any():  # it surrounds nothing (no eyes, no marks)
+            outside |= region  # background seen through the figure
     return ~outside
 
 

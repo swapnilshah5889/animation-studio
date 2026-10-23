@@ -131,6 +131,24 @@ def test_the_head_leaves_the_scarf_on_the_torso() -> None:
     assert not at(head, f["scarf"])
 
 
+def test_a_muzzle_below_the_nose_line_stays_on_the_head() -> None:
+    """Bo's case (task 4.9): a muzzle in its own colour, all of it below the skeleton's nose
+    line, between the cheeks. The colour rule alone left it on the torso. The scarf below the
+    chin still isn't head."""
+    img = sheet()
+    draw = ImageDraw.Draw(img)
+    (nx, ny), nose_y = FRONT.joints["neck"], FRONT.joints["nose"][1]
+    r = (ny - FRONT.joints["head_top"][1]) / 2
+    muzzle = [nx - 0.5 * r, nose_y + 2, nx + 0.5 * r, ny - 0.15 * r]
+    draw.ellipse(muzzle, fill=(240, 236, 150))  # pale yellow: no head colour above the line
+    img = np.asarray(img).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    head = head_mask(img, figure, FRONT)
+    centre = (nx, (muzzle[1] + muzzle[3]) / 2)
+    assert at(figure, centre) and at(head, centre)
+    assert not at(head, face_points(FRONT)["scarf"])
+
+
 def test_limbs_take_their_own_pixels_and_leave_the_tail() -> None:
     img = pixels()
     figure, _ = figure_mask(img, FRONT)
