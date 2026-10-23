@@ -952,3 +952,32 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     edit exists.
   - In the test render (`preview_puppet.py --view three_quarter`), Kit faces Pip, waves with
     the far arm, blinks and talks.
+
+### D-054: Backgrounds from text: drafts, then one finished plate (task 4.6)
+- **`generate_background`** (`studio_core/place/design.py`): a description plus the film's
+  style gives N drafts at 1536×576 (an SDXL 8:3 bucket).
+  - The prompt template is code. It pushes the described things into the middle and far
+    distance, keeps the front a plain lawn "like a stage floor", and excludes people and
+    animals. The first drafts put big flowers and the stream along the bottom.
+  - Seeds are recorded, and rounds add drafts. The records live in
+    `backgrounds/<id>/design/plates.json`, which follows `schemas/plates.schema.json`.
+- **Only the chosen draft is finished.** `choose_background` records the pick, then runs
+  `comfy_graphs.finish_plate` (written by a subagent) and saves `backgrounds/<id>/plate.png`
+  for task 4.7.
+  - The finish: Real-ESRGAN x4 anime_6B, scale to 2880×1080 (lanczos), then a low-denoise
+    SDXL refine (0.3, 10 steps) in the same style.
+  - **Why:** the finish takes minutes on this Mac (SDXL at about 3 MP), so finishing every
+    draft would multiply that.
+  - `txt2img` was refactored to share the style setup with the finish (`_add_style`); its
+    JSON is byte-identical, and the golden files are unchanged.
+- **Ground-band checks** (`place/checks.py`, no model), on rows 78–97% of the height where
+  characters' feet go:
+  - edges: at most 10% of pixels at luma gradient ≥ 20
+  - colours far from the band's main ones: at most 20%
+  - the top and bottom must differ
+  - Calibrated on real drafts: a valley with big foreground flowers and the stream along the
+    front failed both (14% edges, 48% covered).
+  - **Known limit:** water or a pond filling the whole band reads as "open"; a vision check
+    could catch it later (D-018).
+- **Review:** `scripts/background_review.py` makes drafts (safe to re-run), writes a
+  self-contained page, and `--choose cN` finishes one.

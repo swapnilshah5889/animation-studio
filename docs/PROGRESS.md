@@ -2,12 +2,46 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.5 done. The three-quarter view now comes
-from FLUX.2 klein (D-053), and Kit renders in both views. **Owner review pending:** Kit's new
-three-quarter render (`renders/puppet-preview/step4-demo-kit-three_quarter/`). Next: 4.6
-(`generate_background`). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler
-download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's
-real voice (placeholder c13), and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.6 done. **Owner review pending:** the
+background drafts and the finished plate
+(`films/step4-demo/backgrounds/meadow/design/review.html`). Next: 4.7 (`split_depth_layers`,
+owner checkpoint 4). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download
+(deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real
+voice (placeholder c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-22: Step 4 task 4.6 done: backgrounds from text
+
+The owner approved Kit's three-quarter view. Built with one subagent in parallel
+(`comfy_graphs.finish_plate`: Real-ESRGAN upscale plus a low-denoise SDXL refine), plus this
+session.
+
+**Built**
+- `studio_core/place/design.py`:
+  - `generate_background`: drafts at 1536×576 in the film's style, from a code prompt
+    template that keeps the front an open lawn
+  - `choose_background`: records the pick, finishes it into `backgrounds/<id>/plate.png`
+    (2880×1080), and records everything in `plates.json` (new schema)
+- `place/checks.py`: ground-band checks (edges, odd colours, depth), calibrated on real
+  drafts.
+- `finish_plate` (subagent): `txt2img` now shares its style setup, and its golden JSON is
+  byte-identical. The refine takes 10 steps.
+- `scripts/background_review.py`: drafts (safe to re-run), a self-contained review page, and
+  `--choose`.
+- Learning note: `docs/learning/upscale-and-refine.md`.
+
+**Verified**
+- First template: big foreground flowers and the stream along the bottom, which the checks
+  caught (14% edges, 48% covered).
+- With the stronger template, all 4 demo drafts ("a sunny meadow at the edge of a forest with
+  a small stream", seeds 11–14) pass, at 120–140 s each.
+- c4 finished into the plate in 327 s. The composition matches the draft, the detail is crisp,
+  and there are no seams.
+- 369 tests pass, model tests excluded, plus the live draft test. ComfyUI kept no copies.
+
+**Open questions for the owner**
+1. Which draft for the meadow? I finished c4 (an open lawn across the front).
 
 ---
 
@@ -322,7 +356,7 @@ The owner approved the Step 4 brief as written (D-047).
 | 4.3 `design_character` (owner checkpoint 2) | **Done; owner chose c3**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
 | 4.4 `build_puppet` (owner checkpoint 3) | **Done; approved by the owner**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
 | 4.5 Three-quarter view | **Done; FLUX.2 klein wired in (D-052, D-053)**: both views cut into one rig, `puppet/consistency.py` compares them, `preview_puppet.py --view three_quarter`. Kit's 3/4 fails the check (hat, barely turned) (D-051). |
-| 4.6 `generate_background` | To do |
+| 4.6 `generate_background` | **Done; waiting for the owner's review**: `place/design.py` (drafts at 1536×576, choose and finish into the 2880×1080 plate), `place/checks.py` (ground band), `comfy_graphs.finish_plate`, `scripts/background_review.py` (D-054). |
 | 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
 | 4.8 `comfy_mcp` server | To do |
 | 4.9 Prove it | To do |
