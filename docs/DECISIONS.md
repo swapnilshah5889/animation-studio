@@ -1061,3 +1061,66 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Inspector check:** `describe_art`, `choose_design` and both previews run for real. The GPU
   jobs only get requests they must refuse, because each takes minutes. Task 4.9's scripted
   client runs them end to end.
+
+### D-057: Proving Step 4 through MCP, and what the runs found (task 4.9)
+- **`scripts/run_step4_shot.py`:** a scripted MCP client starts the three servers from
+  `.mcp.json`. From words, it makes a new character (Bo, "a cheerful little brown bear cub
+  wearing blue dungarees") and a new place (an orchard), checks both with the previews, then
+  builds and renders a shot with Bo and Pip using only tool calls. The transcript is
+  `docs/learning/mcp-step4-shot.md`. Outside MCP there are only two setup steps: creating the
+  empty film (no tool makes films yet) and stopping a ComfyUI left running, so the music model
+  can load.
+- **The script plays the director where the owner would choose:**
+  - It takes the first candidate whose checks pass, drawing another round if none does.
+  - If `build_puppet` reports that the views don't match, it builds from the next passing
+    sheet (at most 2 builds).
+  - It orders the work by the memory rule: music first, then the art jobs, then Synfig
+    (CPU).
+- **Bugs found and fixed.** Bo is the first character after Kit, and several rules turned out
+  to be fitted to Kit:
+  - **The three-quarter redraw added a scarf.** The FLUX.2 klein prompt named "scarf". It
+    now carries the candidate's own description and asks for nothing added. Existing
+    redraws are still reused, so Kit's approved view doesn't change.
+  - **Background between touching legs was cut into the leg parts** (white strips).
+    `fill_holes` filled every enclosed region. Given the image, it now leaves open a region
+    of the background's own colour (median within 15) that surrounds no figure pixels.
+    - Measured: such gaps sit 5–7 from the background; Kit's cream face and chest sit 30–42.
+    - A face as pale as the background still surrounds its eyes, so it stays filled.
+  - **A muzzle below the skeleton's nose line went to the torso**, so it stayed behind when
+    the head turned. The head's colour rule only knows the colours above the nose line. Now
+    figure pieces between head pixels join the head, along a row (a muzzle between the
+    cheeks) or a column (a chin in a notch at the profile's edge), if they are at least 1% of
+    the head. A scarf has neither cheeks beside it nor head below it.
+  - **An eye was kept as the nose.** In Bo's three-quarter view the nose sits on the
+    outline and joins it into one long blob, and the open mouth below it is a smaller black
+    blob. The search took the lowest compact black blob, so it got the near eye or the
+    mouth, and that eye stayed painted while code drew the face. Now thin strokes are opened
+    away before the search, the biggest compact black blob is the nose, and a mark sharing
+    pixels with it isn't painted out.
+  - Kit's masks and face detection are pixel-identical before and after these fixes.
+  - **The plate finish failed on MPS** ("tensor dims larger than INT_MAX" in an untiled 3 MP
+    VAE decode). It depended on free memory: ComfyUI only falls back to tiles on
+    out-of-memory errors. The encode and decode are now tiled at 1024 px, and ComfyUI
+    averages three tilings, so there are no seams.
+  - **Progress news** says what is being made now ("c1 drawn (1/3): ok; drawing sheet 2 of
+    3").
+- **Open (not fixed; for the owner):**
+  - **A white snout on a redraw can be lost.** With c1, klein drew the snout near-white with
+    no outline at the profile edge. No colour key or SAM mask separates it from the light
+    background, so the snout came out transparent. A likely fix: ask klein for a backdrop
+    far from the character's colours, and hand its exact figure mask to the build. That
+    changes klein's output for every new character, so it needs trials first.
+  - **The three-quarter cut doesn't generalise yet.** Kit's figure follows the skeleton
+    closely. Bo c2's redraw has arms held out and wide dungaree legs, and the limb fit didn't
+    follow it (`limbs_ok` false in both views). Its torso part ended up holding pieces of
+    other parts:
+    - the chin and muzzle (fixed since by the column rule)
+    - part of the far arm
+    - the dungaree cuffs and leg outlines
+    - thin outline dashes from where the arms were drawn, left behind when the arms are hung
+    - In the bent-knee test pose the far leg falls apart. Run 2's shot used this build.
+    - Fixing it means making the cut follow drawings that differ from the skeleton, tried on
+      several varied characters, not tuned on one: a task of its own.
+  - **"Head 116% as tall"** rejected every klein seed of c1. It may be klein's real
+    proportion for this character, or partly a measurement effect. To be looked at with the
+    above.

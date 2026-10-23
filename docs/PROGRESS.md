@@ -2,12 +2,83 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.8 done. Owner checkpoint 4 passed.
-Next: 4.9 (prove it: a scripted MCP client goes from text to a new character and a new place,
-then a shot through all three servers). Open items: Step 2's Claude Code run (D-035), task
-3.2b's Parler download (deferred), Docker's memory reservation, deleting the pre-Step-4 scratch
-files, Kit's real voice (placeholder c13), and the proposed animation-quality step (owner's
-call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.9 run. Task 4.9's proof works end to
+end through MCP, but a second character showed that the puppet cut doesn't generalise yet
+(see the 4.9 entry). **Owner decision needed:** fix the cut on a few varied characters before
+closing Step 4 (recommended), or close Step 4 with it tracked. Then 4.10 (docs and the Step 5
+brief). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred),
+Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice
+(placeholder c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-23: Step 4 task 4.9: the proof runs end to end; the puppet cut needs to generalise
+
+`scripts/run_step4_shot.py` is a scripted MCP client. It starts the three servers from
+`.mcp.json`, makes a new character and a new place from words, then builds and renders a shot
+with them using only tool calls. Where the owner would choose, it takes the first candidate
+whose checks pass, and if the puppet's views don't match it builds from the next passing sheet
+(D-057). The transcript is `docs/learning/mcp-step4-shot.md`.
+
+**Run 2 (the recorded one): 39 tool calls in 49 min, 11 of 12 checks passed**
+- Bo, "a cheerful little brown bear cub wearing blue dungarees":
+  - 3 sheets, all passing their checks
+  - c1's build was rejected (head 116% as tall in the three-quarter view); c2 built with
+    consistent views
+- The orchard: 2 drafts → plate (tiled finish, 341 s) → 4 layers (469 s). The pan showed no
+  hole in 50 frames.
+- The shot `films/step4-proof/shots/s01_sh01/shot.mp4`: Bo (three-quarter, facing Pip) waves
+  and asks, Pip nods and answers, with music, birdsong and a slow pan. 1080p, 192 frames.
+- Progress notifications reached the client over stdio on every art call over 30 s.
+- The failed check was the loudness: −15.2 LUFS against −14 ± 1. That is the mixer working as
+  designed: it trims the whole mix when a true peak still pokes over −1.5 dBTP after its
+  limiter. The check now follows that contract (−16 to −13 LUFS, peaks ≤ −1 dBTP). The
+  transcript keeps the run's own result.
+
+**Fixed along the way (each verified on the real sheets; Kit's masks and face detection are
+pixel-identical before and after; a unit test for each fails without its fix)**
+- Run 1 stopped at the plate: an untiled 3 MP VAE decode failed on MPS ("tensor dims larger
+  than INT_MAX"). The plate's VAE encode and decode are now tiled.
+- The three-quarter redraw gave Bo a scarf: the klein prompt named Kit's scarf. It now carries
+  the character's own description.
+- Background between touching legs was cut into the leg parts (white strips): enclosed
+  background-coloured regions that surround nothing stay open.
+- A muzzle below the skeleton's nose line went to the torso: figure between head pixels, along
+  rows or columns, joins the head.
+- An eye was taken for the nose and stayed painted, because the real nose sat on the outline.
+  Thin strokes are now opened away first, and the biggest compact black blob is the nose.
+- Progress news now says what is being made ("c1 drawn (1/3): ok; drawing sheet 2 of 3").
+
+**What the shot still shows (open, D-057).** Run 2's Bo was built before the face fixes, and
+some problems have no fix yet:
+- a third, painted eye next to the two drawn by code (fixed since, not yet rebuilt)
+- outline dashes beside the body, left behind when the arms are hung
+- a seam on the waving arm, and a thin line across the muzzle where the chin piece (on the
+  torso) meets the head
+- in c2's three-quarter cut, the torso also holds part of the far arm and the dungaree cuffs;
+  in the bent-knee test pose the far leg falls apart
+- with c1, the redraw made the snout near-white with no outline, and it came out
+  transparent; no colour key or SAM mask finds it
+- "orchard" came out as hills, houses and plain trees (no apples), and the background prompt
+  always asks for a lawn floor (task 4.6)
+
+**Verified**
+- The full suite: 459 passed, model tests excluded (2 min 2 s). Ruff clean.
+- Kit is unchanged by every fix (masks and face notes compared before and after).
+
+**Not done**
+- No run with all the fixes together: Bo has not been rebuilt since the eye fix. A run 3 takes
+  about 50 min.
+- The three-quarter cut problems above. They come from rules tuned on one character.
+  Recommended next: build 3 or 4 varied characters (a bear, a child, a bird, a robot, say)
+  and make the cut follow drawings that differ from the skeleton, before closing Step 4. Its
+  done-when ("a text description becomes a rigged puppet ... with no manual steps") holds for
+  Kit today, not yet in general.
+
+**Open questions for the owner**
+1. Fix the cut on varied characters before closing Step 4 (recommended), or close Step 4 and
+   carry it into the proposed animation-quality step?
+2. Bo's voice is a placeholder (`am_puck`, +2.5 semitones) cast by the script.
 
 ---
 
