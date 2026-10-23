@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/plates.schema.json",
+  "title": "Background candidates",
+  "description": "films/<film>/backgrounds/<id>/design/plates.json: every background draft generated for a place (task 4.6, D-054), with its seed and checks, and the chosen one, which is finished into the 2880x1080 plate.",
+  "type": "object",
+  "required": ["schema_version", "background", "style", "candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "background": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+    "style": { "type": "string", "minLength": 1 },
+    "chosen": { "type": "string", "pattern": "^c[1-9][0-9]*$", "description": "The draft finished into the plate." },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "seed", "draft", "ok", "problems"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^c[1-9][0-9]*$" },
+          "description": { "type": "string", "minLength": 3, "maxLength": 300 },
+          "seed": { "type": "integer", "minimum": 0 },
+          "draft": { "type": "string", "pattern": "^c[1-9][0-9]*/draft\\.png$" },
+          "plate": { "type": "string", "pattern": "^c[1-9][0-9]*/plate\\.png$", "description": "Present once finished." },
+          "ok": { "type": "boolean" },
+          "problems": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "seconds": { "type": "number", "minimum": 0 },
+          "created": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

@@ -34,6 +34,7 @@ SCHEMAS = (
     "music",
     "sfx_library",
     "design",
+    "plates",
 )
 FILE_KINDS = {
     "rig.json": "rig",
@@ -44,6 +45,7 @@ FILE_KINDS = {
     "voice.json": "voice",
     "manifest.json": "sfx_library",
     "candidates.json": "design",
+    "plates.json": "plates",
 }
 # Files named by id (l001.json) are recognized by their folder instead.
 FOLDER_KINDS = {"dialogue": "line", "lipsync": "lipsync", "music": "music"}
@@ -342,6 +344,22 @@ def check_design(data: dict[str, Any]) -> list[Issue]:
     return issues
 
 
+def check_plates(data: dict[str, Any]) -> list[Issue]:
+    ids = [c["id"] for c in data["candidates"]]
+    issues = [Issue("candidates", f"draft {d!r} appears more than once") for d in _duplicates(ids)]
+    for i, c in enumerate(data["candidates"]):
+        for key in ("draft", "plate"):
+            if key in c and c[key] != f"{c['id']}/{key}.png":
+                issues.append(Issue(f"candidates[{i}].{key}", f"should be {c['id']}/{key}.png"))
+        if c["ok"] == bool(c["problems"]):
+            issues.append(
+                Issue(f"candidates[{i}].ok", "ok must be true exactly when problems is empty")
+            )
+    if "chosen" in data and data["chosen"] not in ids:
+        issues.append(Issue("chosen", f"unknown draft {data['chosen']!r}; known: {ids}"))
+    return issues
+
+
 SEMANTIC = {
     "rig": check_rig,
     "shot": check_shot,
@@ -352,6 +370,7 @@ SEMANTIC = {
     "music": check_music,
     "sfx_library": check_sfx_library,
     "design": check_design,
+    "plates": check_plates,
 }
 
 

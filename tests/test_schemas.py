@@ -24,6 +24,7 @@ EXAMPLES = {
     "music": "schemas/music_m01.json",
     "sfx_library": "schemas/sfx_library.json",
     "design": "schemas/design_kit.json",
+    "plates": "schemas/plates_meadow.json",
 }
 
 
@@ -296,6 +297,14 @@ CASES: list[tuple[str, str, Mutation, str, str]] = [
         lambda d: d["sounds"][1].update(sha256=d["sounds"][0]["sha256"]),
         "sounds",
         "the same audio appears more than once",
+    ),
+    ("plates", "unknown choice", lambda d: d.update(chosen="c9"), "chosen", "unknown draft"),
+    (
+        "plates",
+        "plate elsewhere",
+        lambda d: d["candidates"][1].update(plate="c1/plate.png"),
+        "candidates[1].plate",
+        "should be c2/plate.png",
     ),
     ("design", "unknown choice", lambda d: d.update(chosen="c9"), "chosen", "unknown candidate"),
     (

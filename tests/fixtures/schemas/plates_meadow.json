@@ -1,0 +1,28 @@
+{
+ "schema_version": 1,
+ "background": "meadow",
+ "style": "storybook",
+ "chosen": "c2",
+ "candidates": [
+  {
+   "id": "c1",
+   "description": "a sunny meadow at the edge of a forest",
+   "seed": 1,
+   "draft": "c1/draft.png",
+   "ok": false,
+   "problems": ["the ground where characters stand is busy (31% edges)"],
+   "seconds": 250.0
+  },
+  {
+   "id": "c2",
+   "description": "a sunny meadow at the edge of a forest",
+   "seed": 2,
+   "draft": "c2/draft.png",
+   "plate": "c2/plate.png",
+   "ok": true,
+   "problems": [],
+   "seconds": 248.5,
+   "created": "2026-10-22T18:00:00Z"
+  }
+ ]
+}
