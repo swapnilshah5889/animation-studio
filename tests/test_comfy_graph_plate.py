@@ -56,9 +56,9 @@ def test_node_types() -> None:
         "UpscaleModelLoader": 1,
         "ImageUpscaleWithModel": 1,
         "ImageScale": 1,
-        "VAEEncode": 1,
+        "VAEEncodeTiled": 1,
         "KSampler": 1,
-        "VAEDecode": 1,
+        "VAEDecodeTiled": 1,
         "SaveImage": 1,
     }  # no EmptyLatentImage: the sampler starts from the draft
 
@@ -68,11 +68,13 @@ def test_the_draft_flows_through_upscale_scale_encode_sample_decode_save() -> No
     saved = only(wf, "SaveImage")["inputs"]
     assert saved["filename_prefix"] == "meadow_plate"
     decode = source(wf, saved["images"])
-    assert decode["class_type"] == "VAEDecode"
+    assert decode["class_type"] == "VAEDecodeTiled"
     sampler = source(wf, decode["inputs"]["samples"])
     assert sampler["class_type"] == "KSampler"
     encode = source(wf, sampler["inputs"]["latent_image"])
-    assert encode["class_type"] == "VAEEncode"
+    assert encode["class_type"] == "VAEEncodeTiled"
+    tiles = (encode["inputs"]["tile_size"], decode["inputs"]["tile_size"])
+    assert tiles == (1024, 1024)  # ~1 MP tiles: an untiled 3 MP decode can fail on MPS
     scale = source(wf, encode["inputs"]["pixels"])
     assert scale["class_type"] == "ImageScale"
     upscale = source(wf, scale["inputs"]["image"])
@@ -139,8 +141,8 @@ def test_style_model_loras_vae_and_prompts(style_id: str) -> None:
     # The style's VAE both encodes the upscale and decodes the result.
     vae_id = next(k for k, n in wf.items() if n["class_type"] == "VAELoader")
     assert wf[vae_id]["inputs"]["vae_name"] == files[style.data["vae"]].comfy_name
-    assert only(wf, "VAEEncode")["inputs"]["vae"] == [vae_id, 0]
-    assert only(wf, "VAEDecode")["inputs"]["vae"] == [vae_id, 0]
+    assert only(wf, "VAEEncodeTiled")["inputs"]["vae"] == [vae_id, 0]
+    assert only(wf, "VAEDecodeTiled")["inputs"]["vae"] == [vae_id, 0]
     positive = source(wf, sampler["positive"])["inputs"]["text"]
     negative = source(wf, sampler["negative"])["inputs"]["text"]
     assert PROMPT in positive

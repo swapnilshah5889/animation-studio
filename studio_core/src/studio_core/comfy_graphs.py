@@ -193,6 +193,10 @@ def txt2img(
     return g.nodes
 
 
+PLATE_TILE = 1024  # px: about 1 MP per tile, the size SDXL's VAE handles everywhere
+PLATE_TILE_OVERLAP = 64
+
+
 def finish_plate(
     manifest: Manifest,
     style_id: str,
@@ -235,8 +239,14 @@ def finish_plate(
     Memory and time (Mac): 2880x1080 is ~3.1 MP, about 3x the pixels of a 1024x1024 image,
     and attention cost grows faster than that, so expect one plate to take several times the
     ~222 s of a 25-step 1024x1024 image (docs/benchmarks.md) and more memory than a draft. On
-    the 24 GB M4 unload Ollama first. ComfyUI falls back to tiled VAE encode/decode if those run
-    out of memory; the UNet pass has no such fallback.
+    the 24 GB M4 unload Ollama first.
+
+    The VAE encode and decode are tiled (`PLATE_TILE` px tiles, `PLATE_TILE_OVERLAP` overlap).
+    Untiled, ComfyUI decodes the whole 3 MP image at once whenever it thinks memory allows,
+    and on MPS that can fail ("MPSGraph does not support tensor dims larger than INT_MAX",
+    task 4.9). Its own fallback to tiles only catches out-of-memory errors, so a plate
+    finished or failed depending on how much memory happened to be free. ComfyUI averages
+    three different tilings, so tiles leave no seams.
 
     The draft should have the plate's aspect ratio (8:3 by default): ImageScale stretches to
     the exact size (crop "disabled") rather than cutting the edges off. `width` and `height`
@@ -268,7 +278,9 @@ def finish_plate(
         height=height,
         crop="disabled",
     )
-    latent = g.add("VAEEncode", pixels=[sized, 0], vae=style.vae)
+    tiles = {"tile_size": PLATE_TILE, "overlap": PLATE_TILE_OVERLAP}
+    tiles |= {"temporal_size": 64, "temporal_overlap": 8}  # video VAEs only; the defaults
+    latent = g.add("VAEEncodeTiled", pixels=[sized, 0], vae=style.vae, **tiles)
     sampled = g.add(
         "KSampler",
         "refine",
@@ -285,7 +297,7 @@ def finish_plate(
         scheduler=settings["scheduler"],
         denoise=denoise,
     )
-    decoded = g.add("VAEDecode", samples=[sampled, 0], vae=style.vae)
+    decoded = g.add("VAEDecodeTiled", samples=[sampled, 0], vae=style.vae, **tiles)
     g.add("SaveImage", images=[decoded, 0], filename_prefix=filename_prefix)
     return g.nodes
 
