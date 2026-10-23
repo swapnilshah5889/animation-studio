@@ -1,16 +1,19 @@
-"""The pure parts of scripts/preview_background.py: the hole counter, the camera and edge
-geometry, the sentinel colour and the probe copy. The render itself is checked by running the
-script (owner checkpoint 4); no test here renders."""
+"""studio_core.preview.background: the hole counter, the camera and edge geometry, the sentinel
+colour, the probe copy and the refusals. The render itself is checked by running
+scripts/preview_background.py (owner checkpoint 4); no test here renders."""
 
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
 import pytest
 from PIL import Image
-from preview_background import (
+
+from studio_core.preview import PreviewError
+from studio_core.preview.background import (
     PIXEL_TOL,
     SENTINELS,
     EdgeEntry,
@@ -27,13 +30,14 @@ from preview_background import (
     make_probe,
     near_colour,
     pick_sentinel,
+    preview_background,
     probe_id,
     sample_indices,
     spare_px,
     summary_lines,
 )
-
 from studio_core.scene import PAN_PX, SceneError, load_background
+from studio_core.shot_spec import FilmFolder
 
 MEADOW = Path(__file__).parent / "fixtures" / "backgrounds" / "meadow"
 FPS = 24
@@ -257,3 +261,24 @@ def test_the_summary_says_ok_or_fails_with_the_worst_frame() -> None:
     assert any("'hills'" in line and "left edge" in line and "frame 7" in line for line in lines)
     note = summary_lines(Report(3, [], [EdgeEntry("fg", "right", 7, 9.0, False)]))
     assert note[0].startswith("ok") and note[-1].startswith("note")
+
+
+# --------------------------------------------------------------------------- refusals
+
+
+def test_an_unknown_background_is_refused(tmp_path: Path) -> None:
+    (tmp_path / "demo").mkdir()
+    film = FilmFolder.open(tmp_path, "demo")
+    with pytest.raises(PreviewError, match=r"no background 'lake'; backgrounds: \[\]"):
+        preview_background(film, "lake")
+    with pytest.raises(PreviewError, match="every must be at least 1"):
+        preview_background(film, "lake", every=0)
+
+
+def test_an_unknown_character_is_refused_before_the_probe_is_made(tmp_path: Path) -> None:
+    shutil.copytree(MEADOW, tmp_path / "demo" / "backgrounds" / "meadow")
+    film = FilmFolder.open(tmp_path, "demo")
+    with pytest.raises(PreviewError, match=r"fox has no rig .* \(characters: none\)"):
+        preview_background(film, "meadow", character="fox")
+    assert film.backgrounds() == ["meadow"]  # no probe copy left behind
+    assert not (film.root / "shots").exists()

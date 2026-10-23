@@ -1,5 +1,5 @@
-"""The pure parts of scripts/preview_puppet.py: the timeline, placement and key frames.
-The render itself is checked by running the script (owner checkpoint 3)."""
+"""studio_core.preview.puppet: the timeline, placement, key frames and the refusals. The render
+itself is checked by running scripts/preview_puppet.py (owner checkpoint 3); no test renders."""
 
 from __future__ import annotations
 
@@ -9,26 +9,27 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from preview_puppet import (
-    FPS,
+
+from studio_core.audio.voices import VoiceError
+from studio_core.preview import PreviewError
+from studio_core.preview.common import matched_scale, rest_box
+from studio_core.preview.puppet import (
     PIP_AT,
     SUBJECT_AT,
     Timeline,
     arm_toward,
     facing_toward,
     key_frames,
-    matched_scale,
     output_name,
     pick_view,
     plan_actions,
-    rest_box,
+    preview_puppet,
     screen_box,
     wave_side,
 )
-
 from studio_core.rig import Rig, ground_offset_px, load_rig
 from studio_core.scene import DESIGN
-from studio_core.shot_spec import SpecError
+from studio_core.shot_spec import FPS, FilmFolder, SpecError, register_rig
 from studio_core.sif import frames
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -166,3 +167,55 @@ def test_screen_box_mirrors_about_the_root_when_facing_left(pip: dict[str, Any])
     assert (mtop, mbottom) == (top, bottom)
     assert mleft - root_x == pytest.approx(-(right - root_x))
     assert mright - root_x == pytest.approx(-(left - root_x))
+
+
+# --------------------------------------------------------------------------- refusals
+
+
+def files(root: Path) -> list[Path]:
+    return sorted(root.rglob("*"))
+
+
+@pytest.fixture
+def empty_film(tmp_path: Path) -> FilmFolder:
+    """A film folder with nothing in it: no Pip, no background, no voices."""
+    (tmp_path / "films" / "demo").mkdir(parents=True)
+    return FilmFolder.open(tmp_path / "films", "demo")
+
+
+def test_a_character_without_a_rig_is_refused(empty_film: FilmFolder) -> None:
+    with pytest.raises(PreviewError, match=r"kit has no rig at .* \(characters: none\)"):
+        preview_puppet(empty_film, "kit")
+    assert files(empty_film.root) == []
+
+
+def test_pip_is_never_the_subject(empty_film: FilmFolder) -> None:
+    register_rig(empty_film, "pip")
+    with pytest.raises(PreviewError, match="Pip is the reference puppet"):
+        preview_puppet(empty_film, "pip")
+
+
+def test_a_character_without_a_voice_is_refused_before_anything_is_written(
+    empty_film: FilmFolder,
+) -> None:
+    register_rig(empty_film, "kit")  # the placeholder puppet, without Pip's voice
+    before = files(empty_film.root)
+    with pytest.raises(PreviewError, match=r"kit has no voice yet; cast one first \(audio_mcp"):
+        preview_puppet(empty_film, "kit")
+    assert files(empty_film.root) == before  # no Pip, no meadow, no voice.json, no shot
+
+
+def test_a_missing_view_or_background_is_refused_before_anything_is_written(
+    empty_film: FilmFolder,
+) -> None:
+    register_rig(empty_film, "kit")
+    before = files(empty_film.root)
+    with pytest.raises(SpecError, match="kit has no three_quarter view"):
+        preview_puppet(empty_film, "kit", view="three_quarter", cast_placeholder=True)
+    with pytest.raises(PreviewError, match="no view 'side'"):
+        preview_puppet(empty_film, "kit", view="side", cast_placeholder=True)
+    with pytest.raises(SpecError, match="no background 'lake'"):
+        preview_puppet(empty_film, "kit", background="lake", cast_placeholder=True)
+    with pytest.raises(VoiceError, match="web or email address"):
+        preview_puppet(empty_film, "kit", line="Visit www.example.com", cast_placeholder=True)
+    assert files(empty_film.root) == before
