@@ -1,14 +1,19 @@
-"""Call every synfig_mcp and audio_mcp tool through the MCP Inspector's CLI, via .mcp.json.
+"""Call the three MCP servers' tools through the MCP Inspector's CLI, via .mcp.json.
 
     uv run scripts/inspector_check.py           # needs films/step2-demo (scripts/make_demo_film.py)
 
-This exercises both servers the way an outside client does: the Inspector starts each from
-.mcp.json over stdio, lists the tools, and calls every one, plus calls that must be refused
-with a fixable message. The audio part casts, speaks, lip-syncs, composes and searches, then
-places the results in the shot through synfig_mcp and previews the mix (it runs Kokoro,
-Rhubarb, ACE-Step and CLAP). It works on a scratch copy, films/inspector-check/, made fresh
-on every run (films/ is git-ignored). Prints one line per call; exits 1 if any call didn't do
-what was expected. The Inspector is pinned (INSPECTOR) and fetched by npx on first use.
+This exercises the three servers the way an outside client does: the Inspector starts each from
+.mcp.json over stdio, lists the tools, and calls them, plus calls that must be refused with a
+fixable message. The audio part casts, speaks, lip-syncs, composes and searches, then places the
+results in the shot through synfig_mcp and previews the mix (it runs Kokoro, Rhubarb, ACE-Step
+and CLAP). The art part (comfy_mcp) describes the art, chooses a design and renders both
+previews of a generated puppet (Kit, copied from films/step4-demo when it is there). Its GPU
+jobs (design_character, build_puppet, generate_background, choose_background,
+split_depth_layers) take minutes each, so here they only get requests they must refuse; task
+4.9's scripted client runs them for real. It works on a scratch copy, films/inspector-check/,
+made fresh on every run (films/ is git-ignored). Prints one line per call; exits 1 if any call
+didn't do what was expected. The Inspector is pinned (INSPECTOR) and fetched by npx on first
+use.
 """
 
 from __future__ import annotations
@@ -47,7 +52,7 @@ CALLS: list[tuple[str, dict[str, Any], bool]] = [
     # refusals the model must be able to act on
     ("apply_motion", {**PIP, "motion": "wavee", "start_s": 1}, True),
     ("pose_at", {**PIP, "time_s": 1, "bone_angles": {"tail": 5}}, True),
-    ("add_character", {**SHOT, "character_id": "kit", "position": [0.5, 0.9]}, True),
+    ("add_character", {**SHOT, "character_id": "fox", "position": [0.5, 0.9]}, True),
 ]
 
 
@@ -90,6 +95,13 @@ def summary(result: dict[str, Any]) -> str:
     if "audio_path" in data:
         made = f"{data['duration_s']} s, peak {data['peak_memory_gb']} GB"
         return f"{short(data['audio_path'])} ({made})"
+    if "styles" in data:  # describe_art
+        chars = {c["id"]: c["next_step"].split(":")[0] for c in data["characters"]}
+        places = [b["id"] for b in data["backgrounds"]]
+        return f"style {data['style']}, characters {chars}, places {places}"
+    if "frames_checked" in data:  # preview_background
+        verdict = "no holes" if data["ok"] else f"HOLES in {len(data['holes'])} frames"
+        return f"{verdict} ({data['frames_checked']} frames checked): {short(data['video_path'])}"
     for key in ("change", "video_path", "image_path", "rig_path", "voice_path"):
         if key in data:
             return short(data[key])
@@ -118,6 +130,9 @@ def main() -> int:
         sys.exit("films/step2-demo is missing: run scripts/make_demo_film.py first")
     shutil.rmtree(films / FILM, ignore_errors=True)
     shutil.copytree(films / "step2-demo", films / FILM, ignore=shutil.ignore_patterns("shots"))
+    kit = films / "step4-demo" / "characters" / "kit"
+    if kit.is_dir():  # a generated puppet, for the art previews
+        shutil.copytree(kit, films / FILM / "characters" / "kit")
 
     results = {"ok": 0, "bad": 0}
 
@@ -131,7 +146,7 @@ def main() -> int:
         print(f"{mark} {server[:6]} {tool:24} {kind:8} {summary(result)}")
         return result.get("structuredContent") or {}
 
-    for server, expected in (("synfig_mcp", 16), ("audio_mcp", 7)):
+    for server, expected in (("synfig_mcp", 16), ("audio_mcp", 7), ("comfy_mcp", 9)):
         tools = call(None, {}, server).get("tools", [])
         results["ok" if len(tools) == expected else "bad"] += 1
         print(f"tools/list {server}: {len(tools)} tools: {', '.join(t['name'] for t in tools)}")
@@ -159,6 +174,31 @@ def main() -> int:
     check(
         "compose", {"film": FILM, "cue_id": "m02", "mood": "spooky", "duration_s": 4}, True, audio
     )
+
+    # the art side (comfy_mcp): describe, choose and preview; the GPU jobs only refused
+    art = "comfy_mcp"
+    kit_args = {"film": FILM, "character_id": "kit"}
+    meadow = {"film": FILM, "background_id": "meadow"}
+    check("describe_art", {"film": FILM}, server=art)
+    if kit.is_dir():
+        chosen = json.loads((kit / "design" / "candidates.json").read_text()).get("chosen", "c1")
+        check("choose_design", {**kit_args, "candidate_id": chosen}, server=art)
+        check("preview_puppet", kit_args, server=art)
+        check("preview_background", {**meadow, "duration_s": 3, "character_id": "kit"}, server=art)
+    else:
+        print("note: films/step4-demo has no Kit; the puppet previews are skipped")
+        check("preview_background", {**meadow, "duration_s": 3}, server=art)
+    for tool, args in (
+        ("design_character", {**kit_args, "description": "a bloody fox"}),
+        ("design_character", {**PIP_FILM, "description": "a small owl"}),
+        ("choose_design", {**kit_args, "candidate_id": "c99"}),
+        ("build_puppet", {"film": FILM, "character_id": "fox"}),
+        ("preview_puppet", PIP_FILM),
+        ("generate_background", {**meadow, "description": "a dark wood", "n": 12}),
+        ("choose_background", {**meadow, "candidate_id": "c1"}),
+        ("split_depth_layers", meadow),
+    ):
+        check(tool, args, True, art)
 
     total = results["ok"] + results["bad"]
     print(f"\n{results['ok']}/{total} as expected")

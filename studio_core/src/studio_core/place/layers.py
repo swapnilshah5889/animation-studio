@@ -378,7 +378,9 @@ def split_depth_layers(
     folder = background_dir(film_root, background_id)
     plate_path = folder / "plate.png"
     if not plate_path.is_file():
-        raise PlaceError(f"{background_id!r} has no plate; choose a draft first")
+        raise PlaceError(
+            f"{background_id!r} has no plate; choose a draft first (choose_background)"
+        )
     data = load_plates(film_root, background_id) or {}
     style = data.get("style") or film_style(film_root, cfg)
     plate = np.asarray(Image.open(plate_path).convert("RGB"), dtype="float32")

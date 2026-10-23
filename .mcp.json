@@ -17,6 +17,15 @@
         "--quiet",
         "audio-mcp"
       ]
+    },
+    "comfy_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "comfy-mcp"
+      ]
     }
   }
 }
