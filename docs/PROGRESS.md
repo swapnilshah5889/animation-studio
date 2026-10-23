@@ -2,12 +2,61 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.6 done. **Owner review pending:** the
-background drafts and the finished plate
-(`films/step4-demo/backgrounds/meadow/design/review.html`). Next: 4.7 (`split_depth_layers`,
-owner checkpoint 4). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download
-(deferred), Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real
-voice (placeholder c13), and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.7 done. **Owner checkpoint 4 pending:**
+the meadow, split into layers, during a slow pan with Kit
+(`renders/background-preview/step4-demo-meadow/`). Next: 4.8 (the `comfy_mcp` server).
+Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred),
+Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice
+(placeholder c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-22/23: Step 4 task 4.7 done: the meadow in layers, panning with no holes
+
+The owner chose meadow c4. Built with three subagents in parallel, plus this session:
+- the depth graph and the one-time model comparison
+- the ProMax repaint fill graph
+- the pan test render with its hole check
+- this session: bands, parallax, layers and the orchestrator
+
+**Built**
+- `comfy_graphs.depth_map` (subagent): DA3 MONO-LARGE at 1512, chosen over DAv2-Small and
+  other resolutions (D-055).
+- `comfy_graphs.repaint_fill` (subagent): SDXL plus ProMax "repaint", with the masked pixels
+  black in the control image and grey in the latent, and a feathered composite.
+- `studio_core/place/layers.py`, `split_depth_layers`:
+  - sky, then far / middle / ground cut at histogram valleys, plus an optional foreground
+  - islands joined; ground kept connected to the bottom (no torn trees)
+  - parallax relative to the ground at the characters' feet, capped so no layer edge
+    enters the frame
+  - fills within pan reach (SDXL); the sky elsewhere a flat colour
+  - feathered compositing; `layers.json` validated; a flat (failed) depth map refused
+- `scripts/preview_background.py` (subagent): a pan with an optional character, rendered
+  over a magenta probe backdrop, with a hole count and a layer-edge check.
+
+**Verified**
+- Meadow split: sky 26%, far 27%, middle 18%, ground 30%; parallax 0.05 / 0.52 / 0.86 / 1.0.
+- Pan with Kit (`slow_pan_right`, 6 s, 1080p): no hole in 38 sampled frames, and no layer
+  edge entered the frame. Rendered in 77 s.
+- The pan reads as depth: the hills and tree line drift slower than the lawn, and the big
+  tree slides in whole.
+- 440 tests pass, model tests excluded (2 min 50 s). New tests: layers 7, depth 16 (plus 2
+  live), fill tests, preview 21.
+- Problems found in review and fixed:
+  - fill seams (now feathered)
+  - fill prompts redrawing near things (now per-layer prompts)
+  - SDXL inventing odd shapes in a full-frame sky fill (now limited to pan reach)
+  - a near tree's canopy in the ground layer (ground must reach the bottom)
+  - a foreground parallax that would show its edge (now capped)
+
+**Costs**
+- A split takes about 8–14 min, mostly three fills at about 2.7 min each plus memory
+  pressure. Depth takes 5 s.
+- A full-size fill isn't feasible on this Mac: over 30 min with swap full.
+
+**Open questions for the owner**
+1. Checkpoint 4: does the meadow feel deep enough during the pan? The parallax factors are
+   perceptual, and can be tuned.
 
 ---
 
@@ -356,8 +405,8 @@ The owner approved the Step 4 brief as written (D-047).
 | 4.3 `design_character` (owner checkpoint 2) | **Done; owner chose c3**: `studio_core/puppet/design.py` + `puppet/checks.py`, `schemas/design.schema.json`, `scripts/design_review.py`; 4 candidates for Kit the fox (D-049). |
 | 4.4 `build_puppet` (owner checkpoint 3) | **Done; approved by the owner**: `puppet/build.py` (cut, face, caps, hanging arms, rig) + `puppet/segment.py` (SAM 2.1) + `scripts/preview_puppet.py` (test render next to Pip) (D-050). |
 | 4.5 Three-quarter view | **Done; FLUX.2 klein wired in (D-052, D-053)**: both views cut into one rig, `puppet/consistency.py` compares them, `preview_puppet.py --view three_quarter`. Kit's 3/4 fails the check (hat, barely turned) (D-051). |
-| 4.6 `generate_background` | **Done; waiting for the owner's review**: `place/design.py` (drafts at 1536×576, choose and finish into the 2880×1080 plate), `place/checks.py` (ground band), `comfy_graphs.finish_plate`, `scripts/background_review.py` (D-054). |
-| 4.7 `split_depth_layers` (owner checkpoint 4) | To do |
+| 4.6 `generate_background` | **Done; owner chose c4**: `place/design.py` (drafts at 1536×576, choose and finish into the 2880×1080 plate), `place/checks.py` (ground band), `comfy_graphs.finish_plate`, `scripts/background_review.py` (D-054). |
+| 4.7 `split_depth_layers` (owner checkpoint 4) | **Done; waiting for the owner's review**: `place/layers.py` (DA3 depth, bands, parallax, fills), `comfy_graphs.depth_map` + `repaint_fill`, `scripts/preview_background.py` (pan test with a hole check) (D-055). |
 | 4.8 `comfy_mcp` server | To do |
 | 4.9 Prove it | To do |
 | 4.10 Docs, Step 5 brief | To do |

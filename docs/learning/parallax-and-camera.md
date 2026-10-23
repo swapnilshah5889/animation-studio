@@ -82,3 +82,25 @@ Every arrow is deterministic, tested code. The director only writes `shot.json`.
   `normalize=0`. Dialogue lines rarely overlap, so we mix without normalizing.
 - **A left-facing character is mirrored**, so a `point` target is mirrored about the character too
   before the arm angle is computed.
+
+## Layers from a generated picture (task 4.7, D-055)
+A generated plate is one flat picture. `place/layers.py` turns it into the layers above:
+- **Depth model:** DA3 MONO-LARGE estimates how far every pixel is. It is a *monocular*
+  model: one image in, relative depth out, no camera needed. Its picture is bright = near,
+  and the sky is exactly 0 (DA3 has a sky head).
+  - Its values are linear in depth, *not* disparity (1/distance), and normalized. So
+    "twice as bright" doesn't mean "moves twice as fast".
+  - Our parallax factors are therefore a perceptual multiplane spread (a band's median
+    brightness over the ground's at the characters' feet), not physics.
+- **Cuts in the valleys:** the cuts between far, middle and ground start at depth quantiles,
+  then move to the nearest valley of the depth histogram. A cut through a busy depth level
+  slices objects in half; a cut in a valley falls between them.
+- **Fill behind:** a nearer layer sliding during a pan uncovers what was behind it, which the
+  plate never had. Each farther layer is repainted there by SDXL with the ProMax ControlNet
+  in "repaint" mode: the hole is blacked out in the control image and greyed out in the
+  latent, so the removed object doesn't creep back. This is done only within the distance a
+  pan can uncover (PAN_PX plus a margin), and everywhere for the sky.
+- **Prove it:** render the pan over a magenta backdrop (`scripts/preview_background.py`). Any
+  magenta pixel in any frame is a hole.
+- **Gotcha:** depth models fail quietly. Out of memory, DA3 returned an all-black map without
+  an error, so a flat depth map is refused.

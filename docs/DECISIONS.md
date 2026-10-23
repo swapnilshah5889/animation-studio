@@ -981,3 +981,41 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     could catch it later (D-018).
 - **Review:** `scripts/background_review.py` makes drafts (safe to re-run), writes a
   self-contained page, and `--choose cN` finishes one.
+
+### D-055: Splitting a plate into parallax layers (task 4.7)
+- **`split_depth_layers`** (`studio_core/place/layers.py`): plate → depth → bands → fills →
+  `layers/*.png` + `layers.json`, validated by the background schema. Steps:
+  - **Depth:** DA3 MONO-LARGE at resolution 1512 (`comfy_graphs.depth_map`, written by a
+    subagent), from the brief's one-time comparison on the meadow:
+    - 1512 separates branches in about 5 s; 1008 merges them; 2016 adds sky specks and is
+      3× slower
+    - 2520 ran out of Metal memory and returned an all-black map with no error, so flat
+      maps are refused
+    - DAv2-Small gave soft halos and put the distant tree line as far as the sky
+    - The map is bright = near with the sky exactly 0, linear in depth (not disparity).
+  - **Bands:**
+    - sky: the farthest region touching the top
+    - far / middle / ground: cuts at the 35% and 70% depth quantiles, each moved to a valley
+      of the depth histogram
+    - tiny bands merged; islands joined to the band around them
+    - foreground: only for things clearly nearer than the ground at their own row, low in the
+      picture
+  - **Parallax:**
+    - ground = 1.0, measured at the characters' feet row
+    - other bands: their nearness over the ground's (a perceptual multiplane spread)
+    - sky 0.05
+    - capped at 0.9 × (width/2 − 960) / PAN_PX, which is 1.8 at 2880 wide, so no layer edge
+      enters the frame during a pan (found by the pan-render subagent)
+  - **Fill behind:** each farther layer is repainted by SDXL plus ProMax "repaint"
+    (`comfy_graphs.repaint_fill`, written by a subagent).
+    - Masked pixels are black in the control image and grey in the latent
+      (VAEEncodeForInpaint), with a feathered composite. Fills run at 1536×576 and are
+      scaled back to the plate.
+    - The fill covers what nearer layers hide within PAN_PX + 32 px of the band; the sky
+      layer is filled everywhere.
+    - Prompts per layer: sky, the far distance, the middle distance, ground.
+- **Test render:** `scripts/preview_background.py` (written by a subagent) pans over the
+  layers with an optional character. It checks for holes by rendering over a magenta probe
+  backdrop and counting magenta pixels, plus a geometric check of layer edges; it exits
+  non-zero on a hole. In development it caught unfilled cut-outs, narrow layers, over-fast
+  foregrounds and zoom-outs.
