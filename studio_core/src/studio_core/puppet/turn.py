@@ -56,11 +56,14 @@ from studio_core.puppet.skeleton import Skeleton, turnaround
 
 SEEDS = (1, 2, 3)
 SIZE = (896, 1024)  # the front half's aspect (672x768) at ~0.9 MP, multiples of 16
+# The character's own description goes in, so the edit keeps what it wears and adds nothing.
+# (The first version named a scarf, Kit's, and gave Bo, a bear cub, a scarf too.)
 PROMPT = (
-    "Turn this cartoon character to a three-quarter view facing to the right. The same "
-    "character with the same face, ears, clothes, scarf, colours and flat storybook art "
-    "style. Full body, standing upright with the legs slightly apart and both arms held "
-    "out from the body at about 25 degrees, the hands well away from the hips, so there "
+    "Turn this cartoon character, {description}, to a three-quarter view facing to the right. "
+    "The same character with the same face, ears, clothes, colours and flat storybook art "
+    "style, wearing only what it wears in the picture. Full body, standing upright with the "
+    "legs slightly apart and both arms held out from the body at about 25 degrees, the hands "
+    "well away from the hips, so there "
     "is a gap of background between each arm and the body. Plain light background, no "
     "shadow on the ground, nothing else in the picture."
 )
@@ -84,7 +87,7 @@ def figure_mask(img: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     background, and without it the eyes and mouth inside it would be loose islands."""
     bg, _ = background(img)
     mask = silhouette(img, bg)
-    blobs = components(fill_holes(mask[::4, ::4]))
+    blobs = components(fill_holes(mask[::4, ::4], img[::4, ::4], bg))
     if not blobs:
         raise build.BuildError("the redrawn picture has no figure on its background")
     keep = np.repeat(np.repeat(blobs[0], 4, axis=0), 4, axis=1)[: mask.shape[0], : mask.shape[1]]
@@ -201,6 +204,8 @@ def turn_design(
     half = CANVAS[0] // 2
     reference = folder / "front.png"
     Image.fromarray(sheet[:, :half].astype("uint8")).save(reference)
+    by_id = {c["id"]: c for c in data["candidates"]}
+    prompt = PROMPT.format(description=by_id[candidate]["description"])
     front_figure, _ = build.figure_mask(sheet, front)
     ys = np.nonzero(front_figure.any(axis=1))[0]
     height = float(ys.max() - ys.min())
@@ -208,7 +213,7 @@ def turn_design(
     results: dict[str, dict[str, Any]] = {}
     for seed in seeds:
         graph = flux2_edit(
-            manifest, PROMPT, references=["@front"], width=SIZE[0], height=SIZE[1], seed=seed
+            manifest, prompt, references=["@front"], width=SIZE[0], height=SIZE[1], seed=seed
         )
         out = folder / f"s{seed}"
         if (out / "edit.png").is_file() and not regenerate:
@@ -220,7 +225,7 @@ def turn_design(
                 "turn",
                 graph,
                 out_dir=out,
-                params={"prompt": PROMPT, "size": SIZE, "candidate": candidate},
+                params={"prompt": prompt, "size": SIZE, "candidate": candidate},
                 seed=seed,
                 names=["edit.png"],
                 uploads={"@front": reference},
@@ -235,7 +240,7 @@ def turn_design(
     choice = {
         "candidate": candidate,
         "model": "flux2-klein-4b",
-        "prompt": PROMPT,
+        "prompt": prompt,
         "chosen_seed": int(chosen[1:]),
         "seeds": results,
     }
