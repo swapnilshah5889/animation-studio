@@ -410,6 +410,14 @@ def view_built(film_root: Path, cid: str, view: str, rig_view: dict, report: dic
     )
 
 
+def progress_news(made: Any, done: str, doing: str, k: int, n: int) -> str:
+    """'c4 drawn (1/3): ok; drawing sheet 2 of 3'. Between candidates the heartbeat repeats the
+    latest news, so it says what is being made now, not only what was made last."""
+    state = "ok" if made.ok else "; ".join(made.problems)
+    after = f"; {doing} {k + 1} of {n}" if k < n else ""
+    return f"{made.id} {done} ({k}/{n}): {state}{after}"
+
+
 # --------------------------------------------------------------------------- the server
 
 
@@ -546,8 +554,11 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 raise ToolError(f"{character_id!r} is a hand-made puppet; design under a new id")
 
             def work(say: Callable[[str], None]) -> list:
+                finished: list[Any] = []
+
                 def done(c: Any) -> None:
-                    say(f"{c.id} drawn: " + ("ok" if c.ok else "; ".join(c.problems)))
+                    finished.append(c)
+                    say(progress_news(c, "drawn", "drawing sheet", len(finished), n))
 
                 return run_design(
                     f.root, character_id, description, n=n, seed=seed, on_candidate=done
@@ -713,8 +724,11 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 raise ToolError("; ".join(problems))
 
             def work(say: Callable[[str], None]) -> list:
+                finished: list[Any] = []
+
                 def done(d: Any) -> None:
-                    say(f"{d.id} painted: " + ("ok" if d.ok else "; ".join(d.problems)))
+                    finished.append(d)
+                    say(progress_news(d, "painted", "painting draft", len(finished), n))
 
                 return run_generate(
                     f.root, background_id, description, n=n, seed=seed, on_draft=done

@@ -141,7 +141,8 @@ def test_design_round_choose_and_next_steps(tmp_path: Path, fake_comfy: list[str
     assert [c["candidate_id"] for c in made["candidates"]] == ["c1", "c2"]
     assert all(Path(c["image_path"]).is_file() for c in made["candidates"])
     assert made["all_candidates"] == ["c1", "c2"] and made["style"] == "storybook"
-    assert any(m.startswith("c1 drawn") for m in news) and any("c2 drawn" in m for m in news)
+    assert any(m.startswith("c1 drawn (1/2): ok; drawing sheet 2 of 2") for m in news)
+    assert any(m.startswith("c2 drawn (2/2): ok (") for m in news)
     kit = next(c for c in describe(root)["characters"] if c["id"] == "kit")
     assert kit["next_step"] == "look at the sheets, then choose_design" and kit["rig_path"] is None
 
