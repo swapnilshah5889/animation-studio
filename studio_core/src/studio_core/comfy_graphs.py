@@ -13,6 +13,9 @@ Real-ESRGAN and refines it with the style at low denoise (task 4.6).
 
 `flux2_edit` is the other builder: FLUX.2 [klein] 4B redrawing reference images from a prompt
 (front → three-quarter view trials, task 4.5, D-052). It doesn't use the style presets.
+
+`depth_map` needs no style either: a plate's depth (Depth Anything 3) for its parallax bands
+(task 4.7).
 """
 
 from __future__ import annotations
@@ -287,6 +290,184 @@ def finish_plate(
     return g.nodes
 
 
+# The xinsir union ControlNet (ProMax) whose "repaint" mode fills behind layers (D-047).
+REPAINT_CONTROLNET = "controlnet-union-sdxl-promax"
+# Seam handling for fills, in working-size pixels: the sampler redraws a ring this wide around
+# the mask (2 latent cells), and the result fades into the original over the ring.
+FILL_REDRAW_PX = 16
+FILL_FEATHER_PX = FILL_REDRAW_PX // 2
+
+
+def repaint_fill(
+    manifest: Manifest,
+    style_id: str,
+    prompt: str,
+    *,
+    image: str,
+    mask: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int = 20,
+    negative: str = "",
+    filename_prefix: str = "fill",
+) -> dict[str, dict[str, Any]]:
+    """Repaint the masked region of a picture in the film's style, matched to its surroundings:
+    the content *behind* a nearer depth layer (task 4.7), e.g. sky and hills where trees were.
+
+    `image` and `mask` are LoadImage input values (uploaded names, or placeholders such as
+    "@image" and "@mask" that run_graph substitutes). The mask is a plain greyscale picture,
+    white = repaint, any size. Both are scaled to `width` x `height` (stretched, not cropped)
+    and the result is that size: new pixels over the mask, fading into the input's own over
+    the 2 * FILL_FEATHER_PX px around it, and the input's own everywhere else. Dilate the mask
+    a few pixels past a layer's soft edge before calling, or the old edge colours stay behind
+    as a halo.
+
+    How ProMax is fed (checked against ComfyUI v0.42.1 and comfyui_controlnet_aux):
+    - **Control image:** the picture with the masked pixels set to *black*. That is what xinsir
+      feeds the repaint mode (ControlNetPlus/promax/controlnet_union_test_inpainting.py zeroes
+      the masked pixels and runs an SDXL *inpaint* pipeline, i.e. a masked latent as below),
+      and ComfyUI hands an SDXL ControlNet the 0..1 image as it is. InpaintPreprocessor's
+      default (-1 in the hole) is the old SD1.5 inpaint ControlNet's convention, so
+      `black_pixel_for_xinsir_cn` is on. SetUnionControlNetType picks "repaint" (control type 7)
+      so the union model doesn't have to guess the task from the image.
+    - **Latent: VAEEncodeForInpaint.** It paints the masked pixels mid-grey before encoding
+      and attaches a noise mask grown by FILL_REDRAW_PX, so a ring around the region is
+      redrawn too (see the composite). The grey matters even at denoise 1.0: ComfyUI starts
+      SDXL's sampling from latent + sigma * noise, so what was under the mask still leaks in
+      faintly, and a dark tree-shaped blob invites a tree back. InpaintModelConditioning would
+      encode the *original* pixels into the latent for a normal checkpoint (its grey copy goes
+      into concat conditioning, which only inpainting checkpoints read), and
+      SetLatentNoiseMask likewise; both keep the thing being removed.
+    - **Mask: the picture's red channel** (LoadImage, scaled to the working size, ImageToMask),
+      so a black-and-white PNG from numpy reads directly, white = 1, and the seam widths below
+      are in working-size pixels whatever size the mask was saved at. LoadImage's own MASK
+      output is the alpha channel inverted (meant for holes painted in ComfyUI's mask editor)
+      and is empty for a picture without alpha.
+    - **Sampling:** the style's checkpoint, LoRAs and prompts at its normal cfg, sampler and
+      scheduler; denoise 1.0 (the region gets new content); the ControlNet at strength 1.0 for
+      every step, since the repaint mode is what ties the fill to the surroundings. The noise
+      mask makes the sampler hold everything outside the region to the original (re-noised to
+      each step's level), so the fill is painted in context.
+    - **Composite:** decoding changes every pixel a little (the VAE round trip), and the noise
+      mask works on 8 px latent cells, so ImageCompositeMasked puts the scaled input back
+      outside the fill. A hard cut at the mask edge showed as a line wherever the new tones
+      differ slightly from the old (a 1536x576 trial on the meadow plate), so the composite
+      mask is the region grown by FILL_FEATHER_PX and blurred by as much: the fill fades out
+      across the redrawn ring, never over pixels the sampler didn't redraw.
+
+    `width` and `height` must be multiples of 8 (the latent is 1/8 of the image; VAE encoding
+    would crop the rest). SDXL works best near 1 MP, e.g. 1536x576 for a 2880x1080 plate."""
+    for name, size in (("width", width), ("height", height)):
+        if size < 8 or size % 8:
+            raise ValueError(f"{name} must be a positive multiple of 8, got {size}")
+    if steps < 1:
+        raise ValueError(f"steps must be at least 1, got {steps}")
+    files = manifest.files
+    settings = manifest.styles[style_id].settings(fast=False)
+    g = Graph()
+    style = _add_style(g, manifest, style_id, prompt, fast=False, negative=negative)
+
+    loaded = g.add("LoadImage", "picture", image=image)
+    picture = g.add(
+        "ImageScale",
+        "working size",
+        image=[loaded, 0],
+        upscale_method="lanczos",
+        width=width,
+        height=height,
+        crop="disabled",
+    )
+    mask_picture = g.add("LoadImage", "mask (white = repaint)", image=mask)
+    mask_sized = g.add(
+        "ImageScale",
+        "mask at working size",
+        image=[mask_picture, 0],
+        upscale_method="bilinear",
+        width=width,
+        height=height,
+        crop="disabled",
+    )
+    region = g.add("ImageToMask", "region", image=[mask_sized, 0], channel="red")
+    hint = g.add(
+        "InpaintPreprocessor",
+        "control image (masked pixels black)",
+        image=[picture, 0],
+        mask=[region, 0],
+        black_pixel_for_xinsir_cn=True,
+    )
+    net = g.add(
+        "ControlNetLoader", "ControlNet", control_net_name=files[REPAINT_CONTROLNET].comfy_name
+    )
+    net = g.add("SetUnionControlNetType", control_net=[net, 0], type="repaint")
+    applied = g.add(
+        "ControlNetApplyAdvanced",
+        "apply ControlNet (repaint)",
+        positive=style.positive,
+        negative=style.negative,
+        control_net=[net, 0],
+        image=[hint, 0],
+        strength=1.0,
+        start_percent=0.0,
+        end_percent=1.0,
+        vae=style.vae,
+    )
+    latent = g.add(
+        "VAEEncodeForInpaint",
+        "grey out the region",
+        pixels=[picture, 0],
+        vae=style.vae,
+        mask=[region, 0],
+        grow_mask_by=FILL_REDRAW_PX,
+    )
+    sampled = g.add(
+        "KSampler",
+        "repaint",
+        model=style.model,
+        positive=[applied, 0],
+        negative=[applied, 1],
+        latent_image=[latent, 0],
+        seed=seed,
+        steps=steps,
+        cfg=settings["cfg"],
+        sampler_name=settings["sampler"],
+        scheduler=settings["scheduler"],
+        denoise=1.0,
+    )
+    decoded = g.add("VAEDecode", samples=[sampled, 0], vae=style.vae)
+    # The seam: the region grown by FILL_FEATHER_PX, then blurred by as much, is 1 over the
+    # whole region and fades to 0 within 2 * FILL_FEATHER_PX outside it (all inside the
+    # redrawn ring), so the new pixels blend into the old ones instead of meeting at a line.
+    grown = g.add(
+        "GrowMask",
+        "seam: grow",
+        mask=[region, 0],
+        expand=FILL_FEATHER_PX,
+        tapered_corners=True,
+    )
+    grown_picture = g.add("MaskToImage", mask=[grown, 0])
+    blurred = g.add(
+        "ImageBlur",
+        "seam: feather",
+        image=[grown_picture, 0],
+        blur_radius=FILL_FEATHER_PX,
+        sigma=FILL_FEATHER_PX / 2,
+    )
+    seam = g.add("ImageToMask", "seam", image=[blurred, 0], channel="red")
+    merged = g.add(
+        "ImageCompositeMasked",
+        "keep the pixels outside the mask",
+        destination=[picture, 0],
+        source=[decoded, 0],
+        x=0,
+        y=0,
+        resize_source=False,
+        mask=[seam, 0],
+    )
+    g.add("SaveImage", images=[merged, 0], filename_prefix=filename_prefix)
+    return g.nodes
+
+
 # FLUX.2 [klein] 4B, distilled (task 4.5 trial, D-052): file ids in config/models.toml.
 FLUX2_KLEIN_MODEL = "flux2-klein-4b"
 FLUX2_TEXT_ENCODER = "qwen3-4b-text-encoder"
@@ -381,4 +562,115 @@ def flux2_edit(
     )
     decoded = g.add("VAEDecode", samples=[sampled, 0], vae=[vae, 0])
     g.add("SaveImage", images=[decoded, 0], filename_prefix=filename_prefix)
+    return g.nodes
+
+
+# Depth for parallax layers (task 4.7, D-047): file ids in config/models.toml.
+DA3_MONO_LARGE = "depth-anything-3-mono-large"
+DAV2_SMALL = "depth-anything-v2-small"
+DEPTH_MODELS = ("da3", "dav2")
+# DA3's working size: the longest side in px, a multiple of 14 (its ViT patch). Measured on the
+# 2880x1080 meadow plate (model already loaded, M4; loading adds ~1 s): 504 → blocky tree
+# edges; 1008 → 1.5 s, thin branches merged; 1512 → 4.8 s, branches separate and edges
+# smooth; 2016 → 13 s, no better, with specks of "sky" inside trees; 2520 ran out of GPU
+# memory, and ComfyUI saved an all-black map without raising an error. Hence 1512, and a cap
+# at 2016.
+DA3_RESOLUTION = 1512
+DA3_MAX_RESOLUTION = 2016
+
+
+def depth_map(
+    manifest: Manifest,
+    *,
+    image: str,
+    model: str = "da3",
+    resolution: int | None = None,
+    filename_prefix: str = "depth",
+) -> dict[str, dict[str, Any]]:
+    """A depth map of a background plate, for cutting it into parallax bands (task 4.7).
+
+    `image` is a LoadImage input value (an uploaded name, or a placeholder such as "@plate"
+    that run_graph substitutes). The output is one greyscale PNG (three equal channels) the
+    size of the plate: **bright = near, dark = far**, 0..255 (0..1 as a ComfyUI image).
+
+    `model` "da3" (the default, D-047): Depth Anything 3 MONO-LARGE through ComfyUI's core
+    nodes, LoadDA3Model → DA3Inference (mono) → DA3Render (depth, "v2_style"). `resolution` is
+    the size DA3 works at (longest side, a multiple of 14, up to DA3_MAX_RESOLUTION; None =
+    DA3_RESOLUTION); the map is scaled back up to the plate's size. What the values mean:
+    - **Sky is exactly 0.** DA3 has a sky head, and v2_style paints every pixel it calls sky
+      (probability >= 0.3) black, so the sky is uniformly the farthest thing. Why not
+      "min_max": DA3's raw depth in the sky is meaningless (on the meadow it came out *nearer*
+      than the trees), so a plain min-max stretch makes the sky bright.
+    - **The land is linear in depth**: 1 - (depth - lo) / (hi - lo), with lo and hi the 1st and
+      99th percentiles of the non-sky depth, clamped. So the farthest 1% of the land is also 0
+      (on the meadow: the distant hills, which then go with the sky) and the nearest 1% is 1.
+      Linear in depth, not in 1/depth: cuts at quantiles don't care (any monotonic scale gives
+      the same cut), but ratios of these values are not parallax ratios.
+    - Not byte-for-byte repeatable: v2_style picks lo and hi from a random sample of 100k
+      pixels, so two runs differ by up to 2 levels (measured: mean 0.3 level).
+
+    `model` "dav2" is the comparison the brief asked for (D-047), kept for re-measuring: Depth
+    Anything V2 Small through comfyui_controlnet_aux (its node always works at 518 px on the
+    short side, so `resolution` must be None). Its values are min-max-stretched relative
+    *inverse* depth (disparity), so far things crowd near 0: on the meadow the whole distant
+    tree line sat below 0.12 with the sky, and tree edges against the sky were soft (a 2-3 px
+    halo). The node returns its own size (short side = 1024 here); a final ImageScale brings
+    it back to the plate's size."""
+    files = manifest.files
+    g = Graph()
+    loaded = g.add("LoadImage", "plate", image=image)
+    if model == "da3":
+        size = DA3_RESOLUTION if resolution is None else resolution
+        if not 140 <= size <= DA3_MAX_RESOLUTION or size % 14:
+            raise ValueError(
+                f"DA3's resolution must be a multiple of 14 in 140..{DA3_MAX_RESOLUTION}, "
+                f"got {size}"
+            )
+        net = g.add(
+            "LoadDA3Model",
+            "Depth Anything 3 MONO-LARGE",
+            model_name=files[DA3_MONO_LARGE].comfy_name,
+            weight_dtype="default",  # the file's fp16 on MPS
+        )
+        geometry = g.add(
+            "DA3Inference",
+            da3_model=[net, 0],
+            image=[loaded, 0],
+            resolution=size,
+            resize_method="upper_bound_resize",
+            mode="mono",
+        )
+        # DA3Render's `output` is a dynamic combo: the chosen option's own inputs follow as
+        # "output.<name>" keys. apply_sky_clip only changes sky depth that v2_style blackens.
+        depth = g.add(
+            "DA3Render",
+            "depth",
+            da3_geometry=[geometry, 0],
+            output="depth",
+            **{"output.normalization": "v2_style", "output.apply_sky_clip": False},
+        )
+    elif model == "dav2":
+        if resolution is not None:
+            raise ValueError("DAv2's node always works at 518 px on the short side")
+        raw = g.add(
+            "DepthAnythingV2Preprocessor",
+            "Depth Anything V2 Small",
+            image=[loaded, 0],
+            # The node takes a bare file name (it finds it under its annotators folder).
+            ckpt_name=files[DAV2_SMALL].dest.rsplit("/", 1)[-1],
+            resolution=1024,  # its output's short side, not the size the model works at
+        )
+        plate_size = g.add("GetImageSize", image=[loaded, 0])
+        depth = g.add(
+            "ImageScale",
+            "plate size",
+            image=[raw, 0],
+            upscale_method="bilinear",
+            width=[plate_size, 0],
+            height=[plate_size, 1],
+            crop="disabled",
+        )
+    else:
+        raise ValueError(f"unknown depth model {model!r}; use one of {DEPTH_MODELS}")
+    g.add("SaveImage", images=[depth, 0], filename_prefix=filename_prefix)
     return g.nodes
