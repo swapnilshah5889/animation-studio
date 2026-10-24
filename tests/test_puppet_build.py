@@ -209,6 +209,34 @@ def test_a_nose_on_the_outline_is_still_the_nose() -> None:
         assert luma[int(f[eye][1]), int(f[eye][0])] > 120, eye  # painted out
 
 
+def test_a_mouth_by_the_snout_is_painted_out() -> None:
+    """A turned head (Bo's three-quarter view, task 4.9): the nose and a drawn mouth sit by
+    the head's edge, beyond the face zone (centred on the head, a share of its width either
+    side). The mouth must be painted out all the same, and the nose kept."""
+    base = np.asarray(sheet()).astype("float32")
+    head = head_mask(base, figure_mask(base, FRONT)[0], FRONT)
+    nose_y = int(FRONT.joints["nose"][1])
+    xs = np.nonzero(head[nose_y])[0]
+    zone_right = (xs.min() + xs.max()) / 2 + 0.42 * (xs.max() - xs.min() + 1)  # clean_face's
+    my = nose_y + 20
+    inside = int(np.nonzero(build._shrink(head, 6)[my])[0].max())  # 6 px in from the outline
+    x0, x1 = int(zone_right) + 1, inside - 1
+    assert x1 - x0 >= 2  # room for a mouth stroke the plain zone can't see
+
+    img = sheet()
+    draw = ImageDraw.Draw(img)
+    nx = int(xs.max()) - 14
+    draw.ellipse([nx - 10, nose_y - 8, nx + 10, nose_y + 8], fill=DARK)  # the nose
+    draw.rectangle([x0, my - 1, x1, my + 1], fill=DARK)  # a mouth stroke by the snout
+    img = np.asarray(img).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    cleaned, _, notes = clean_face(img, head_mask(img, figure, FRONT), FRONT)
+    luma = cleaned @ np.array([0.299, 0.587, 0.114])
+    assert notes["nose_found"] and abs(notes["nose_px"][0] - nx) < 4
+    assert luma[nose_y, nx] < 60  # the nose stays
+    assert luma[my, (x0 + x1) // 2] > 120  # the mouth is painted out
+
+
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
     built = build_puppet(film, "kit", name="Kit", sam=False, three_quarter="sheet")
     folder = film / "characters" / "kit"

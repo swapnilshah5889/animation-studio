@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 from studio_core.puppet.checks import (
     FG_THRESHOLD,
@@ -228,13 +228,14 @@ def head_mask(img: np.ndarray, mask: np.ndarray, sk: Skeleton) -> np.ndarray:
 
 def _between_the_cheeks(head: np.ndarray, mask: np.ndarray, top: int, bottom: int) -> np.ndarray:
     """The rest of the face below the nose line, which the colour rule misses when it has its
-    own colour (Bo's cream muzzle, task 4.9): figure pieces in the band from the nose line to
-    the neck that lie between head pixels, along their row (a muzzle between the cheeks) or
-    their column (a chin in a notch at the profile's edge, with head above and below), and
-    form a real region (1% of the head or more). A scarf below the chin has neither cheeks
-    beside it nor head below it. Without this, the muzzle was cut onto the torso and stayed
-    behind when the head turned. Kit's head is unchanged: his pale face reaches above the nose
-    line."""
+    own colour (Bo's cream muzzle, task 4.9). Figure pieces in the band from the nose line to
+    the neck join the head when they form a real region (1% of the head or more) and lie
+    - between head pixels along their row: a muzzle between the cheeks
+    - between head pixels along their column: a chin in a notch, with head above and below
+    - inside the head's convex hull: the snout tip under a profile's nose, open on one side
+    A scarf below the chin is none of these. Without this, the muzzle was cut onto the torso,
+    stayed behind when the head turned, and kept its drawn mouth (only the head is cleaned).
+    Kit's head is unchanged: his pale face reaches above the nose line."""
     top, bottom = max(0, top), min(bottom, mask.shape[0])
     between = np.zeros_like(mask)
     for y in range(top, bottom):
@@ -245,11 +246,35 @@ def _between_the_cheeks(head: np.ndarray, mask: np.ndarray, top: int, bottom: in
         ys = np.nonzero(head[top:bottom, x])[0]
         if len(ys) >= 2:
             between[top + ys.min() : top + ys.max() + 1, x] = True
+    between[top:bottom] |= _convex_hull(head)[top:bottom]
     out = head.copy()
     for blob in components(between & mask & ~head):
         if blob.sum() >= 0.01 * head.sum():
             out |= blob
     return out
+
+
+def _convex_hull(mask: np.ndarray) -> np.ndarray:
+    """The mask's convex hull, filled (Andrew's monotone chain over its pixels)."""
+    ys, xs = np.nonzero(mask)
+    if len(xs) < 3:
+        return mask.copy()
+    pts = sorted(set(zip(xs.tolist(), ys.tolist(), strict=True)))
+
+    def turn(o: tuple[int, int], a: tuple[int, int], b: tuple[int, int]) -> int:
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    chain: list[tuple[int, int]] = []
+    for seq in (pts, pts[::-1]):  # the lower half, then the upper half
+        half: list[tuple[int, int]] = []
+        for p in seq:
+            while len(half) >= 2 and turn(half[-2], half[-1], p) <= 0:
+                half.pop()
+            half.append(p)
+        chain += half[:-1]
+    canvas = Image.new("L", (mask.shape[1], mask.shape[0]), 0)
+    ImageDraw.Draw(canvas).polygon([(float(x), float(y)) for x, y in chain], fill=255, outline=255)
+    return np.asarray(canvas) > 127
 
 
 # ---------------------------------------------------------------------------------- limbs
@@ -418,22 +443,7 @@ def clean_face(
     xs = np.nonzero(head[nose_row])[0]
     row_w = float(xs.max() - xs.min() + 1) if len(xs) else float(hx1 - hx0)
     cx = float(xs.min() + xs.max()) / 2 if len(xs) else (hx0 + hx1) / 2
-    zone = _shrink(head, max(3, int(row_w * 0.05)))
-    zone[: int(hy0 + 0.35 * (hy1 - hy0))] = False
-    zone[:, : int(cx - 0.42 * row_w)] = False
-    zone[:, int(cx + 0.42 * row_w) :] = False
     luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
-    # A mark is clearly darker than its surroundings (a light brow stroke on a cream muzzle
-    # counts; the shading of orange fur doesn't).
-    around = Image.fromarray(np.clip(luma, 0, 255).astype("uint8")).filter(
-        ImageFilter.BoxBlur(max(4, int(row_w * 0.04)))
-    )
-    dark = zone & (luma < np.asarray(around, dtype="float32") - MARK_CONTRAST)
-    x0, y0, x1, y1 = _bbox(zone)
-    found = _blobs(dark[y0:y1, x0:x1])
-    for b in found:
-        b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
-        b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
     # The nose: the biggest solid, near-black mark around the nose line, looked for anywhere in
     # the head, because a turned head's nose sits on its outline, outside the face zone. Eyes
     # are smaller, outlines are thin, mouths are rarely black and never compact. (It was the
@@ -475,6 +485,33 @@ def clean_face(
     nose_px = np.zeros_like(head)  # the nose's own pixels, on the canvas
     if nose is not None:
         nose_px[by0:by1, bx0:bx1] = nose["mask"]
+    zone = _shrink(head, max(3, int(row_w * 0.05)))
+    zone[: int(hy0 + 0.35 * (hy1 - hy0))] = False
+    zone[:, : int(cx - 0.42 * row_w)] = False
+    zone[:, int(cx + 0.42 * row_w) :] = False
+    if nose is not None:
+        # A turned head's mouth sits by its snout, beside the nose and below it, outside the
+        # zone (Bo's three-quarter view, task 4.9: his open mouth and smile stayed drawn).
+        # The zone also takes in a box around and below the nose, a few pixels inside the
+        # outline, never the nose itself.
+        n_ys, n_xs = np.nonzero(nose_px)
+        snout = np.zeros_like(head)
+        snout[
+            n_ys.min() : int(n_ys.max() + 0.3 * row_w),
+            max(0, int(n_xs.min() - 0.15 * row_w)) : n_xs.max() + 1,
+        ] = True
+        zone |= snout & _shrink(head, 6) & ~_grow(nose_px, 3)
+    # A mark is clearly darker than its surroundings (a light brow stroke on a cream muzzle
+    # counts; the shading of orange fur doesn't).
+    around = Image.fromarray(np.clip(luma, 0, 255).astype("uint8")).filter(
+        ImageFilter.BoxBlur(max(4, int(row_w * 0.04)))
+    )
+    dark = zone & (luma < np.asarray(around, dtype="float32") - MARK_CONTRAST)
+    x0, y0, x1, y1 = _bbox(zone)
+    found = _blobs(dark[y0:y1, x0:x1])
+    for b in found:
+        b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
+        b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
     solid = [b for b in found if b["solid"]]
     if nose is None:
         # No black nose. Open eyes are a pair of solid marks at one height and the nose is the
@@ -502,17 +539,29 @@ def clean_face(
             nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
 
     def on_nose(b: dict[str, Any]) -> bool:
-        """The nose's mark: at the nose, or sharing pixels with it (a nose joined to the
-        outline is one mark here, its centre off the nose)."""
-        if nose is None:
-            return False
-        if abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2 and (
-            abs(b["cy"] - nose["cy"]) <= nose["h"] / 2 + 2
-        ):
-            return True
-        return bool((b["mask"] & nose_px[y0:y1, x0:x1]).any())
+        return nose is not None and (
+            abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2
+            and abs(b["cy"] - nose["cy"]) <= nose["h"] / 2 + 2
+        )
 
-    marks = [b for b in found if b is not nose and not on_nose(b)]
+    # A mark joined to the nose (Bo's three-quarter view: the nose on the outline, an open
+    # mouth drawn under it) is painted out except for the nose and a rim around it.
+    keep = _grow(nose_px, 3)[y0:y1, x0:x1]
+    marks = []
+    for b in found:
+        if b is nose or on_nose(b):
+            continue
+        if not (b["mask"] & keep).any():
+            marks.append(b)
+            continue
+        for rest in _blobs(b["mask"] & ~keep):
+            rest["cx"], rest["cy"], rest["bottom"] = (
+                rest["cx"] + x0,
+                rest["cy"] + y0,
+                rest["bottom"] + y0,
+            )
+            rest["solid"] = False
+            marks.append(rest)
     nose_y = nose["cy"] if nose else sk.joints["nose"][1]
     nx = nose["cx"] if nose else sk.joints["nose"][0]
     # Eyes sit a little above the nose and within about half a head of it: further back or
