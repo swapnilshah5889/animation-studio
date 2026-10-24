@@ -1097,7 +1097,20 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     mouth, and that eye stayed painted while code drew the face. Now thin strokes are opened
     away before the search, the biggest compact black blob is the nose, and a mark sharing
     pixels with it isn't painted out.
-  - Kit's masks and face detection are pixel-identical before and after these fixes.
+  - **Bo's face came out deformed** in the run 2 shot (owner review): three eyes, two noses,
+    one brow over both eyes, and a seam across the muzzle. After the nose fix, three more
+    causes:
+    - The snout tip under a profile's nose was cut onto the torso. Figure inside the head's
+      convex hull, below the nose line, now joins the head (with the row and column rules,
+      at least 1% of the head).
+    - Klein's drawn open mouth, joined to the nose, was kept with it. A mark sharing pixels
+      with the nose is now painted out except for the nose and a 3 px rim.
+    - The face zone is centred on the head, so a mouth beside a turned head's snout was never
+      cleaned. The zone now also takes in a box around and below a found nose, staying 6 px
+      inside the outline. A speck right at the snout's edge can remain.
+  - Kit's head masks are pixel-identical before and after all these fixes, and so is his
+    face, except that the snout box paints out a 134 px leftover of his drawn smile and
+    moves his mouth anchor 4.6 px. That only happens if Kit is rebuilt; he hasn't been.
   - **The plate finish failed on MPS** ("tensor dims larger than INT_MAX" in an untiled 3 MP
     VAE decode). It depended on free memory: ComfyUI only falls back to tiles on
     out-of-memory errors. The encode and decode are now tiled at 1024 px, and ComfyUI

@@ -49,12 +49,19 @@ pixel-identical before and after; a unit test for each fails without its fix)**
   Thin strokes are now opened away first, and the biggest compact black blob is the nose.
 - Progress news now says what is being made ("c1 drawn (1/3): ok; drawing sheet 2 of 3").
 
-**What the shot still shows (open, D-057).** Run 2's Bo was built before the face fixes, and
-some problems have no fix yet:
-- a third, painted eye next to the two drawn by code (fixed since, not yet rebuilt)
+**Bo's face (owner review: "the face is deformed").** In run 2's shot Bo had three eyes,
+two noses, one brow over both eyes and a seam across the muzzle. All of it came from one wrong
+guess: the near eye was taken for the nose, so that eye was kept, and the drawn face was
+anchored to it. With the nose fix and three more (D-057: the snout tip joins the head, a
+mouth joined to the nose is painted out, the face zone reaches the snout), Bo was rebuilt
+(22 s; the three-quarter redraw is reused) and the shot re-rendered. He now has two eyes where
+the drawing had them, a brow over each, one nose, and the mouth on the muzzle, with no seam.
+A small speck can remain right at the snout's edge. `films/step4-proof/shots/s01_sh01/shot.mp4`
+is the re-rendered shot.
+
+**What the shot still shows (open, D-057)**
 - outline dashes beside the body, left behind when the arms are hung
-- a seam on the waving arm, and a thin line across the muzzle where the chin piece (on the
-  torso) meets the head
+- a seam on the waving arm
 - in c2's three-quarter cut, the torso also holds part of the far arm and the dungaree cuffs;
   in the bent-knee test pose the far leg falls apart
 - with c1, the redraw made the snout near-white with no outline, and it came out
@@ -63,12 +70,12 @@ some problems have no fix yet:
   always asks for a lawn floor (task 4.6)
 
 **Verified**
-- The full suite: 459 passed, model tests excluded (2 min 2 s). Ruff clean.
+- The full suite: 460 passed, model tests excluded (2 min 4 s). Ruff clean.
 - Kit is unchanged by every fix (masks and face notes compared before and after).
 
 **Not done**
-- No run with all the fixes together: Bo has not been rebuilt since the eye fix. A run 3 takes
-  about 50 min.
+- No full run with all the fixes together. Bo was rebuilt and the shot re-rendered with
+  studio_core directly, not through a new MCP run. A run 3 takes about 50 min.
 - The three-quarter cut problems above. They come from rules tuned on one character.
   Recommended next: build 3 or 4 varied characters (a bear, a child, a bird, a robot, say)
   and make the cut follow drawings that differ from the skeleton, before closing Step 4. Its
