@@ -1207,3 +1207,27 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   vs 0.369 three-quarter (within the 10% tolerance), and no feet colour is flagged. The "110% as
   tall" and "feet" findings came from the other candidates in that trial.
 
+### D-062: Pim's far arm: white clothes are figure, and a sleeve of its own is cut as drawn (task 4.5, 2026-10-26)
+- **Cause:** the loose limbs were one bug upstream of the limb code. `fill_holes` (D-057) leaves an
+  enclosed region open as "background seen through the figure" when its colour is within
+  `BG_HOLE` = 15 of the background and it surrounds nothing. Pim's white shirt and sleeves sit
+  13-15 from his near-white background, so they were cut out of the silhouette: only their
+  outlines remained, the limb fit then locked onto an outline stroke (the near upper arm at -95
+  instead of -141), and the arms ended up in the torso part.
+- **Fix 1:** `BG_HOLE` is 10 (gaps between touching legs measured 5-7, Bo "under 10"). Pim's
+  front view now passes `limbs_ok`; in the three-quarter view both arms and both legs follow the
+  drawing.
+- **Fix 2:** `complete_hidden`: an upper arm that comes out from behind the body halfway along
+  (t from 0.5 to 0.75) is a plain sleeve in the forearm's colour only if what shows is that
+  colour (within 40). A sleeve of its own colour (Pim: white over a blue forearm) is cut as
+  drawn, so it moves with the arm and doesn't stay on the torso as a ghost arm. From 0.75 on
+  it is a plain sleeve whatever shows (Kit: 0.9; the visible bit there is scarf and body).
+  Bo (0.6, the same fur) is unchanged.
+- **Verified:** Kit and both Bo builds (SAM off, existing redraws) have byte-identical part
+  images and rig before and after; a unit test for each rule fails without it.
+- **Still open for Pim:** a brown disc at the far elbow when the arm is raised; small fragments
+  beside the body at rest; the far leg falls apart in the bent-knee test pose (as Bo's did,
+  D-057), and `shin_l` coverage is 0.81 against 0.85 because the drawn sole is shorter than the
+  skeleton's. Pim was not rebuilt with SAM or through MCP.
+- **Limits:** 0.75 and 40 come from three characters.
+

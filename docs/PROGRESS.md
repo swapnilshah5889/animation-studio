@@ -12,6 +12,33 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-26: Step 4: Pim's loose arms: white clothes were cut out of the silhouette (D-062)
+
+**Diagnosed:** not the limb fit. D-057's gap rule left Pim's white shirt and sleeves (13-15 from the
+background, `BG_HOLE` was 15) open as "background seen through", so only their outlines were
+figure. The arm fit then followed an outline stroke, and the arms stayed in the torso part.
+
+**Done**
+- `puppet/checks.py`: `BG_HOLE` 15 -> 10.
+- `puppet/build.py` `complete_hidden`: an upper arm half hidden, with a sleeve of its own colour
+  (not the forearm's), is cut as drawn instead of becoming a plain sleeve.
+- Tests: a white shirt just off the background stays figure; the far sleeve rules (own colour,
+  same fur, mostly hidden). Each fails without its fix.
+
+**Verified**
+- Kit and both Bo builds: part images and rig byte-identical before and after (scratch harness,
+  SAM off). Pim: front `limbs_ok` true; three-quarter arms and legs follow the drawing (checked on
+  an overlay), the far arm no longer leaves a ghost arm on the torso.
+- 467 passed, models excluded; ruff clean.
+
+**Not done (Pim, three-quarter):** a brown disc at the far elbow when the arm is raised; small
+fragments beside the body at rest; the far leg falls apart in the bent-knee pose; `shin_l`
+coverage 0.81 (needs 0.85, the drawn sole is short). Pim was not rebuilt with SAM or through MCP.
+
+**Next:** the elbow disc and the bent-knee far leg (they also affect Bo), then Mia and Bolt.
+
+---
+
 ## 2026-10-26: Step 4: small view-only paint is a note (D-061)
 
 **Done**

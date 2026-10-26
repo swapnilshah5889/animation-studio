@@ -35,7 +35,8 @@ from studio_core.puppet.skeleton import OPENPOSE, Skeleton
 
 BG_TOLERANCE = 30.0  # RGB distance still counted as background
 FG_THRESHOLD = 45.0  # RGB distance from the background that counts as figure
-BG_HOLE = 15.0  # an enclosed region this close to the background (median) is background
+BG_HOLE = 10.0  # an enclosed region this close to the background (median) is background:
+# gaps between legs sit 5-7 away (Bo), white clothes 13-15 (Pim's shirt and sleeves)
 SCALE = 4  # components are found on a 1/4-size mask (fast, plenty for figure-sized blobs)
 MIN_SHAPE = 0.0005  # share of the image; smaller pieces are specks (about 23x23 px at 1344x768)
 
@@ -118,7 +119,8 @@ def fill_holes(
     is figure, not background. Given the image (at the mask's size) and its background colour,
     a region of the background's own colour that surrounds no part of the figure stays open:
     that is background seen through the figure, e.g. between legs whose feet touch (under 10
-    from the background on Bo, task 4.9). Pale parts of a figure stay filled: a cream face or
+    from the background on Bo, task 4.9). White clothes are figure: Pim's shirt and
+    sleeves sit 13-15 away. Pale parts of a figure stay filled: a cream face or
     a white chest sits 30 or more from the background (Kit), and a face as pale as the
     background still surrounds its eyes."""
     outside = np.zeros_like(mask)

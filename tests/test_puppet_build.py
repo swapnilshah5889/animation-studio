@@ -19,6 +19,7 @@ from studio_core.puppet.build import (
     assign_parts,
     build_puppet,
     clean_face,
+    complete_hidden,
     compose,
     figure_mask,
     head_mask,
@@ -278,6 +279,59 @@ def test_a_single_brown_eye_is_an_eye_not_a_nose() -> None:
     _, anchors, notes = clean_face(img, head, FRONT)
     assert notes["eyes_found"] == ["left"], notes
     assert abs(anchors["eyes"]["left"][0] - ex) < 4 and abs(anchors["eyes"]["left"][1] - ey) < 4
+
+
+def _far_arm(joint_x: int, sleeve: tuple[int, int, int], forearm: tuple[int, int, int]):
+    """A far arm drawn behind a wide body, sticking out to the right: a sleeve from the body's
+    edge (x=120) to x=165, then a forearm to x=200. Returns what complete_hidden takes."""
+    h, w = 120, 220
+    rgb = np.full((h, w, 3), 245.0, dtype="float32")
+    figure = np.zeros((h, w), dtype=bool)
+    figure[10:110, 10:120] = True  # the body
+    figure[50:70, 120:200] = True  # the arm
+    rgb[figure] = (200, 150, 90)
+    rgb[50:70, 120:165] = sleeve
+    rgb[50:70, 165:200] = forearm
+    ys, xs = np.mgrid[0:h, 0:w]
+    names = ("upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r", "torso")
+    parts = {n: np.zeros((h, w), dtype=bool) for n in names}
+    parts["upper_arm_l"] = figure & (xs >= joint_x) & (xs < 165) & (ys >= 50) & (ys < 70)
+    parts["forearm_l"] = figure & (xs >= 165) & (ys >= 50) & (ys < 70)
+    parts["torso"] = figure & ~parts["upper_arm_l"] & ~parts["forearm_l"]
+    far = {"joint_px": (joint_x, 60), "end_px": (165, 60)}
+    elsewhere = {"joint_px": (30, 5), "end_px": (60, 5)}  # no figure there: nothing hidden
+    bones = {"upper_arm_l": far, "forearm_l": {"joint_px": (165, 60), "end_px": (200, 60)},
+             "upper_arm_r": elsewhere, "forearm_r": elsewhere}  # fmt: skip
+    fits = {n: {"radius_px": 10.0} for n in bones}
+    return rgb, figure, parts, bones, fits, names
+
+
+def test_a_far_sleeve_of_its_own_colour_is_cut_as_drawn() -> None:
+    """Pim, the bird: a white sleeve out of the body, then a blue forearm. The upper arm comes
+    out halfway along, but a plain sleeve in the forearm's blue would be the wrong colour, and
+    the drawn white one would stay on the torso when the arm moves."""
+    rgb, figure, parts, bones, fits, names = _far_arm(45, (250, 245, 235), (140, 210, 240))
+    _, notes = complete_hidden(rgb, figure, parts, bones, fits, names)
+    assert notes["upper_arm_l"]["drawn"] == "fill", notes
+    assert parts["upper_arm_l"][60, 140] and not parts["torso"][60, 140]  # the sleeve moves
+
+
+def test_a_far_sleeve_in_the_forearms_colour_is_a_plain_sleeve() -> None:
+    """Bo: the same fur on the sleeve and the forearm, so a plain sleeve stands in for it."""
+    rgb, figure, parts, bones, fits, names = _far_arm(45, (120, 80, 50), (122, 82, 52))
+    _, notes = complete_hidden(rgb, figure, parts, bones, fits, names)
+    assert notes["upper_arm_l"]["drawn"] == "sleeve", notes
+
+
+def test_a_mostly_hidden_far_arm_is_a_plain_sleeve_whatever_shows() -> None:
+    """Kit: the arm comes out at the very end of the upper arm; what shows isn't sleeve."""
+    rgb, figure, parts, bones, fits, names = _far_arm(5, (250, 245, 235), (140, 210, 240))
+    bones["upper_arm_l"] = {"joint_px": (5, 60), "end_px": (130, 60)}
+    parts["upper_arm_l"] = (
+        figure & (np.mgrid[0:120, 0:220][1] < 130) & (np.mgrid[0:120, 0:220][0] >= 50)
+    )
+    _, notes = complete_hidden(rgb, figure, parts, bones, fits, names)
+    assert notes["upper_arm_l"]["drawn"] == "sleeve", notes
 
 
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:

@@ -92,6 +92,19 @@ def test_background_seen_through_the_figure_stays_open() -> None:
     assert fill_holes(mask)[80, 50]  # without the colours, every enclosed region fills
 
 
+def test_white_clothes_just_off_the_background_are_figure() -> None:
+    """A white shirt and sleeves on a near-white background (Pim, the bird: 13-15 from it)
+    are enclosed by their outline and surround nothing, but they are figure, not a gap."""
+    bg = np.array([242, 242, 240], dtype="float32")
+    img = np.full((120, 100, 3), bg, dtype="float32")
+    img[10:20, 20:80] = (200, 120, 60)  # the outline's top
+    img[100:110, 20:80] = (200, 120, 60)  # and bottom
+    img[10:110, 20:30] = img[10:110, 70:80] = (200, 120, 60)  # and sides
+    img[20:100, 30:70] = (252, 245, 233)  # the shirt: about 13 from the background
+    mask = silhouette(img, bg)
+    assert fill_holes(mask, img, bg)[60, 50]
+
+
 def test_a_busy_background_is_reported() -> None:
     img = np.asarray(sheet(FRONT, SIDE)).copy()
     noise = np.random.default_rng(1).integers(0, 255, img.shape, dtype=np.uint8)

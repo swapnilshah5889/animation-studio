@@ -691,6 +691,10 @@ def emergence(figure: np.ndarray, bone: dict[str, Any], r: float) -> float:
     return 0.0
 
 
+MOSTLY_HIDDEN = 0.75  # an upper arm emerging this far along is a plain sleeve, whatever it shows
+SLEEVE_MATCH = 40.0  # RGB distance: the shown sleeve and the forearm are one fabric
+
+
 def complete_hidden(
     rgb: np.ndarray,
     figure: np.ndarray,
@@ -717,6 +721,17 @@ def complete_hidden(
             continue
         t, d = _coords(figure.shape, bone["joint_px"], bone["end_px"])
         sleeve = name.startswith("upper") and t_e >= 0.5
+        if sleeve and t_e < MOSTLY_HIDDEN:
+            # Half hidden: the part that shows is the arm's own sleeve. A plain sleeve in the
+            # forearm's colour stands in for it only when that is the sleeve's colour (Bo: the
+            # same fur). A sleeve of its own (Pim's white one over a blue forearm) is cut as it
+            # is drawn, so it moves with the arm instead of staying behind on the torso.
+            luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
+            shows = rgb[parts[name] & (t >= t_e) & (luma > 80)]
+            forearm = rgb[parts["forearm" + name[-2:]] & (luma > 80)]
+            if len(shows) and len(forearm):
+                gap = np.linalg.norm(np.median(shows, axis=0) - np.median(forearm, axis=0))
+                sleeve = bool(gap <= SLEEVE_MATCH)
         # A plain sleeve replaces the whole upper arm, so all its cut pixels go back.
         before = parts[name] & (t < t_e) if not sleeve else parts[name].copy()
         parts[name] &= ~before
