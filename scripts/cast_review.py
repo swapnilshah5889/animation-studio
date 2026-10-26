@@ -106,6 +106,9 @@ def make(member: dict[str, str]) -> None:
             print(f"{cid}: built from {c['id']} in {time.monotonic() - t0:.0f} s; views {verdict}")
             if consistency["ok"]:
                 return
+        if len(tried) >= BUILDS:
+            print(f"{cid}: no build gave consistent views in {BUILDS} tries; kept the last")
+            return
         if round_no == ROUNDS:
             break
         t0 = time.monotonic()
