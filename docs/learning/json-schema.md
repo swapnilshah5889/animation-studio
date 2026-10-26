@@ -24,7 +24,7 @@ every mismatch with its location. We use draft 2020-12 with the `jsonschema` Pyt
 5. **The same contract serves MCP tools.** Every MCP tool declares a JSON Schema for its inputs;
    the shot schema's `$defs` can be reused there.
 6. **Evals (Step 7) and fine-tuning:** "the shot list validates" is the first, free, objective
-   reward signal for GRPO (ROADMAP Step 7).
+   reward signal for GRPO (ROADMAP Step 9).
 
 ## Two layers of checking
 

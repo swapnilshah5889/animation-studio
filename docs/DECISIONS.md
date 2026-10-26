@@ -1149,3 +1149,26 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Consequences:** Step 2's open done-when item now closes via `scripts/run_first_shot.py`, a
   scripted `synfig_mcp` client (verified 2026-10-26: 10 tool calls → a 1080p, 240-frame shot,
   all checks pass). The `claude` CLI is no longer required anywhere in the repo.
+
+### D-059: New steps, and a production-grade goal (owner, 2026-10-26)
+- **Decision:** the final output of the project is **production-grade films**, and the roadmap
+  grows to match:
+  - **Step 4B, animation quality** (proposed 2026-10-22, now approved): a generalised cut, clean
+    edges, bending limbs, hands and secondary parts, walking across the frame, a pose-sweep check.
+  - **The old Step 7 ("level up") is split** into Step 7 evals, Step 8 durable pipeline (Temporal,
+    MinIO), Step 9 training (LoRAs, SFT + GRPO), Step 10 series and Step 12 future tiers.
+  - **Step 11, production release (v1):** met when the test prompts produce films that pass the
+    production-grade bar with no manual steps.
+  - **The production-grade bar** (ROADMAP) lists targets for picture, animation, lip-sync, sound,
+    story, rights, reliability, deliverables and operations. Its numbers are proposals for the
+    owner to confirm in the Step 4B and Step 5 briefs.
+- **Step numbers are stable ids.** Steps 0–6 keep their numbers, because about 50 places in code,
+  schemas, tool docstrings and the history refer to them. A step inserted later gets a letter.
+- **Consequences:**
+  - References to the old Step 7 in older entries map as follows: evals → Step 7, Temporal → Step 8,
+    LoRAs and fine-tuning → Step 9, longer films → Step 10, tiers → Step 12. Live docs are updated;
+    the history is kept as written.
+  - Temporal moves from "Step 5+" (D-011, ARCHITECTURE) to Step 8. The Windows laptop still joins in
+    Step 5, as a plain render node.
+  - The owner decision on hosted vs desktop delivery (open since 2026-10-21) is now needed by Step 11.
+

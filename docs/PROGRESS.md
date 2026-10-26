@@ -5,10 +5,32 @@ Update this at the end of every working session. Newest entry at the top.
 **Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.9 run; 4.10 (docs + the Step 5 brief)
 remains. The owner chose to fix the puppet cut on a few varied characters before closing
 Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
-project now runs under a DeepSeek Harness coding agent, not Claude Code (D-058), and Step 2's
-open done-when item is closed. Open items: task 3.2b's Parler download (deferred), Docker's
-memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice (placeholder
-c13), and the proposed animation-quality step (owner's call).
+roadmap now ends in production-grade films (D-059): Step 4B (animation quality) comes next,
+and the old Step 7 is split into Steps 7–12. Open items: the eye-finder fix (a failing test
+is written, uncommitted), task 3.2b's Parler download (deferred), Docker's memory
+reservation, deleting the pre-Step-4 scratch files, Kit's and Bo's real voices (placeholders),
+and the hosted-vs-desktop decision (needed by Step 11).
+
+---
+
+## 2026-10-26: Roadmap: production-grade goal and new steps (D-059)
+
+The owner asked for the missing steps to be added and set the goal: the final output must be
+production grade.
+
+**Done**
+- `docs/ROADMAP.md`: a production-grade bar (picture, animation, lip-sync, sound, story, rights,
+  reliability, deliverables, operations), Step 4B (animation quality), and the old Step 7 split
+  into Steps 7 (evals), 8 (durable pipeline), 9 (training), 10 (series), 11 (production release)
+  and 12 (future tiers). Each new step has a "done when".
+- Step numbers 0–6 are unchanged (stable ids); live references to the old Step 7 now point at the
+  new steps (ARCHITECTURE, AGENTS, README, the Step 3/4 briefs, a learning note).
+- Docs only: no code, tests or schemas changed.
+
+**Open questions for the owner**
+1. Confirm or change the bar's targets (they are proposals), at the latest in the Step 4B brief.
+2. How to close Step 4: time-box the varied cast against a pass bar, or close it on Kit and Bo
+   and carry the rest into Step 4B.
 
 ---
 

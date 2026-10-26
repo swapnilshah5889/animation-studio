@@ -24,7 +24,7 @@ APIs and no API keys.
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | Instructions for coding agents working on this repo |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Pipeline, MCP servers, film folder layout, machines, model picks |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Steps 0–6, each with a "done when" |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Steps 0–12 (including 4B) and the production-grade bar, each step with a "done when" |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Decisions made so far, and why |
 | [`docs/PROGRESS.md`](docs/PROGRESS.md) | Current status and next actions |
 | [`docs/MODELS.md`](docs/MODELS.md) | Every model used, with license and location |

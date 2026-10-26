@@ -159,7 +159,8 @@ films/<film-slug>/
 - **Step 5:** the **director agent**, a hand-written agent loop in Python against Ollama. It runs a
   stage state machine over the film folder, with approval checkpoints (story, character designs,
   first shot) and resume from the last completed stage.
-- **Step 5+:** introduce **Temporal** once the Windows laptop joins. **Task queues by capability**:
+- **Step 8:** introduce **Temporal** (the Windows laptop already joins in Step 5 as a render node).
+  **Task queues by capability**:
   `ai-mac` (LLM, image generation, vision QA, music) and `render-win` (Synfig rendering, TTS, Rhubarb,
   encoding). MCP servers on the Windows machine use MCP's HTTP transport over the LAN. Shared assets
   go through MinIO (S3-compatible), so moving to the cloud later is a configuration change.

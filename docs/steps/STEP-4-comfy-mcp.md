@@ -12,7 +12,7 @@ There are no manual steps; manual cleanup is allowed but tracked. Pip and the me
 in code; from here on, the art comes from the film's style preset.
 
 **Out of scope:**
-- Training (character LoRAs come in Step 7). Consistency comes from one generation per
+- Training (character LoRAs come in Step 9). Consistency comes from one generation per
   character, reused by the rig (D-007).
 - Side views and walk cycles across the frame (later).
 - The director and the vision QA server (Step 5). Here the clients are scripts, the Inspector

@@ -1,21 +1,51 @@
 # Roadmap
 
 The first goal is **one prompt → a 60-second children's film**, fully local, in roughly 6–8 weeks of
-part-time work. Each step has a "done when". Don't move on until it's met and verified.
+part-time work. The final goal is **production-grade films** (the bar is defined below). Each step
+has a "done when". Don't move on until it's met and verified.
+
+**Step numbers are stable ids** (D-059). The history in PROGRESS and DECISIONS refers to them, so a
+step inserted later gets a letter (4B) instead of renumbering the steps after it.
 
 | Step | Name | Owner | Detailed brief |
 |---|---|---|---|
-| 0 | Environment setup + benchmarks | Agent | `steps/STEP-0-setup.md` |
+| 0 | Environment setup + benchmarks | Agent | `steps/STEP-0-setup.md` (done) |
 | 1 | Learn Synfig by hand + document its format | Owner + agent | `steps/STEP-1-synfig.md` (done) |
-| 2 | `synfig_mcp`: scene, rig, motion, render tools | Agent (owner reviews) | `steps/STEP-2-synfig-mcp.md` (done, one item open) |
+| 2 | `synfig_mcp`: scene, rig, motion, render tools | Agent (owner reviews) | `steps/STEP-2-synfig-mcp.md` (done) |
 | 3 | `audio_mcp`: voices, lip-sync, music, sound effects, mix | Agent | `steps/STEP-3-audio-mcp.md` (done) |
-| 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | `steps/STEP-4-comfy-mcp.md` (approved) |
+| 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | `steps/STEP-4-comfy-mcp.md` (approved, in progress) |
+| 4B | Animation quality: puppets that hold up on screen | Agent (owner reviews) | to be written |
 | 5 | Director agent + `edit_mcp` + `qa_mcp`: first full film | **Owner + agent** | to be written |
 | 6 | OpenToonz backend + render containers (D-030–D-032) | Agent (owner reviews) | to be written |
-| 7 | Evals, Temporal, LoRAs, fine-tuning, longer films, future tiers | Owner + agent | to be written |
+| 7 | Evals: measure every change | **Owner + agent** | to be written |
+| 8 | Durable pipeline: Temporal, MinIO, both machines | Agent (owner reviews) | to be written |
+| 9 | Training: character and style LoRAs, director fine-tuning (SFT + GRPO) | **Owner + agent** | to be written |
+| 10 | Series: longer episodes that reuse characters and places | Agent (owner reviews) | to be written |
+| 11 | Production release (v1): meet the production-grade bar | Owner + agent | to be written |
+| 12 | Future tiers: limited and full animation (anime styles) | Owner + agent | to be written |
 
 At the end of each step, write the brief for the next one (`docs/steps/STEP-<n>-<name>.md`) and have
 the owner review it before starting.
+
+---
+
+## The production-grade bar
+
+What "production grade" means for a finished film. **Proposed targets, for the owner to confirm**
+in the Step 4B and Step 5 briefs. Every step from 4B on works toward them, Step 7 measures them,
+and Step 11 is done when films meet all of them unattended.
+
+| Area | Target |
+|---|---|
+| Picture | 1080p24 (4K as an option), no seams, gaps, fringes or holes in any frame; characters on-model in every shot; smooth camera |
+| Animation | Motions read clearly at a glance; limbs bend; hands and secondary parts (ears, tails) move; characters can walk across the frame |
+| Lip-sync | Mouth changes within one frame (±42 ms) of the cue |
+| Sound | −14 LUFS ±1 for the web (EBU R128 −23 LUFS as an option), true peak ≤ −1 dBTP, dialogue always intelligible over music |
+| Story | A beginning, middle and end; every line and shot age-appropriate (`qa_mcp` safety check plus owner sign-off) |
+| Rights | Every model and asset in the film commercial-OK, with a per-film provenance manifest (models, licenses, seeds, sound sources) |
+| Reliability | Most prompts in a fixed test set produce a passing film with no manual steps (the rate is set in Step 7); a failed stage resumes; re-rendering a film folder gives the same film |
+| Deliverables | Final MP4, an editable Kdenlive project, captions (SRT), a thumbnail and a credits/licenses file |
+| Operations | Pinned, reproducible environments and render containers; logs and per-stage timings for every run; setup docs a new machine can follow |
 
 ---
 
@@ -79,6 +109,31 @@ with music and one sound effect into a playable shot.
 animate, and a text description of a place becomes a parallax background, with no manual steps (manual
 cleanup allowed but tracked).
 
+Cut defects that remain after Step 4's own bar (outline dashes, seams, loose far-side limbs) are
+recorded and carried into Step 4B.
+
+## Step 4B: Animation quality
+Puppets that look finished on screen, not just correct in a test render. This is where the
+picture and animation rows of the production-grade bar are met for cut-out films.
+
+- **The cut, generalised:** varied characters (animals, children, birds, robots) cut cleanly in both
+  views, including drawings that don't follow the skeleton. Carry-overs from Step 4.
+- **Clean edges:** a drawn outline along every cut edge, no fringes or dashes left on other parts,
+  no seams at joints in any pose.
+- **Bending limbs:** Synfig's skeleton deformation (or a mesh) so an elbow or knee bends instead of
+  showing two rigid rectangles.
+- **Hands and secondary parts:** a few swappable hand poses (open, point, fist, wave); ears and tails
+  as their own bones, with follow-through.
+- **Moving through a shot:** placement that changes over time, and a real walk across the frame in
+  the three-quarter view.
+- **More acting:** more expressions and talk gestures, and motion timing reviewed against the
+  principles in `docs/learning/motion-library.md`.
+- **Automatic checks:** a pose sweep that renders every motion at its extremes and fails on holes,
+  seams or detached parts; a review reel for the owner.
+
+**Done when:** the varied cast performs every motion in a review reel that passes the automatic
+checks and the owner's review.
+
 ## Step 5: Director agent + edit + QA → first film
 - `qa_mcp`: a vision model compares preview frames against the shot spec, plus a children's-safety check.
 - `edit_mcp`: MLT XML assembly (shots, audio, titles), `melt` render, and a Kdenlive project the owner
@@ -117,15 +172,75 @@ rendering (D-032). Starting point: the spike scripts in `scripts/spikes/` and `d
 changes to the director or the schemas**, inside the render container, and passes the conformance
 tests.
 
-## Step 7: Level up (pick in any order)
-- **Evals:** character consistency (embedding similarity), palette adherence (exact), lip-sync timing
-  error, a vision judge for shot-vs-spec, and a safety classifier. Run them on every change.
-- **Temporal:** durable stages, retries, task queues by capability (`ai` workers, plus a pool of
-  render containers, of which the Windows laptop is one), MinIO.
-- **LoRAs:** character LoRAs for new poses and views. Style LoRAs.
-- **Fine-tune the director:** LoRA supervised fine-tuning of a small LLM to write valid shot lists, then
-  **GRPO with a verifiable reward** (the shot list validates, renders without errors, and passes QA
-  checks).
-- **Longer films:** 3–7 minute episodes that reuse characters and backgrounds across a series.
-- **Future tiers:** limited animation (Tier 2) and full animation (Tier 3) for anime style, on the
-  OpenToonz backend. See ARCHITECTURE.
+## Step 7: Evals
+Turn the production-grade bar into numbers that run on every change. **Ask the owner before
+building the harness** (AGENTS.md): propose the design and a skeleton first.
+
+- A fixed set of test prompts, plus golden film folders to re-render.
+- Metrics:
+  - character consistency across shots (embedding similarity)
+  - palette adherence (exact)
+  - lip-sync timing error
+  - holes, seams and fringes (pixel checks, from Step 4B)
+  - loudness and true peak
+  - a vision judge for shot-vs-spec
+  - a children's-safety classifier
+  - end-to-end success rate and time per film
+- A report per run, compared with the last baseline, so a regression is visible before it lands.
+
+**Done when:** one command runs the suite on the test prompts, writes a report with every metric
+against its target, and flags any regression from the stored baseline.
+
+## Step 8: Durable pipeline
+- **Temporal:** each director stage becomes a durable activity with retries, so a crash or a reboot
+  resumes mid-film.
+- **Task queues by capability:** `ai` workers (Mac) and a pool of render containers (the Windows
+  laptop is one).
+- **MinIO** for shared assets, so moving to the cloud is a configuration change (D-032).
+- Logs, traces and per-stage timings for every run.
+
+**Done when:** a film runs across both machines through Temporal, survives killing a worker mid-stage
+(it resumes and finishes), and every run's timings are visible.
+
+## Step 9: Training
+Needs Step 7, because every training run is judged by the evals.
+
+- **Character LoRAs:** new poses and views of a cast character that stay on-model.
+- **Style LoRAs:** a house style, trained only on art we own or are licensed to use.
+- **Director fine-tuning:** LoRA supervised fine-tuning of a small LLM to write valid shot lists,
+  then **GRPO with a verifiable reward** (the shot list validates, renders without errors and passes
+  the QA checks).
+
+**Done when:** a fine-tuned director beats the base model on the Step 7 suite, and a character LoRA
+improves the consistency metric, both measured.
+
+## Step 10: Series
+- 3–7 minute episodes that reuse characters, voices and places across a series.
+- A series bible (characters, places, style lock, recurring music) and story memory with retrieval
+  (RAG), so later episodes stay consistent with earlier ones.
+- Longer edits: scenes, transitions, titles and credits.
+
+**Done when:** two episodes of one series are made from prompts, with the same characters and
+places, and pass the Step 7 suite.
+
+## Step 11: Production release (v1)
+- Close every gap between the eval report and the production-grade bar.
+- Package the studio for the owner's chosen delivery (hosted, desktop or both: an open owner
+  decision since 2026-10-21).
+- A licensing and provenance audit of every model and asset, and the per-film provenance manifest.
+- A safety review of the whole pipeline for children's content.
+- Setup and operating docs that a new machine can follow from scratch.
+
+**Done when:** the test prompts produce films that meet every row of the production-grade bar with no
+manual steps, and a clean machine can be set up from the docs alone.
+
+## Step 12: Future tiers
+After v1. Anime-style films on the OpenToonz backend, one tier chosen per shot by the director (see
+ARCHITECTURE, "Future tiers"):
+
+- **Tier 2, limited animation:** strong keyframes plus camera moves, parallax, mesh deformation,
+  compositing effects and swapped drawings.
+- **Tier 3, full animation:** AI keyframes from a character LoRA, with motion generated between our
+  own start and end frames.
+
+**Done when:** to be set in the step's brief, against the same production-grade bar.

@@ -3,6 +3,8 @@
 You are working on **Animation Studio**: a fully local, AI-native 2D animation studio that turns a
 story prompt into a finished children's animated film. Open-source animation apps do the animating;
 a local LLM acts as the director and drives those apps through MCP servers.
+The end goal is **production-grade films**: the bar is defined in `docs/ROADMAP.md`
+("The production-grade bar"), and every step from 4B on works toward it.
 
 Read these before doing anything, in this order:
 
