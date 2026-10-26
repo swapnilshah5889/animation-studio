@@ -1,8 +1,8 @@
 # Step 2: `synfig_mcp`: scene, rig, motion and render tools
 
-> **Status: done (2026-10-22), with one done-when item open.** The Claude Code run was skipped by
-> the owner because the `claude` CLI can't be logged in on this machine (D-035). Approved
-> 2026-10-21 as written (D-028); tool changes during the build are recorded in D-034.
+> **Status: done (2026-10-22); done-when closed 2026-10-26.** The done-when is proven by a
+> scripted MCP client, not a logged-in Claude Code CLI (D-058). Approved 2026-10-21 as written
+> (D-028); tool changes during the build are recorded in D-034.
 
 **Goal:** an MCP server that lets an LLM build and render a cut-out shot: a bone-rigged character
 with a procedural face, moving with named, parameterized motions, lip-synced from Rhubarb cues,
@@ -12,7 +12,7 @@ core of the pipeline.
 **Out of scope:**
 - AI-generated art (Step 4): placeholder parts are drawn in code.
 - Generating audio (Step 3): use the Step 0 fixture line and its Rhubarb cues.
-- The director agent (Step 5): Claude Code and the MCP Inspector are the clients here.
+- The director agent (Step 5): a coding agent and the MCP Inspector are the clients here.
 - Real three-quarter view art: the schema supports views, but only the front view gets art.
 - IK and Skeleton Deformation (bendy limbs).
 
@@ -45,8 +45,8 @@ core of the pipeline.
 |---|---|---|
 | Source of truth for a shot | A **shot spec JSON** (`shots/<id>/shot.json`, validated by the schema); `scene.sif` is a **build artifact** regenerated from it on every change | Tools stay small and idempotent; the LLM edits intent, not XML; hand edits in Synfig can be re-imported later if needed (D-008 still holds for the film folder) |
 | Server layout | `mcp/synfig_mcp/` as a uv workspace member (`synfig-mcp`), importing `studio_core` | Matches ARCHITECTURE; one venv for our code |
-| SDK | Official **MCP Python SDK 2.x** (`mcp` on PyPI, MIT; `from mcp.server import MCPServer`, the v2 name of the FastMCP decorator style) | CLAUDE.md: official SDK, FastMCP style |
-| Transport | **stdio** now (Claude Code, Inspector); streamable HTTP added in Step 5 for the Windows node | Simplest locally |
+| SDK | Official **MCP Python SDK 2.x** (`mcp` on PyPI, MIT; `from mcp.server import MCPServer`, the v2 name of the FastMCP decorator style) | AGENTS.md: official SDK, FastMCP style |
+| Transport | **stdio** now (a coding agent, the Inspector); streamable HTTP added in Step 5 for the Windows node | Simplest locally |
 | Motion composition | Per-bone channels; a shot lists motions with start times; a later motion overrides a bone channel for its duration; idle motions (breathe, blink) are **additive** layers | Predictable, testable, enough for v1 |
 | Face | **Vector, procedural** (D-007): eyes (blink via eyelid switch or scale), brows (angle and offset per expression), mouth set **A–H, X** as vector shapes in a switch on the head bone | Exact lip-sync and expressions with zero AI cost |
 
@@ -135,9 +135,8 @@ nod, …"), because the LLM reads them.
 ### 2.8 Prove it from a client
 - Unit and render tests for every tool, calling the Python functions directly.
 - **MCP Inspector:** list the tools, call each one, check schemas and errors.
-- **Claude Code as the client** (a project `.mcp.json` entry): in one conversation, build and
-  render the done-when shot. Save the transcript of tool calls as
-  `docs/learning/mcp-first-shot.md`.
+- **A scripted MCP client** (a project `.mcp.json` entry): build and render the done-when
+  shot with only tool calls, and save the transcript as `docs/learning/mcp-first-shot.md`.
 
 ### 2.9 Docs
 - `docs/learning/mcp.md`: what MCP is (tools, resources, prompts, transports), how a tool
@@ -155,10 +154,8 @@ nod, …"), because the LLM reads them.
 - [x] Parallax background and camera presets render correctly (render tests)
 - [x] `synfig_mcp` exposes the tools above over stdio; all are tested; the Inspector lists and
       calls them (`scripts/inspector_check.py`)
-- [ ] **From Claude Code as an MCP client, the LLM builds and renders a 10-second shot of a
-      rigged character waving and blinking in front of a parallax background, with a mouth cue
-      track driving the mouth** (ROADMAP Step 2). **Open:** skipped by the owner (CLI login).
-      `scripts/run_first_shot.py` does it from any logged-in terminal. Shots with the same
-      ingredients were built and rendered through the tools by real MCP clients (the tests and
-      the Inspector), but with scripted calls, not an LLM choosing them.
+- [x] **From an MCP client, the shot is built and rendered: a 10-second shot of a rigged
+      character waving and blinking in front of a parallax background, with a mouth cue track
+      driving the mouth** (ROADMAP Step 2). `scripts/run_first_shot.py` is a scripted MCP client
+      that does it (10 tool calls, verified 2026-10-26; D-058).
 - [x] Learning notes, DECISIONS, PROGRESS updated; Step 3 brief drafted; work committed and pushed

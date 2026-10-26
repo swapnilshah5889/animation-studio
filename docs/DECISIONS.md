@@ -200,7 +200,7 @@ Add an entry whenever you choose a tool, model or format, or deviate from the pl
   the Step 5/6 comparison on real director tasks; this check is deliberately tiny.
 - **Design rule confirmed:** validate every tool call in code and send the validation error back
   as the tool result. gpt-oss recovered from one of its two bad calls that way.
-- **Owner:** Step 5 is owner-led (CLAUDE.md); this is input, not the final choice.
+- **Owner:** Step 5 is owner-led (AGENTS.md); this is input, not the final choice.
 
 ### D-025: Switchable style presets, locked per film
 - **Context:** The owner wants to switch image models from inside the app (relayed 2026-10-19):
@@ -577,7 +577,7 @@ The owner approved `docs/steps/STEP-3-audio-mcp.md` as written. In short:
     "temporary fix" (whose repo needs git-lfs), and `protobuf>=4` over audiotools 0.7.2's
     `<3.20` pin. The import check passes; inference is checked when the weights are in.
 - **The owner's step:** accept the model's terms on Hugging Face and log in with a free token
-  (allowed by CLAUDE.md for gated downloads). Agents never handle the token.
+  (allowed by AGENTS.md for gated downloads). Agents never handle the token.
 
 ### D-043: Sound-effect library and search (task 3.5)
 - **Sources (CC0 only, checked 2026-10-22):**
@@ -1137,3 +1137,15 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   - **"Head 116% as tall"** rejected every klein seed of c1. It may be klein's real
     proportion for this character, or partly a measurement effect. To be looked at with the
     above.
+
+### D-058: The coding agent: Claude Code → DeepSeek Harness (owner, 2026-10-26)
+- **Decision:** the repo no longer depends on Claude Code. `CLAUDE.md` is renamed to `AGENTS.md`
+  (agent-neutral; every live reference is updated, the historical PROGRESS log is kept), and
+  `scripts/run_first_shot.py` is rewritten as a scripted MCP client instead of a headless
+  `claude -p` run.
+- **Why:** the owner moved to a different coding agent and wants the project agent-agnostic. The
+  MCP boundary already was (D-035, "one `.mcp.json` for every client"); only the development
+  client and one done-when script named Claude Code.
+- **Consequences:** Step 2's open done-when item now closes via `scripts/run_first_shot.py`, a
+  scripted `synfig_mcp` client (verified 2026-10-26: 10 tool calls → a 1080p, 240-frame shot,
+  all checks pass). The `claude` CLI is no longer required anywhere in the repo.

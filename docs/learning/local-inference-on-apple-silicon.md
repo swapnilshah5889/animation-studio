@@ -14,7 +14,7 @@ Consequences:
 - **The GPU can use most of RAM, not a fixed VRAM size.** macOS caps GPU-wired memory at roughly
   two thirds to three quarters of RAM by default (`sysctl iogpu.wired_limit_mb` shows an override
   if one is set; 0 means the default). On 24 GB that is about **16 GB for models**, which is the
-  number CLAUDE.md uses. Everything else (macOS, Docker's VM, browsers, our Python processes)
+  number AGENTS.md uses. Everything else (macOS, Docker's VM, browsers, our Python processes)
   lives in the remaining ~8 GB.
 - **Memory bandwidth, not compute, limits LLM speed.** Generating one token means reading every
   weight once. The M4 has about 120 GB/s of bandwidth, so a 9 GB model can produce at most

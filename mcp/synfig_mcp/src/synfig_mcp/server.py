@@ -1,6 +1,6 @@
 """synfig_mcp: the director's animation tools over MCP (stdio).
 
-    uv run synfig-mcp                                      # stdio (Claude Code, Inspector)
+    uv run synfig-mcp                                      # stdio (any MCP client)
     npx @modelcontextprotocol/inspector uv run synfig-mcp  # browse and call the tools
 
 The tools edit **intent** in shots/<id>/shot.json (studio_core.shot_spec, engine-neutral, D-030)
@@ -9,7 +9,7 @@ mention Synfig, so another backend can sit behind the same tools later (ROADMAP 
 
 Every refused edit raises ToolError: the client gets `is_error` and the message, which says what
 to fix ("unknown bone 'tail'; pip has: ..."). Nothing is saved when an edit is refused.
-Media results are file paths inside the film folder, never bytes (CLAUDE.md).
+Media results are file paths inside the film folder, never bytes (AGENTS.md).
 """
 
 from __future__ import annotations

@@ -6,7 +6,7 @@
 #   scripts/comfy_server.sh --manager    # also enable ComfyUI-Manager (it contacts the internet)
 #   scripts/comfy_server.sh --stop
 #
-# Mac memory rule: unload Ollama models before heavy ComfyUI work (CLAUDE.md).
+# Mac memory rule: unload Ollama models before heavy ComfyUI work (AGENTS.md).
 set -euo pipefail
 
 COMFY_DIR="${COMFY_DIR:-$HOME/ai-studio/comfyui}"

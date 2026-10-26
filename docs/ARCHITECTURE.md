@@ -155,7 +155,7 @@ films/<film-slug>/
 ## Orchestration
 
 - **Steps 1–4:** each MCP server is developed and tested on its own, using the MCP Inspector or
-  Claude Code as the client.
+  a coding agent as the client.
 - **Step 5:** the **director agent**, a hand-written agent loop in Python against Ollama. It runs a
   stage state machine over the film folder, with approval checkpoints (story, character designs,
   first shot) and resume from the last completed stage.
@@ -210,7 +210,7 @@ the compositor around AI-generated motion.
 
 ```
 animation-studio/
-  CLAUDE.md  README.md  pyproject.toml (uv workspace)
+  AGENTS.md  README.md  pyproject.toml (uv workspace)
   docs/        ARCHITECTURE, ROADMAP, DECISIONS, PROGRESS, MODELS, benchmarks.md, steps/, learning/
   scripts/     doctor (environment check), benchmarks, setup helpers
   schemas/     shotlist, rig and film JSON Schemas

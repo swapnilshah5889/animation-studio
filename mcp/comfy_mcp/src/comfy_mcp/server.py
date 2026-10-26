@@ -1,6 +1,6 @@
 """comfy_mcp: the director's art tools over MCP (stdio), task 4.8.
 
-    uv run comfy-mcp                                      # stdio (Claude Code, Inspector)
+    uv run comfy-mcp                                      # stdio (any MCP client)
     npx @modelcontextprotocol/inspector uv run comfy-mcp  # browse and call the tools
 
 The tools turn words into the two kinds of art a shot needs (Step 4), each through a short

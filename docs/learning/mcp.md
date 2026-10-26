@@ -1,6 +1,6 @@
 # MCP: how the director gets its hands
 
-The **Model Context Protocol** is how an LLM application (the *client*: Claude Code today, our
+The **Model Context Protocol** is how an LLM application (the *client*: a coding agent today, our
 director in Step 5) uses capabilities that live in another program (the *server*: `synfig_mcp`).
 The model never imports our Python. It sees a list of tools, each with a name, a description and a
 JSON Schema for its arguments, and asks the client to call one. The client sends a JSON-RPC message
@@ -19,7 +19,7 @@ Written with tasks 2.7–2.8.
 ## Transports
 
 - **stdio:** the client starts the server as a subprocess and they talk over stdin/stdout. This is
-  what Claude Code and the Inspector use locally (`uv run synfig-mcp`).
+  what a coding agent and the Inspector use locally (`uv run synfig-mcp`).
 - **Streamable HTTP:** the server runs on its own, maybe on another machine. That comes in Step 5
   for the Windows render node.
 
@@ -71,7 +71,7 @@ hand. It shows exactly what a model would see:
 - each call's raw result: `content` (text for the model), `structuredContent` (the JSON that
   matches the output schema) and `isError`
 
-It reads the same `.mcp.json` as Claude Code:
+It reads the same `.mcp.json`:
 
 ```bash
 npx -y @modelcontextprotocol/inspector@2.9.0 --config .mcp.json --server synfig_mcp
@@ -97,7 +97,7 @@ machine's Node 22.13 it prints warnings but works.
 ## How a tool schema reaches the model
 
 ```
-server: @tool functions ──tools/list──▶ client (Claude Code, the director) ──▶ model request:
+server: @tool functions ──tools/list──▶ client (a coding agent, the director) ──▶ model request:
         name, description,                 adds the server prefix:              "tools": [{name,
         inputSchema, outputSchema          mcp__synfig_mcp__apply_motion         description,
                                                                                  input_schema}]
@@ -107,7 +107,7 @@ model ──tool_use {name, input}──▶ client ──tools/call──▶ ser
 The model only ever sees the name, the description and the input schema. Those three are its
 whole manual for the tool, so every word in a docstring is paid for on every request.
 
-## Claude Code as the client
+## A coding agent as the client
 
 `.mcp.json` at the repo root registers the server for anyone who opens the project:
 
@@ -115,18 +115,17 @@ whole manual for the tool, so every word in a docstring is paid for on every req
 {"mcpServers": {"synfig_mcp": {"type": "stdio", "command": "uv", "args": ["run", "--quiet", "synfig-mcp"]}}}
 ```
 
-- Project servers run code on your machine, so Claude Code asks before starting one:
-  `claude mcp list` shows "Pending approval" until you approve it in an interactive session.
+- Project servers run code on your machine, so a coding agent may ask before starting one.
 - In the model's tool list our tools are named `mcp__synfig_mcp__<tool>`.
-- Headless runs can pin exactly what the model gets: `claude -p ... --mcp-config .mcp.json
-  --strict-mcp-config --tools ""` gives a session with *only* our 14 tools and no built-in ones
-  (no shell, no file edits). `scripts/run_first_shot.py` uses this for Step 2's done-when and
-  saves the transcript to `mcp-first-shot.md`.
+- A scripted client pins exactly what the model gets: it connects over stdio with only our tools
+  and none of the agent's built-ins (no shell, no file edits). `scripts/run_first_shot.py`,
+  `run_step3_shot.py` and `run_step4_shot.py` do this for each step's done-when and save a
+  transcript.
 
 ## Two servers, one film
 
 From Step 3 there are two servers: `synfig_mcp` edits and renders shots, and `audio_mcp` makes
-sound (voices, music, sound-effect search). A client like Claude Code or our director connects
+sound (voices, music, sound-effect search). A client — a coding agent or our director — connects
 to both, and the model sees one list of tools. The servers never call each other. They share
 the film folder and pass **ids** through the model:
 

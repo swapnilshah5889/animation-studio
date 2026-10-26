@@ -2,13 +2,46 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.9 run. Task 4.9's proof works end to
-end through MCP, but a second character showed that the puppet cut doesn't generalise yet
-(see the 4.9 entry). **Owner decision needed:** fix the cut on a few varied characters before
-closing Step 4 (recommended), or close Step 4 with it tracked. Then 4.10 (docs and the Step 5
-brief). Open items: Step 2's Claude Code run (D-035), task 3.2b's Parler download (deferred),
-Docker's memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice
-(placeholder c13), and the proposed animation-quality step (owner's call).
+**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.9 run; 4.10 (docs + the Step 5 brief)
+remains. The owner chose to fix the puppet cut on a few varied characters before closing
+Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
+project now runs under a DeepSeek Harness coding agent, not Claude Code (D-058), and Step 2's
+open done-when item is closed. Open items: task 3.2b's Parler download (deferred), Docker's
+memory reservation, deleting the pre-Step-4 scratch files, Kit's real voice (placeholder
+c13), and the proposed animation-quality step (owner's call).
+
+---
+
+## 2026-10-26: The coding agent: Claude Code → DeepSeek Harness (D-058)
+
+The owner moved from Claude Code to a DeepSeek Harness coding agent and asked to confirm the new
+agent could run the project before resuming Step 4. This session did both.
+
+**Proved the new agent can drive the whole pipeline (not just read it):**
+- `ruff check .` clean; the full suite passes (460 passed, models excluded, 2 min 20 s).
+- All three MCP servers start over stdio from `.mcp.json` and answer real calls: `synfig_mcp`
+  (16 tools), `audio_mcp` (7), `comfy_mcp` (9).
+- Generated real media through the servers: the Step 3 done-when shot (27 tool calls →
+  1080p/240-frame video with two voiced, lip-synced lines, music and SFX, −14.6 LUFS) and a
+  background draft through `comfy_mcp` (storybook garden, 1536×576, checks passed).
+
+**Scrapped the Claude Code dependency:**
+- `CLAUDE.md` → `AGENTS.md` (agent-neutral; every live reference updated, the historical
+  PROGRESS log and DECISIONS entries kept as-is).
+- `scripts/run_first_shot.py` rewritten as a scripted MCP client (no `claude` CLI). This
+  closes Step 2's done-when: verified 10 tool calls → a 1080p, 240-frame shot with a mouth
+  cue track, all checks pass. Transcript: `docs/learning/mcp-first-shot.md`.
+- README, ARCHITECTURE, ROADMAP, the Step 2/3 briefs and `docs/learning/mcp.md` now say
+  "any MCP client / a coding agent" instead of "Claude Code". D-058 records the change.
+
+**Decisions confirmed with the owner (2026-10-26):**
+1. Rename `CLAUDE.md` → `AGENTS.md`.
+2. Replace `run_first_shot.py` with a scripted client.
+3. Resume Step 4 by fixing the puppet cut on varied characters (`cast_review.py`).
+4. Prove the agent can generate media (done, above).
+
+**Next:** resume Step 4: run `scripts/cast_review.py` on the varied cast, make the cut follow
+drawings that differ from the skeleton, then task 4.10 (docs + the Step 5 brief).
 
 ---
 

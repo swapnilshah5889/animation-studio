@@ -47,7 +47,7 @@ waving puppet and a moving background.
   gestures. Each one is parameterized (duration, energy, side) and unit-tested for timing.
 - MCP tools: `create_scene`, `build_rig`, `pose_at`, `apply_motion`, `apply_lipsync`,
   `add_parallax_background`, `camera_move`, `render_preview_frame`, `render_shot`.
-- Test it with the MCP Inspector and with Claude Code as the client.
+- Test it with the MCP Inspector and with any MCP client (a coding agent or the Inspector).
 
 **Done when:** from a client, the LLM builds and renders a 10-second shot of a rigged character waving
 and blinking in front of a parallax background, with a placeholder mouth cue track driving the mouth.

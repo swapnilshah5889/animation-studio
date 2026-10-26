@@ -8,7 +8,7 @@ Files already present with the right size are skipped. Each file is fetched as N
 range requests (default 8): on this network one connection to Hugging Face gets ~30-75 KB/s but
 eight together get ~7x that, the same trick `ollama pull` uses. Every range resumes after an
 interruption; the pieces are joined and the file is only moved into place after the sha256
-matches. Ask the owner before any single download over ~20 GB (CLAUDE.md).
+matches. Ask the owner before any single download over ~20 GB (AGENTS.md).
 """
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ def main() -> int:
     files = manifest.expand(args.ids)
     todo = [f for f in files if not f.is_present(models_dir)]
     if any(f.size > OWNER_LIMIT for f in todo):
-        sys.exit("A single file is over 20 GB: ask the owner first (CLAUDE.md).")
+        sys.exit("A single file is over 20 GB: ask the owner first (AGENTS.md).")
     for f in files:
         print(f"{f.id}: {fetch(f, models_dir, args.connections)}", flush=True)
     return 0

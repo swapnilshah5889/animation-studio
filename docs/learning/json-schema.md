@@ -9,7 +9,7 @@ every mismatch with its location. We use draft 2020-12 with the `jsonschema` Pyt
 
 ## Why it matters in an LLM pipeline
 
-"Rules in code, judgment in the LLM" (CLAUDE.md) needs a precise boundary, and the schema is it:
+"Rules in code, judgment in the LLM" (AGENTS.md) needs a precise boundary, and the schema is it:
 
 1. **The LLM writes intent as JSON** (a shot: who, where, which motions, when), and code turns it
    into a `.sif`. The schema is the exact contract for that JSON.

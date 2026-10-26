@@ -83,7 +83,7 @@ Include a minimal working example per concept, each rendered with the CLI as pro
   `Canvas`, `ImportLayer`, `Group(transform=..., children=...)`, `SwitchGroup`, `Animated(waypoints)`.
 - Deterministic output: same input, byte-identical XML (stable ordering, fixed float formatting).
 - Units handled in one place: pixels ↔ Synfig units, seconds ↔ frames.
-- **Rules in code:** timing math and frame counts are unit-tested (CLAUDE.md).
+- **Rules in code:** timing math and frame counts are unit-tested (AGENTS.md).
 - No GUI-only cruft. Every element the builder writes must be one the CLI needs.
 
 ### 1.4 Agent: tests

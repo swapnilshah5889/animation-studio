@@ -63,7 +63,7 @@ format that model was trained on, then parses the model's special output back in
 Rules for the real director, learned here:
 
 - **Validate every call in code** before running it (JSON Schema, then our own checks). Never trust
-  the model's arguments; "rules live in code" (CLAUDE.md).
+  the model's arguments; "rules live in code" (AGENTS.md).
 - **Small, sharp tools** with precise descriptions beat one giant tool. The model reads the
   descriptions; they are part of the prompt.
 - **Thinking models** (qwen3, gpt-oss) reason before calling. That helps planning but costs tokens

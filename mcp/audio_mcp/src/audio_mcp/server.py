@@ -1,6 +1,6 @@
 """audio_mcp: the director's sound tools over MCP (stdio), task 3.7.
 
-    uv run audio-mcp                                      # stdio (Claude Code, Inspector)
+    uv run audio-mcp                                      # stdio (any MCP client)
     npx @modelcontextprotocol/inspector uv run audio-mcp  # browse and call the tools
 
 The tools make **audio assets** for a film (D-036): voices and spoken lines with their mouth

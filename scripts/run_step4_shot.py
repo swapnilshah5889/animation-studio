@@ -83,7 +83,7 @@ COMFY_TOOLS = {
 
 
 def server_params(name: str) -> StdioServerParameters:
-    """The launch command from .mcp.json, as Claude Code and the Inspector use it."""
+    """The launch command from .mcp.json, as any MCP client uses it."""
     spec = json.loads((REPO_ROOT / ".mcp.json").read_text())["mcpServers"][name]
     return StdioServerParameters(command=spec["command"], args=spec["args"], cwd=REPO_ROOT)
 

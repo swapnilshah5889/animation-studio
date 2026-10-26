@@ -13,7 +13,7 @@ Steps:
 2. **Cache:** the request hash covers mood, energy, instruments, duration, seed and model. Same
    hash = the existing cue is reused.
 3. **Make room:** unload every Ollama model, and refuse if ComfyUI is running (one large model
-   in memory at a time, CLAUDE.md). ACE-Step then runs in its own env (scripts/audio/
+   in memory at a time, AGENTS.md). ACE-Step then runs in its own env (scripts/audio/
    acestep_compose.py) in bf16 with PyTorch's DiT and VAE only (D-041), under
    `/usr/bin/time -l`, so the peak memory footprint of every cue is measured and reported.
 4. **Finish:** trim to the exact length with a short fade-in and a fade-out, normalize to

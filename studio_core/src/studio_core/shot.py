@@ -1,6 +1,6 @@
 """Shot assembly: a shot spec (shots/<id>/shot.json, D-028) → scene.sif → shot.mp4.
 
-The director writes the spec; everything from there is deterministic code (CLAUDE.md "rules in
+The director writes the spec; everything from there is deterministic code (AGENTS.md "rules in
 code"): motions become bone tracks, expressions and Rhubarb cues become face switch tracks,
 characters are placed by their feet, and the camera and parallax come from the background.
 

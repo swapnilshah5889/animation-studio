@@ -151,8 +151,8 @@ terms forbid copying the database).
   extended to the new server.
 
 ### 3.8 Prove it (owner checkpoint 4)
-- A scripted MCP client builds the done-when shot through both servers. If the `claude` CLI is
-  logged in, the same run goes through Claude Code too (as `scripts/run_first_shot.py` does).
+- A scripted MCP client builds the done-when shot through both servers
+  (`scripts/run_step3_shot.py`).
 - The owner watches and listens.
 
 ### 3.9 Docs
@@ -183,7 +183,7 @@ terms forbid copying the database).
 | | Indic Parler-TTS |
 |---|---|
 | License | **Apache-2.0** weights. Training data: IndicTTS, LIMMITS, Rasa (CC-BY-4.0) + GLOBE. Commercial use OK |
-| Access | **Gated:** the owner accepts the terms on Hugging Face once and logs in (a free token, allowed by CLAUDE.md). Fully offline after the download |
+| Access | **Gated:** the owner accepts the terms on Hugging Face once and logs in (a free token, allowed by AGENTS.md). Fully offline after the download |
 | Size | 0.94B params, ~3.7 GB fp32 download (under the 20 GB ask-first limit) |
 | Languages | **Indian English, stated explicitly by its card**, Hindi and ~19 more Indian languages, in one model |
 | Voices | 21 named English speakers (Thoma and Mary recommended) and 4 Hindi speakers (Rohit and Divya recommended). A character = a speaker + a fixed description, so the voice stays the same |

@@ -2,7 +2,7 @@
 
 How "Pip waves" in a shot spec becomes keyframes on bones (`studio_core/motions/`). The LLM picks
 *what* (a motion name, a start time, a few parameters); code decides *how* (frames, angles,
-easing). That's CLAUDE.md's "rules in code".
+easing). That's AGENTS.md's "rules in code".
 
 ## From action to keyframes
 
