@@ -345,8 +345,9 @@ def test_sam_joins_the_colour_key_unless_it_went_wrong(
     assert views["three_quarter"]["silhouette"]["sam_rejected"]
 
 
-def _two_views(tq_skeleton: Skeleton, *, hat: bool = False) -> np.ndarray:
-    """A sheet whose three-quarter figure is drawn from `tq_skeleton`, maybe with a hat."""
+def _two_views(tq_skeleton: Skeleton, *, hat: bool = False, beak: bool = False) -> np.ndarray:
+    """A sheet whose three-quarter figure is drawn from `tq_skeleton`, maybe with a hat, or with
+    a small beak that only the turned head shows."""
     img = Image.new("RGB", CANVAS, BG)
     draw = ImageDraw.Draw(img)
     draw_character(draw, FRONT)
@@ -354,6 +355,9 @@ def _two_views(tq_skeleton: Skeleton, *, hat: bool = False) -> np.ndarray:
     if hat:
         x, y = tq_skeleton.joints["head_top"]
         draw.ellipse([x - 40, y + 5, x + 40, y + 55], fill=(90, 60, 200))
+    if beak:
+        x, y = tq_skeleton.joints["nose"]
+        draw.ellipse([x - 22, y - 4, x + 22, y + 32], fill=(254, 204, 46))
     return np.asarray(img).astype("float32")
 
 
@@ -379,6 +383,15 @@ def test_a_hat_in_one_view_only_is_reported() -> None:
     report = _consistency(_two_views(SIDE, hat=True))
     assert [p for p in report["problems"] if p.startswith("head:")]
     assert report["regions"]["head"]["only_three_quarter"][0]["share"] > 0.03
+
+
+def test_a_small_feature_only_the_turn_shows_is_a_note_not_a_problem() -> None:
+    # A bird's beak seen in profile: a few per cent of the head, in one view only (Step 4, Pim).
+    report = _consistency(_two_views(SIDE, beak=True))
+    share = report["regions"]["head"]["only_three_quarter"][0]["share"]
+    assert 0.03 <= share < 0.07, share
+    assert report["ok"], report["problems"]
+    assert [n for n in report["notes"] if n.startswith("head:")]
 
 
 def test_an_unturned_three_quarter_view_is_reported() -> None:

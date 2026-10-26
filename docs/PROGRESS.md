@@ -12,6 +12,27 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-26: Step 4: small view-only paint is a note (D-061)
+
+**Done**
+- `puppet/consistency.py`: paint seen in one view only is reported from 3% of a region, but is a
+  problem only from 7%; below that it is a note (`report["notes"]`, `"tolerated": true`).
+- Test: a small beak only the turned head shows passes with a note, a hat (9.7%) still fails, and
+  the beak test fails without the change.
+
+**Verified**
+- Real sheets (scratch harness, SAM off): Kit and Bo (both films) have identical consistency
+  reports; Pim's now passes with the beak (4.7%) as a note. 463 passed, models excluded; ruff
+  clean.
+- Pim's current sheets show no head-size or feet problem (head share 0.352 vs 0.369): those
+  findings in the bird trial came from the other candidates.
+
+**Not done:** the 7% limit rests on two characters; re-check with Mia and Bolt. Pim's remaining
+problems: SAM rejected, far arm and shins in the three-quarter view, and a full end-to-end rebuild
+is still to run. Mia and Bolt are not designed yet.
+
+---
+
 ## 2026-10-26: Step 4: the no-nose face fix (D-060)
 
 The owner chose to time-box the varied-cast work to a pass bar and start with the eye finder.

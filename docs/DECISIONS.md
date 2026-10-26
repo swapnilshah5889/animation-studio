@@ -1190,3 +1190,20 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   fails without the fix. The remaining Pim problems (SAM rejection, consistency flags on the
   beak and feet, head 110% as tall, far arm and shins) are still open.
 
+### D-061: Small view-only paint is a note, not a drift problem (task 4.5 check, 2026-10-26)
+- **Context:** Pim's (the bird's) only consistency problem was its yellow beak: 4.7% of the
+  three-quarter head in a colour the front head lacks. A turned head shows features the front
+  doesn't (a beak in profile, the side of a shoe). Kit's hat, the thing the check exists for, is
+  about 10% of the head.
+- **Decision:** `compare_views` still reports paint from 3% of a region (`MIN_SHARE`), but only
+  paint from 7% (`TOLERATED_SHARE`) is a problem. Between 3% and 7% it goes to `report["notes"]`
+  and the region listing, with `"tolerated": true`, so it stays visible and doesn't block a build.
+- **Limits:** a hat smaller than about 7% of the head now passes as a note. The synthetic hat in
+  the tests is 9.7%, so the margin is thin; the number comes from two characters, so re-check it
+  with Mia and Bolt. The head-size and turn checks are unchanged.
+- **Verified:** Kit and Bo (two films) have identical reports before and after; Pim's consistency
+  now passes with the beak as a note. A unit test with a small beak fails without the change.
+- **Correction to the bird trial notes:** with the current sheets Pim's head share is 0.352 front
+  vs 0.369 three-quarter (within the 10% tolerance), and no feet colour is flagged. The "110% as
+  tall" and "feet" findings came from the other candidates in that trial.
+

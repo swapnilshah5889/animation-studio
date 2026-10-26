@@ -10,7 +10,10 @@ draws the "three-quarter" figure barely turned. Both are measured here, without 
 
 - **Colours per region** (head, torso, arms, legs): paint covering at least 3% of a region in
   one view that the same region of the other view doesn't have (colour histograms, with
-  neighbouring shades counted as the same paint). A hat, a bag, a different shirt.
+  neighbouring shades counted as the same paint). A hat, a bag, a different shirt. A small
+  patch (under `TOLERATED_SHARE`) is a **note**, not a problem: turning a head or a foot shows
+  a feature the other view doesn't (a bird's beak in profile, a shoe's side), and a few
+  per cent of paint is about that size.
 - **Head size:** head height as a share of the figure's height, per view.
 - **Turn:** how far the face's marks (eyes, nose, mouth) sit off the head's centre line, as a
   share of the head's width, compared with what the three-quarter skeleton asked for.
@@ -33,7 +36,8 @@ REGIONS = {
     "arms": ("upper_arm_l", "forearm_l", "upper_arm_r", "forearm_r"),
     "legs": ("thigh_l", "shin_l", "thigh_r", "shin_r"),
 }
-MIN_SHARE = 0.03  # a colour must cover this share of a region to count
+MIN_SHARE = 0.03  # a colour must cover this share of a region to be reported
+TOLERATED_SHARE = 0.07  # below this it is a note, not a problem: a feature the turn reveals
 BIN = 32  # colour grid cell size (RGB levels); neighbouring cells count as the same paint
 PRESENT = 0.002  # a cell is present in a region if this share of its pixels fall in it
 MIN_TURN = 0.5  # the three-quarter view must turn at least this share of what was asked
@@ -91,7 +95,7 @@ def extra_colours(a: np.ndarray, b: np.ndarray) -> list[dict[str, Any]]:
         return []
     common = np.bincount(cells[unmatched]).argmax()
     colour = a[unmatched][cells[unmatched] == common].mean(axis=0)
-    return [{"hex": _hex(colour), "share": round(share, 3)}]
+    return [{"hex": _hex(colour), "share": round(share, 3), "tolerated": share < TOLERATED_SHARE}]
 
 
 def face_offset(img: np.ndarray, head: np.ndarray) -> float | None:
@@ -144,7 +148,7 @@ def asked_turn(sk: Skeleton) -> float:
 
 def compare_views(img: np.ndarray, cuts: dict[str, ViewCut]) -> dict[str, Any]:
     front, tq = cuts["front"], cuts["three_quarter"]
-    report: dict[str, Any] = {"regions": {}, "problems": []}
+    report: dict[str, Any] = {"regions": {}, "problems": [], "notes": []}
     for region, bones in REGIONS.items():
         fm = np.any([front.parts[b] for b in bones], axis=0)
         tm = np.any([tq.parts[b] for b in bones], axis=0)
@@ -154,9 +158,8 @@ def compare_views(img: np.ndarray, cuts: dict[str, ViewCut]) -> dict[str, Any]:
         report["regions"][region] = {"only_three_quarter": only_tq, "only_front": only_front}
         for which, extra in (("three-quarter", only_tq), ("front", only_front)):
             for c in extra:
-                report["problems"].append(
-                    f"{region}: {c['hex']} covers {c['share']:.0%} of the {which} view only"
-                )
+                what = f"{region}: {c['hex']} covers {c['share']:.1%} of the {which} view only"
+                report["notes" if c["tolerated"] else "problems"].append(what)
     heads = {}
     for view, cut in cuts.items():
         figure = np.any(list(cut.parts.values()), axis=0)
