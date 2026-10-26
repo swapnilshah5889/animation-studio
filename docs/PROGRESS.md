@@ -40,8 +40,20 @@ agent could run the project before resuming Step 4. This session did both.
 3. Resume Step 4 by fixing the puppet cut on varied characters (`cast_review.py`).
 4. Prove the agent can generate media (done, above).
 
-**Next:** resume Step 4: run `scripts/cast_review.py` on the varied cast, make the cut follow
-drawings that differ from the skeleton, then task 4.10 (docs + the Step 5 brief).
+**Bird trial (Pim, same day):** built end to end (~46 min, slow: Docker's 8 GB reservation keeps
+VRAM at ~3 GB free and the klein redraw swaps). Both passing sheets (c1, c3) built but their views
+differ, and round 2's sheets all failed their checks. Failures to fix, in order:
+1. **No eyes found** (both views). Diagnosed: the beak is yellow, so the near-black "nose" finder
+   takes a dark feature *above* the eyes for the nose; the "eyes above the nose" band then sits
+   above the real eyes and loses them. Fix the eye/nose finder for faces with no dark nose.
+2. SAM rejected (IoU ~0.72) → colour-key fallback.
+3. Consistency flags the beak yellow and feet orange as view drift (small features).
+4. Head 110% as tall in the three-quarter view.
+5. Far arm and shins loose in the three-quarter view.
+Also fixed `cast_review.py` so it stops before a design round past the build limit.
+
+**Next:** fix the eye finder first (a unit test with a bird-like face that fails without the fix),
+then consistency/palette tolerance, then Mia (child) and Bolt (robot), then task 4.10.
 
 ---
 
