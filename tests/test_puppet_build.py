@@ -237,6 +237,49 @@ def test_a_mouth_by_the_snout_is_painted_out() -> None:
     assert luma[my, (x0 + x1) // 2] > 120  # the mouth is painted out
 
 
+def test_eyes_are_found_when_there_is_no_dark_nose() -> None:
+    """A bird (Step 4 varied cast): a light beak and dark eyes at the beak's height. The
+    near-black nose finder must not take one eye for the nose and drop the pair."""
+    img = sheet()
+    draw = ImageDraw.Draw(img)
+    f = face_points(FRONT)
+    mx, my = f["nose"]
+    for eye in ("eye_l", "eye_r"):
+        ex, ey = f[eye]
+        draw.ellipse([ex - 7, ey - 7, ex + 7, ey + 7], fill=CREAM)  # no high fox eyes
+    draw.ellipse([mx - 10, my - 8, mx + 10, my + 8], fill=CREAM)  # the beak is light, not black
+    for eye in ("eye_l", "eye_r"):
+        ex, _ = f[eye]
+        draw.ellipse([ex - 7, my - 7, ex + 7, my + 7], fill=DARK)  # dark eyes at the beak's height
+    img = np.asarray(img).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    head = head_mask(img, figure, FRONT)
+    _, _, notes = clean_face(img, head, FRONT)
+    assert notes["eyes_found"] == ["left", "right"], notes
+
+
+def test_a_single_brown_eye_is_an_eye_not_a_nose() -> None:
+    """The real bird (Step 4 varied cast): a turned head with one brown eye (not near-black) and no
+    nose. The only mark on the face must not be taken for the nose."""
+    img = sheet()
+    draw = ImageDraw.Draw(img)
+    f = face_points(FRONT)
+    for eye in ("eye_l", "eye_r"):
+        ex, ey = f[eye]
+        draw.ellipse([ex - 7, ey - 7, ex + 7, ey + 7], fill=CREAM)  # clear the fox's eyes
+    mx, my = f["nose"]
+    draw.ellipse([mx - 10, my - 8, mx + 10, my + 8], fill=CREAM)  # no nose
+    ex, ey = f["eye_l"]
+    brown = (120, 70, 55)
+    draw.ellipse([ex - 8, ey - 12, ex + 8, ey + 12], fill=brown)  # the one eye
+    img = np.asarray(img).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    head = head_mask(img, figure, FRONT)
+    _, anchors, notes = clean_face(img, head, FRONT)
+    assert notes["eyes_found"] == ["left"], notes
+    assert abs(anchors["eyes"]["left"][0] - ex) < 4 and abs(anchors["eyes"]["left"][1] - ey) < 4
+
+
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
     built = build_puppet(film, "kit", name="Kit", sam=False, three_quarter="sheet")
     folder = film / "characters" / "kit"

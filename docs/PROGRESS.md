@@ -6,10 +6,39 @@ Update this at the end of every working session. Newest entry at the top.
 remains. The owner chose to fix the puppet cut on a few varied characters before closing
 Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
 roadmap now ends in production-grade films (D-059): Step 4B (animation quality) comes next,
-and the old Step 7 is split into Steps 7–12. Open items: the eye-finder fix (a failing test
-is written, uncommitted), task 3.2b's Parler download (deferred), Docker's memory
+and the old Step 7 is split into Steps 7–12. Open items: Pim's other cut failures (the eye finder is fixed, D-060), task 3.2b's Parler download (deferred), Docker's memory
 reservation, deleting the pre-Step-4 scratch files, Kit's and Bo's real voices (placeholders),
 and the hosted-vs-desktop decision (needed by Step 11).
+
+---
+
+## 2026-10-26: Step 4: the no-nose face fix (D-060)
+
+The owner chose to time-box the varied-cast work to a pass bar and start with the eye finder.
+
+**Done**
+- Pass bar recorded (D-060): 4 of 5 (Kit, Bo, Pim, Mia, Bolt) build with matching views, limbs on
+  their bones and the face found in both views; the rest is tracked and carried into Step 4B.
+- `puppet/build.py` `clean_face`: a face with no dark nose is read again with no nose when the
+  mark taken for the nose leaves no eye above it (`no_nose`).
+- Tests: the bird-like face (was xfail, now a normal test, fails without the fix) and a guard for
+  a single brown eye.
+
+**Verified**
+- Before/after on the real sheets (scratch harness, SAM off, existing klein redraws): Kit and Bo
+  (both films) identical in cleaned pixels, face anchors and notes. Pim: eyes `[]` -> one eye
+  found in each view (the other placed from the skeleton), where before the eye was kept as a
+  nose.
+- `ruff check` clean; 462 passed, models excluded (2 min 7 s).
+
+**Not done**
+- Pim was not rebuilt end to end: only the face step was compared. The other Pim failures are
+  still open: SAM rejected (IoU ~0.72), consistency flags the beak and feet, head 110% as tall in
+  the three-quarter view, far arm and shins loose.
+- Mia (child) and Bolt (robot) have no designs yet (`films/step4-cast` has no `child` candidates).
+
+**Next:** the consistency tolerance for small features (beak, feet), then Pim's head size and
+loose limbs, then design Mia and Bolt, then task 4.10.
 
 ---
 

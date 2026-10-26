@@ -1172,3 +1172,21 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
     Step 5, as a plain render node.
   - The owner decision on hosted vs desktop delivery (open since 2026-10-21) is now needed by Step 11.
 
+### D-060: Step 4 closes against a pass bar on a varied cast; the no-nose face fix (owner, 2026-10-26)
+- **Decision:** the varied-cast work (D-057's open item) is time-boxed to a pass bar instead of
+  "until every character is perfect". Cast: Kit (fox), Bo (bear), Pim (bird), Mia (child), Bolt
+  (robot). **Pass bar:** at least 4 of the 5 build with their views matching, every limb on its
+  bone (`limbs_ok`) and the face found in both views. Whatever still fails is recorded as tracked
+  manual cleanup (the Step 4 done-when allows it) and carried into Step 4B (ROADMAP).
+- **First fix, faces with no dark nose (Pim):** the nose finder took the bird's only eye for the
+  nose (a brown eye through the "solid mark nearest the nose line" fallback, or a near-black one
+  through the black-blob rule), so no eyes were found. Now, when the mark taken for the nose
+  leaves no eye above it, `clean_face` reads the face again with no nose (`no_nose=True`): the
+  marks are eyes (compact: at most 2:1; a second eye at least 0.35 of the first's area, so a
+  feather arc isn't one), the window for eyes reaches 0.5 head widths above the skeleton's nose
+  line, and one eye places the other from the skeleton's offsets as before.
+- **Verified:** the Kit, Bo (two films) face results are identical before and after (cleaned pixels,
+  anchors and notes), and Pim now finds an eye in both views. A unit test with a bird-like face
+  fails without the fix. The remaining Pim problems (SAM rejection, consistency flags on the
+  beak and feet, head 110% as tall, far arm and shins) are still open.
+

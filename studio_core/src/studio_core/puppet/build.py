@@ -429,7 +429,7 @@ def _blobs(mask: np.ndarray, min_px: int = 6) -> list[dict[str, Any]]:
 
 
 def clean_face(
-    rgb: np.ndarray, head: np.ndarray, sk: Skeleton
+    rgb: np.ndarray, head: np.ndarray, sk: Skeleton, *, no_nose: bool = False
 ) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
     """Paint out the drawn eyes, brows and mouth; keep the nose. Returns the new pixels, the
     face anchors in canvas pixels, and notes on what was found.
@@ -437,7 +437,12 @@ def clean_face(
     Nothing assumes a symmetric face (the three-quarter view): the **nose** is the solid dark
     blob nearest the skeleton's nose line, the **eyes** the two best marks above it (big, and
     low rather than high, so not the brows) far enough apart, the **mouth** the marks below
-    it."""
+    it.
+
+    A face with no dark nose (a bird: a light beak, dark eyes) would give its eye to the nose
+    and leave no eye. When the mark taken for the nose leaves no eye above it, the face is read
+    again with no nose at all (`no_nose`): the marks are eyes, and the mouth is wherever the
+    skeleton has it."""
     hx0, hy0, hx1, hy1 = _bbox(head)
     nose_row = int(sk.joints["nose"][1])
     xs = np.nonzero(head[nose_row])[0]
@@ -468,17 +473,21 @@ def clean_face(
                     out.append(b)
             return out
 
-        blacks = noses(_blobs(black))
+        blacks = [] if no_nose else noses(_blobs(black))
         # A nose drawn on the outline joins it into one long blob (Bo's three-quarter view,
         # whose eye was then taken for the nose and kept). Without the thin strokes it stands
         # free; pieces that overlap a mark already found add nothing.
         stroke = max(2, int(0.015 * row_w))
         freed = _grow(_shrink(black, stroke), stroke) & black
-        blacks += [
-            b
-            for b in noses(_blobs(freed))
-            if not any((b["mask"] & k["mask"]).any() for k in blacks)
-        ]
+        blacks += (
+            []
+            if no_nose
+            else [
+                b
+                for b in noses(_blobs(freed))
+                if not any((b["mask"] & k["mask"]).any() for k in blacks)
+            ]
+        )
         for b in blacks:
             b["cx"], b["cy"], b["bottom"] = b["cx"] + bx0, b["cy"] + by0, b["bottom"] + by0
     nose = max(blacks, key=lambda b: b["area"]) if blacks else None
@@ -513,7 +522,7 @@ def clean_face(
         b["cx"], b["cy"], b["bottom"] = b["cx"] + x0, b["cy"] + y0, b["bottom"] + y0
         b["solid"] = b["area"] / (b["w"] * b["h"]) >= 0.45 and b["area"] >= (0.025 * row_w) ** 2
     solid = [b for b in found if b["solid"]]
-    if nose is None:
+    if nose is None and not no_nose:
         # No black nose. Open eyes are a pair of solid marks at one height and the nose is the
         # solid mark just below them; with closed (arc) eyes there is no pair, and the solid
         # mark nearest the skeleton's nose line, preferring the centre, is the nose.
@@ -563,16 +572,20 @@ def clean_face(
             rest["solid"] = False
             marks.append(rest)
     nose_y = nose["cy"] if nose else sk.joints["nose"][1]
+    if no_nose:  # the eyes sit by the skeleton's nose line here, not above it
+        nose_y += 0.12 * row_w
     nx = nose["cx"] if nose else sk.joints["nose"][0]
     # Eyes sit a little above the nose and within about half a head of it: further back or
     # higher, a turned head's marks are ear shading, not a far eye.
     above = [
         b
         for b in marks
-        if nose_y - 0.25 * row_w < b["cy"] < nose_y - 0.02 * row_w
+        if nose_y - (0.5 if no_nose else 0.25) * row_w < b["cy"] < nose_y - 0.02 * row_w
         and abs(b["cx"] - nx) < 0.45 * row_w
-        and max(b["w"], b["h"]) <= 4 * min(b["w"], b["h"])  # a dot or an arc, not a line
+        and max(b["w"], b["h"]) <= (2 if no_nose else 4) * min(b["w"], b["h"])  # a dot, not a line
     ]
+    if above == [] and nose is not None and not no_nose:
+        return clean_face(rgb, head, sk, no_nose=True)
     top = min((b["cy"] for b in above), default=nose_y)
 
     def score(b: dict[str, Any]) -> float:  # big, and lower (eyes) rather than higher (brows)
@@ -582,7 +595,15 @@ def clean_face(
     ranked = sorted(above, key=score, reverse=True)
     if ranked:
         first = ranked[0]
-        second = next((b for b in ranked[1:] if abs(b["cx"] - first["cx"]) > 0.12 * row_w), None)
+        second = next(
+            (
+                b
+                for b in ranked[1:]
+                if abs(b["cx"] - first["cx"]) > 0.12 * row_w
+                and (not no_nose or b["area"] >= 0.35 * first["area"])  # not an arc or a speck
+            ),
+            None,
+        )
         pair = sorted([b for b in (first, second) if b], key=lambda b: b["cx"])
         if len(pair) == 2:
             eyes = {"right": pair[0], "left": pair[1]}  # the character's left is screen-right
