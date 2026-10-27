@@ -40,6 +40,8 @@ MIN_SHARE = 0.03  # a colour must cover this share of a region to be reported
 TOLERATED_SHARE = 0.07  # below this it is a note, not a problem: a feature the turn reveals
 BIN = 32  # colour grid cell size (RGB levels); neighbouring cells count as the same paint
 PRESENT = 0.002  # a cell is present in a region if this share of its pixels fall in it
+BLOB = 9  # px: a mark this thick in every direction is an eye, not a line (sheet scale)
+MIN_BLOB_PIXELS = 10  # eroded pixels needed before the blobs replace all the marks
 MIN_TURN = 0.5  # the three-quarter view must turn at least this share of what was asked
 HEAD_TOLERANCE = 0.1  # head height shares may differ by this much (relative)
 
@@ -134,6 +136,17 @@ def face_offset(img: np.ndarray, head: np.ndarray) -> float | None:
     marks = inner & (luma < np.asarray(around, dtype="float32") - 40)
     if marks.sum() < 20:
         return None
+    # Thin lines (an ear's contour, a curl's shadow, the mouth) pull the centroid toward the
+    # hair when the head is a big head of hair; big dark blobs (large eyes) are the face. Use
+    # them alone when the head has any, else every mark (small dot eyes, a nose, a beak).
+    solid = (
+        np.asarray(
+            Image.fromarray((marks * 255).astype("uint8")).filter(ImageFilter.MinFilter(BLOB))
+        )
+        > 127
+    )
+    if solid.sum() >= MIN_BLOB_PIXELS:
+        marks = solid
     centre = (row.min() + row.max()) / 2
     return float((np.nonzero(marks)[1].mean() - centre) / width)
 

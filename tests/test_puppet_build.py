@@ -25,7 +25,7 @@ from studio_core.puppet.build import (
     head_mask,
     limb_fit,
 )
-from studio_core.puppet.consistency import ViewCut, compare_views
+from studio_core.puppet.consistency import ViewCut, asked_turn, compare_views, face_offset
 from studio_core.puppet.design import CANVAS
 from studio_core.puppet.skeleton import Skeleton, place, rig_bones, turnaround
 from studio_core.schema import validate_file
@@ -495,6 +495,38 @@ def test_an_unturned_three_quarter_view_is_reported() -> None:
     unturned = place("front", height_px=SIDE.height_px, feet_px=SIDE.joints["sole"])
     report = _consistency(_two_views(Skeleton("three_quarter", unturned.joints, SIDE.hidden)))
     assert any("barely turned" in p for p in report["problems"])
+
+
+def _hair_head(eye_xs: tuple[int, ...]) -> tuple[np.ndarray, np.ndarray]:
+    """A head that is mostly curly hair (400 wide, 300 tall): a face on its right with big dark
+    eyes at `eye_xs`, and on the left an ear and curl shadows drawn as thin dark lines."""
+    img = Image.new("RGB", (600, 500), BG)
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([100, 100, 500, 400], fill=(200, 120, 70))  # the hair
+    draw.ellipse([280, 200, 470, 400], fill=(250, 225, 205))  # the face
+    for x in range(130, 270, 25):
+        draw.line([x, 250, x, 340], fill=(60, 30, 20), width=4)  # curl shadows, the ear
+    for x in eye_xs:
+        draw.ellipse([x - 14, 276, x + 14, 304], fill=(40, 20, 20))
+    head = Image.new("L", img.size, 0)
+    ImageDraw.Draw(head).ellipse([100, 100, 500, 400], fill=255)
+    return np.asarray(img).astype("float32"), np.asarray(head) > 127
+
+
+def test_a_wide_head_of_hair_does_not_hide_a_turned_face() -> None:
+    # Mia (Step 4): thin ear and curl lines on the hair's side outnumber the eyes' pixels and pull
+    # the face marks back to the head's middle, so a clearly turned face scored under half.
+    img, head = _hair_head((350, 410))
+    offset = face_offset(img, head)
+    assert offset is not None
+    assert offset / asked_turn(SIDE) >= 0.5, offset
+
+
+def test_a_wide_head_of_hair_with_a_front_face_is_still_unturned() -> None:
+    img, head = _hair_head((270, 330))  # eyes about the head's middle
+    offset = face_offset(img, head)
+    assert offset is not None
+    assert offset / asked_turn(SIDE) < 0.5, offset
 
 
 def test_nothing_chosen_is_refused(film: Path) -> None:
