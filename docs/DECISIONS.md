@@ -1274,3 +1274,19 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   steps that make the art (4, 4B) and to Step 5 (the director calls the art tools itself). Options
   already identified: lower Docker's memory reservation, two sheets a round, a cheap pre-check
   before a full sheet, cache rejected seeds, simpler layer fills, and a vision model to find faces.
+
+
+### D-065: The director is a veteran animator (owner, 2026-10-27)
+- **Decision:** the Step 5 director is built to act as a veteran animator who knows these tools
+  deeply and can make any kind of animated video the tools can make. See ROADMAP Step 5 for the four
+  parts: a craft library (RAG), a look-then-fix loop with `qa_mcp`, rules in code, and a capability
+  list.
+- **Why not just a persona prompt:** a "you are a veteran" prompt changes tone, not skill. A 14B local
+  model gets skill from knowledge it can look up, feedback on what it made, and training on measured
+  results (Steps 7 and 9).
+- **Limit:** "any kind of video" means any kind the toolset supports: cut-out puppet films with
+  AI-made art today, more styles as backends and tiers arrive (Steps 6 and 12). Out-of-range requests
+  are declined with a reason, not faked.
+- **Owner-led:** per AGENTS.md the agent loop core is the owner's to write; the agent proposes the
+  design and a skeleton first.
+\n

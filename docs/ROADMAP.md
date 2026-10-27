@@ -142,6 +142,18 @@ checks and the owner's review.
   It runs a stage state machine over the film folder (story → characters → backgrounds → audio →
   shots → edit), uses schema-validated shot lists, has approval checkpoints, and resumes from the last
   completed stage. It must unload models between stages (Mac memory rule).
+- **Veteran-animator director (D-065):** the director behaves like an animator with decades on these
+  tools, not a prompt-follower. It gets four things, in this order of value:
+  1. **A craft library** it retrieves from (RAG, `docs/craft/`): how each tool and motion is used,
+     timing and spacing rules, staging, shot grammar, what fails and why (the lessons already in
+     `docs/learning/` and DECISIONS), written as short playbooks.
+  2. **A look-then-fix loop:** it renders a preview frame, `qa_mcp` describes what it sees against
+     the shot spec, and the director revises before the final render (critique and retry).
+  3. **Rules in code** for everything that must be exact (timing, frame counts, safety), so its
+     judgment covers only choices.
+  4. **A capability list** it reads first (`describe_*` tools), so it never plans something the
+     tools can't do, and says so when a request is outside them.
+  Later, Step 7 measures its choices and Step 9 trains them (SFT, then GRPO on the evals).
 - Bring in the Windows laptop as a render node (Synfig rendering in parallel by shot).
 
 **Done when:** one prompt produces a **60-second children's film** (2 characters, 2 backgrounds,
