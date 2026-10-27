@@ -1289,4 +1289,3 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   are declined with a reason, not faked.
 - **Owner-led:** per AGENTS.md the agent loop core is the owner's to write; the agent proposes the
   design and a skeleton first.
-\n
