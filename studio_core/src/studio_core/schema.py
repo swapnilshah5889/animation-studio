@@ -214,6 +214,18 @@ def check_shot(shot: dict[str, Any], at: str = "") -> list[Issue]:
                         f"{action['motion']} runs past the end of the {end}s shot",
                     )
                 )
+        last = 0.0
+        for wi, key in enumerate(char.get("path", [])):
+            path = f"{pre}characters[{ci}].path[{wi}].time_s"
+            if key["time_s"] <= last + 1e-9:
+                issues.append(
+                    Issue(
+                        path, f"waypoint at {key['time_s']}s is not after the one before ({last}s)"
+                    )
+                )
+            elif key["time_s"] > end + 1e-9:
+                issues.append(Issue(path, f"waypoint at {key['time_s']}s is past the {end}s shot"))
+            last = max(last, key["time_s"])
         for ei, expr in enumerate(char.get("expressions", [])):
             after_end(f"characters[{ci}].expressions[{ei}].start_s", expr["start_s"], expr["expr"])
         for pi, pose in enumerate(char.get("poses", [])):

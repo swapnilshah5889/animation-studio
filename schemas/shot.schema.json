@@ -68,10 +68,27 @@
         "view": { "enum": ["front", "three_quarter"], "default": "front" },
         "position": { "$ref": "#/$defs/frame_pos", "description": "Where the character stands: the point between its feet (the lowest point of its rest pose), as fractions of the frame. [0.5, 0.92] = centre, standing near the bottom." },
         "scale": { "type": "number", "minimum": 0.2, "maximum": 3, "default": 1, "description": "1 = the rig's natural size." },
-        "facing": { "enum": ["left", "right"], "default": "right", "description": "Mirror the character to face left." },
+        "facing": { "enum": ["left", "right"], "default": "right", "description": "Mirror the character to face left. While a walk_cycle runs and the character moves sideways along its path, it faces the direction of travel." },
+        "path": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/waypoint" },
+          "description": "Where the character moves during the shot: waypoints in time order. It stands at `position` until the first segment begins; each waypoint is reached from the one before it (the start position for the first) with the waypoint's easing. Two waypoints at the same position make it hold still."
+        },
         "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
         "expressions": { "type": "array", "items": { "$ref": "#/$defs/expression" } },
         "poses": { "type": "array", "items": { "$ref": "#/$defs/pose" } }
+      }
+    },
+    "waypoint": {
+      "type": "object",
+      "description": "The character is at `position` at time_s, arriving with `ease`.",
+      "required": ["time_s", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "time_s": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds from the start of the shot; strictly increasing along the path, no later than the end of the shot." },
+        "position": { "$ref": "#/$defs/frame_pos", "description": "Where its feet are, as for `position`." },
+        "ease": { "enum": ["linear", "ease_in", "ease_out", "ease_in_out"], "default": "ease_in_out", "description": "How the segment ending here accelerates: linear = constant speed; ease_in = starts slow; ease_out = ends slow; ease_in_out = both." }
       }
     },
     "action": {

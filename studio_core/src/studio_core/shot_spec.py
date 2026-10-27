@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from studio_core import placement
 from studio_core.audio.library import LibraryError, load_library
 from studio_core.config import REPO_ROOT
 from studio_core.film import Film
@@ -34,7 +35,7 @@ ID = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 # The placeholder puppet (Pip) that build_rig copies when no rig is given, until Step 4
 # generates real puppets.
 PLACEHOLDER_RIG = REPO_ROOT / "tests" / "fixtures" / "characters" / "pip"
-REMOVABLE = ("character", "action", "pose", "expression", "dialogue", "sound_effect")
+REMOVABLE = ("character", "action", "pose", "expression", "dialogue", "sound_effect", "movement")
 
 
 class SpecError(ValueError):
@@ -319,6 +320,35 @@ def place_character(
     return save(film, spec)
 
 
+def move_character(
+    film: FilmFolder,
+    shot_id: str,
+    character_id: str,
+    to: list[float],
+    start_s: float,
+    duration_s: float,
+    ease: str = placement.DEFAULT_EASE,
+) -> list[str]:
+    """Move a character to `to` (where its feet end up) starting at start_s and taking
+    duration_s. It stays where it is until start_s. Moves come in time order: a new move may not
+    start before the last one ends."""
+    if ease not in placement.EASES:
+        raise SpecError(f"unknown ease {ease!r}; use one of: {', '.join(placement.EASES)}")
+    spec = load(film, shot_id)
+    char = _character(spec, character_id)
+    path = char.setdefault("path", [])
+    if path and start_s < path[-1]["time_s"] - 1e-9:
+        raise SpecError(
+            f"{character_id} is still moving until {path[-1]['time_s']}s; start this move at "
+            "or after that, or remove the earlier move first"
+        )
+    if start_s > 1e-9 and (not path or start_s > path[-1]["time_s"] + 1e-9):
+        here = placement.position_at(char["position"], path, start_s)
+        path.append({"time_s": start_s, "position": [round(v, 6) for v in here], "ease": "linear"})
+    path.append({"time_s": start_s + duration_s, "position": list(to), "ease": ease})
+    return save(film, spec)
+
+
 def add_action(
     film: FilmFolder,
     shot_id: str,
@@ -475,6 +505,10 @@ def remove_item(
         spec["characters"].remove(char)
         spec["dialogue"] = [d for d in spec.get("dialogue", []) if d["character"] != character_id]
         return char, save(film, spec)
+    elif kind == "movement":  # the whole path; the character stays at its start position
+        char = _character(spec, character_id)
+        removed = {"path": char.pop("path", [])}
+        return removed, save(film, spec)
     else:
         items = _character(spec, character_id).get(f"{kind}s", [])
     if index is None or not 0 <= index < len(items):

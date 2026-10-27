@@ -119,3 +119,24 @@ A front-view cut-out can only rotate parts in the picture plane. So:
 
 `uv run scripts/preview_motions.py [--energy 1]` renders every motion as a labelled cell in a 3×3
 video (`~/ai-studio/scratch/motion-preview/`), using exactly the code path `synfig_mcp` uses.
+
+## Walking across the frame (task 4B.6)
+
+A character can move during a shot: `characters[].path` is a list of waypoints (`time_s`,
+`position`, `ease`), edited with `move_character`. `studio_core/placement.py` turns it into a
+position per frame (ease_in_out is a smoothstep); the scene builder keys the placement group on
+those frames.
+
+`walk_cycle` uses the path. When the character moves while the walk runs, the gait is **driven by
+distance, not by the clock**: `studio_core.motions.library._stride_walk` plans `steps` strides
+(`stride_plan`: about 0.8 of the leg length, never above 1.0), and for every frame solves the
+thigh angle that keeps the planted foot at the same world x while the hip travels over it
+(`foot_angle`, a bisection on the leg's forward kinematics). The other leg swings and lifts; the
+body drops by however much the tilted planted leg lifts it. Because phase follows distance, an
+eased start takes small slow steps and the walk stops exactly at rest. Standing still, `walk_cycle`
+keeps the march in place (D-029). The character faces the direction of travel while walking (the
+placement group's scale flips on the frame the direction changes).
+
+Gotchas: the legs swing in the image plane, which is right for side-on art and a waddle on
+front-view art (Pip); the generated three-quarter cast needs real side-view art for a convincing
+walk. A pause (two waypoints at one position) mid-walk freezes the legs mid-step.

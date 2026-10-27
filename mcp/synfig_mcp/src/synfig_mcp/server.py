@@ -28,7 +28,7 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, Field
 
-from studio_core import shot_spec
+from studio_core import placement, shot_spec
 from studio_core.config import load_config
 from studio_core.face import EXPRESSIONS
 from studio_core.motions import MOTIONS
@@ -45,6 +45,7 @@ _SHOT = json.loads((SCHEMA_DIR / "shot.schema.json").read_text())["$defs"]
 Motion = Literal[tuple(_SHOT["action"]["properties"]["motion"]["enum"])]  # type: ignore[valid-type]
 Expression = Literal[tuple(EXPRESSIONS)]  # type: ignore[valid-type]
 CameraMove = Literal[tuple(CAMERA_MOVES)]  # type: ignore[valid-type]
+Ease = Literal[tuple(placement.EASES)]  # type: ignore[valid-type]
 View = Literal["front", "three_quarter"]
 Side = Literal["left", "right"]
 Removable = Literal[tuple(shot_spec.REMOVABLE)]  # type: ignore[valid-type]
@@ -385,6 +386,40 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             return update(f, shot_id, f"{character_id}: {motion} at {start_s}s", warnings)
 
     @tool()
+    def move_character(
+        film: FilmArg,
+        shot_id: ShotArg,
+        character_id: CharArg,
+        to: Annotated[
+            FramePos, Field(description="Where its feet end up: [x, y] frame fractions.")
+        ],
+        start_s: Seconds,
+        duration_s: Annotated[float, Field(gt=0, description="How long the move takes.")],
+        ease: Annotated[
+            Ease,
+            Field(
+                description="ease_in_out (default: starts and stops gently), linear (constant "
+                "speed), ease_in (starts slow), ease_out (ends slow)."
+            ),
+        ] = "ease_in_out",
+    ) -> ShotUpdate:
+        """Move a character across the frame: it stays where it is until start_s, then travels
+        to `to` in duration_s. Moves must come in time order (a new move cannot start before the
+        last one ends). To WALK while moving, also apply_motion 'walk_cycle' over the same time
+        span: the steps then match the distance covered (code decides the step count, so feet do
+        not slide) and the character turns to face the direction of travel. Without walk_cycle it
+        just glides. Walking across the frame swings the legs sideways, which suits side-on art;
+        in the front view it reads as a simple toy-like waddle."""
+        with fixable():
+            f = open_film(film)
+            warnings = shot_spec.move_character(
+                f, shot_id, character_id, list(to), start_s, duration_s, ease
+            )
+            return update(
+                f, shot_id, f"{character_id}: moves to {list(to)} at {start_s}s", warnings
+            )
+
+    @tool()
     def pose_at(
         film: FilmArg,
         shot_id: ShotArg,
@@ -542,8 +577,8 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         ] = None,
     ) -> ShotUpdate:
         """Undo part of a shot: remove a character (with its dialogue), or one of a character's
-        actions, poses or expressions, or one dialogue line or sound effect, by its index in
-        describe_shot."""
+        actions, poses or expressions, a character's whole movement path (kind 'movement'), or one
+        dialogue line or sound effect, by its index in describe_shot."""
         with fixable():
             f = open_film(film)
             removed, warnings = shot_spec.remove_item(

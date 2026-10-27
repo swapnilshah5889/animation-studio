@@ -81,6 +81,10 @@ class PlacedCharacter:
     scale: float = 1.0
     facing: str = "right"  # "left" mirrors the character
     ground_px: float = 0.0  # feet below the root at rest, art px (studio_core.rig.ground_offset_px)
+    # Per-frame feet position (frame fractions) and facing when the character moves (placement
+    # path); None = it stays at `position` / `facing`.
+    track: list[tuple[float, float]] | None = None
+    facings: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -130,6 +134,19 @@ def _plane(name: str, factor: float, pan: Animated | None, children: list[Layer]
     return Group(name, transform=Transform(offset=offset), children=children)
 
 
+def _animated_offset(track: list[tuple[float, float]], spot: Any) -> Vec | Animated:
+    """The placement group's offset: a key on every frame around the movement, straight lines
+    between (the easing was already applied per frame by studio_core.placement)."""
+    moving = [f for f in range(1, len(track)) if track[f] != track[f - 1]]
+    if not moving:
+        return spot(track[0])
+    keep = {0, len(track) - 1, *range(moving[0] - 1, moving[-1] + 1)}
+    return Animated(
+        "vector",
+        tuple(Waypoint(f, spot(track[f]), Interp.LINEAR) for f in sorted(keep) if f < len(track)),
+    )
+
+
 def build_scene(
     *,
     fps: int,
@@ -157,13 +174,34 @@ def build_scene(
     for ch in characters:
         if ch.facing not in ("left", "right"):
             raise SceneError(f"facing must be 'left' or 'right', not {ch.facing!r}")
-        x, y = DESIGN.to_units(ch.position[0] * DESIGN.width, ch.position[1] * DESIGN.height)
-        y += DESIGN.length(ch.ground_px * ch.scale)  # the root sits above the feet
-        sx = -ch.scale if ch.facing == "left" else ch.scale
+
+        def spot(position: tuple[float, float], ch: PlacedCharacter = ch) -> Vec:
+            x, y = DESIGN.to_units(position[0] * DESIGN.width, position[1] * DESIGN.height)
+            return Vec(
+                x, y + DESIGN.length(ch.ground_px * ch.scale)
+            )  # the root sits above the feet
+
+        sign = {"left": -1, "right": 1}
+        offset: Vec | Animated = spot(ch.position)
+        place_scale: Vec | Animated = Vec(sign[ch.facing] * ch.scale, ch.scale)
+        if ch.track is not None:
+            offset = _animated_offset(ch.track, spot)
+        if ch.facings is not None:
+            flips = [(0, ch.facings[0])] + [
+                (f, face) for f, face in enumerate(ch.facings) if f and face != ch.facings[f - 1]
+            ]
+            if len(flips) > 1 or ch.facings[0] != ch.facing:
+                place_scale = Animated(
+                    "vector",
+                    tuple(
+                        Waypoint(f, Vec(sign[face] * ch.scale, ch.scale), Interp.CONSTANT)
+                        for f, face in flips
+                    ),
+                )
         placed.append(
             Group(
                 f"place {ch.built.group.desc}",
-                transform=Transform(offset=Vec(x, y), scale=Vec(sx, ch.scale)),
+                transform=Transform(offset=offset, scale=place_scale),
                 children=[ch.built.group],
             )
         )

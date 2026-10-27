@@ -48,9 +48,11 @@ def animate(
     scale: float = 1.0,
     seed: str = "",
     poses: list[dict[str, Any]] | None = None,
+    travel: list[float] | None = None,
 ) -> Animation:
     """Turn a character's actions into tracks. Unknown motions raise MotionError with the list of
-    known ones; angle offsets are clamped to each bone's limits."""
+    known ones; `travel` (distance covered per frame, from the placement path) makes walk_cycle
+    step across the frame; angle offsets are clamped to each bone's limits."""
     clips = []
     for action in actions:
         name = action["motion"]
@@ -69,6 +71,7 @@ def animate(
             root_px=root_px or Vec(0, 0),
             scale=scale,
             seed=seed,
+            travel=travel,
         )
         clips.append(MOTIONS[name](ctx))
 

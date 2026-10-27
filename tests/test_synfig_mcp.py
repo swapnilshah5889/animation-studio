@@ -34,6 +34,7 @@ TOOLS = {
     "render_shot",
     "add_sound_effect",
     "set_music",
+    "move_character",
 }
 needs_synfig = pytest.mark.skipif(
     not load_config().path("tools", "synfig").exists(), reason="no synfig CLI"

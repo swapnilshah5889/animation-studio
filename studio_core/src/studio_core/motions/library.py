@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from studio_core.motions.timeline import Channel, Clip, Key, sample
-from studio_core.rig import world_pose
+from studio_core.rig import chain, world_pose
 from studio_core.sif import Interp, Vec
 
 SIGN = {"left": 1.0, "right": -1.0}  # raising an arm: CCW for the character's left (front view)
@@ -41,6 +41,9 @@ class MotionContext:
     root_px: Vec = field(default_factory=lambda: Vec(0, 0))  # character root on screen (px, y down)
     scale: float = 1.0  # art px → screen px
     seed: str = ""  # makes "random" choices (blink timing) repeatable
+    # Distance the character has travelled forward by each frame (cumulative, art px), from its
+    # placement path; None = it stands still. walk_cycle steps in time with it.
+    travel: list[float] | None = None
 
     @property
     def energy(self) -> float:
@@ -241,10 +244,130 @@ def blink(ctx: MotionContext) -> Clip:
     return _clip(ctx, "blink", {("eyes", ""): keys})
 
 
+STRIDE = 0.8  # nominal hip travel per step, as a fraction of the leg length
+MAX_STRIDE = 1.0  # a step never exceeds this (the thigh's joint limit allows about 1.1)
+FOOT_LIFT = 0.12  # how high the swinging foot rises, as a fraction of the leg length
+
+
+def _leg(ctx: MotionContext, side: str) -> tuple[float, float, str]:
+    """(foot offset from the hip along x, leg length, thigh bone) at rest, in art px: the foot
+    is the bottom-centre of the lowest part hanging from the thigh."""
+    thigh = ctx.bone("thigh", side)
+    rest = world_pose(ctx.view)
+    hip = rest[thigh][0]
+    low_y, low_x = hip.y, hip.x
+    for part in ctx.view["parts"].values():
+        if thigh not in chain(ctx.view, part["bone"]):
+            continue
+        joint = rest[part["bone"]][0]
+        bottom = joint.y - (part["size_px"][1] - part["pivot_px"][1])
+        if bottom < low_y:
+            low_y = bottom
+            low_x = joint.x + part["size_px"][0] / 2 - part["pivot_px"][0]
+    return low_x - hip.x, hip.y - low_y, thigh
+
+
+def foot_angle(offset: float, length: float, reach: float, lo: float, hi: float) -> float:
+    """The thigh angle (degrees, CCW positive, within [lo, hi]) that puts a foot hanging
+    (offset, -length) below the hip at x = reach: solves offset*cos + length*sin = reach."""
+
+    def x_at(deg: float) -> float:
+        r = math.radians(deg)
+        return offset * math.cos(r) + length * math.sin(r)
+
+    if reach <= x_at(lo):
+        return lo
+    if reach >= x_at(hi):
+        return hi
+    a, b = lo, hi
+    for _ in range(40):
+        mid = (a + b) / 2
+        a, b = (mid, b) if x_at(mid) < reach else (a, mid)
+    return (a + b) / 2
+
+
+def stride_plan(distance: float, leg: float) -> tuple[int, float]:
+    """(steps, stride): how many steps cover `distance` px with legs of `leg` px, and the hip
+    travel per step. The walk starts and ends in the rest pose, so the gait covers the
+    distance in `steps` strides (two half steps count as one)."""
+    steps = max(1, round(distance / (STRIDE * leg)))
+    if distance / steps > MAX_STRIDE * leg:
+        steps = math.ceil(distance / (MAX_STRIDE * leg))
+    return steps, distance / steps
+
+
+def _stride_walk(ctx: MotionContext) -> Clip | None:
+    """Walk across the frame: each foot is planted on the ground while the hip travels over it
+    (it does not slide), the other leg swings forward. Steps are timed by the distance covered
+    (ctx.travel), so a slow start or an eased stop takes small, slow steps. None when the
+    character does not move during the walk or the rig has no pair of legs."""
+    travel = ctx.travel
+    if travel is None or not (ctx.has("thigh", "left") and ctx.has("thigh", "right")):
+        return None
+    end = min(ctx.last_frame, ctx.start + ctx.duration) if ctx.duration else ctx.last_frame
+    moving = [f for f in range(ctx.start, end) if travel[f + 1] - travel[f] > 1e-6]
+    if not moving:
+        return None
+    f0, f1 = moving[0], moving[-1] + 1
+    legs = {side: _leg(ctx, side) for side in SIGN}
+    length = min(leg[1] for leg in legs.values())
+    steps, stride = stride_plan(travel[f1] - travel[f0], length)
+    lift_px = FOOT_LIFT * length
+    arm = ctx.lerp(8, 18)
+    root = ctx.bone("torso")
+    sides = list(SIGN)  # sides[k % 2] is planted during step k
+    limits = {s: ctx.view["bones"][legs[s][2]]["limits_deg"] for s in sides}
+    ch: dict[Channel, list[Key]] = {("shift", root): []}
+    for side in sides:
+        ch[("shift", legs[side][2])] = []
+        ch[("angle", legs[side][2])] = []
+        if ctx.has("upper_arm", side):
+            ch[("angle", ctx.bone("upper_arm", side))] = []
+    rest_frames = [ctx.start] if ctx.start < f0 else []
+    for f in rest_frames:
+        for channel, keys in ch.items():
+            keys.append(Key(f, Vec(0, 0) if channel[0] == "shift" else 0.0, L))
+    for f in range(f0, f1 + 1):
+        s = (travel[f] - travel[f0]) / stride  # strides walked, 0..steps
+        g = 0.5 + s  # gait phase: step k = floor(g), progress u = g - k
+        k = min(int(g), steps)
+        u = g - k
+        hip = s * stride  # hip x from where the walk started
+        fade = min(1.0, 40 * s, 40 * (steps - s))  # the foot settles at the first and last steps
+        phi: dict[str, float] = {}
+        drop = 0.0
+        for side in sides:
+            offset, leg_len, thigh = legs[side]
+            if sides[k % 2] == side:  # planted at the hip position of step k's middle
+                reach = k * stride - hip + offset
+            else:  # swings from the foot's last spot (k-1) to its next (k+1)
+                sm = u * u * (3 - 2 * u)
+                reach = (k - 1) * stride + 2 * stride * sm - hip + offset
+            lim = limits[side]
+            phi[side] = foot_angle(offset, leg_len, reach, lim["min"], lim["max"])
+            ch[("angle", thigh)].append(Key(f, phi[side], L))
+            if sides[k % 2] == side:  # the planted foot rises as its leg tilts: lower the body
+                r = math.radians(phi[side])
+                drop = -(offset * math.sin(r) - leg_len * math.cos(r) + leg_len)
+            lift = 0.0 if sides[k % 2] == side else lift_px * math.sin(math.pi * u) * fade
+            ch[("shift", thigh)].append(Key(f, Vec(0, lift), L))
+        ch[("shift", root)].append(Key(f, Vec(0, drop), L))
+        span = max(abs(limits[s_]["max"]) for s_ in sides)
+        for side in sides:
+            if ctx.has("upper_arm", side):  # arms swing against the same-side leg
+                swing = -arm * phi[side] / span
+                ch[("angle", ctx.bone("upper_arm", side))].append(Key(f, swing, L))
+    return _clip(ctx, "walk_cycle", ch)
+
+
 def walk_cycle(ctx: MotionContext) -> Clip:
-    """Walk in place, seen from the front: legs lift in turn (a march), the body bobs, the arms
-    swing a little. A front view can't show legs swinging forward, so a sideways swing would look
+    """Walk. When the character moves across the frame during the walk (its placement path), the
+    feet are planted and the steps follow the distance covered (_stride_walk). Standing still, it
+    marches in place, seen from the front: legs lift in turn, the body bobs, the arms swing a
+    little. A front view can't show legs swinging forward, so a sideways swing would look
     like stumbling; lifting the leg's joint reads as stepping."""
+    if (stride := _stride_walk(ctx)) is not None:
+        return stride
     step = ctx.frames(ctx.lerp(0.6, 0.4))
     steps = _cycles(ctx, 4, step, step)
     lift, knee, arm, bob = ctx.lerp(10, 24), ctx.lerp(2, 6), ctx.lerp(6, 16), ctx.lerp(2, 6)

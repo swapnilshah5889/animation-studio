@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from studio_core import placement
 from studio_core.audio.mix import mix_shot
 from studio_core.config import StudioConfig, load_config
 from studio_core.face import face_attachments
@@ -117,6 +118,14 @@ def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) 
         ground = ground_offset_px(view)
         feet = Vec(ch["position"][0] * DESIGN.width, ch["position"][1] * DESIGN.height)
         root = Vec(feet.x, feet.y - ground * scale)  # screen px, y down
+        track = facings = travel = None
+        if ch.get("path"):  # the character moves: walk_cycle steps with the distance covered
+            track = placement.frame_positions(ch["position"], ch["path"], fps, n_frames)
+            walking = placement.walking_frames(ch.get("actions", []), fps, n_frames)
+            facings = placement.facing_frames(facing, track, walking)
+            travel = placement.forward_travel(
+                track, facings, width_px=DESIGN.width, height_px=DESIGN.height, scale=scale
+            )
 
         actions = []
         for action in ch.get("actions", []):
@@ -135,6 +144,7 @@ def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) 
             scale=scale,
             seed=f"{shot['id']}:{cid}",
             poses=ch.get("poses"),
+            travel=travel,
         )
         attachments = None
         if "face" in view:
@@ -155,7 +165,11 @@ def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) 
             shifts=anim.shifts,
             attachments=attachments,
         )
-        placed.append(PlacedCharacter(built, tuple(ch["position"]), scale, facing, ground))
+        placed.append(
+            PlacedCharacter(
+                built, tuple(ch["position"]), scale, facing, ground, track=track, facings=facings
+            )
+        )
 
     canvas = build_scene(
         fps=fps,
