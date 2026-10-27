@@ -437,6 +437,7 @@ def assign_parts(
     head: np.ndarray,
     bones: dict[str, dict],
     fits: dict[str, dict],
+    reclaim_orphans: bool = False,
 ) -> dict[str, np.ndarray]:
     """bone name → its pixels (before caps). A limb only takes pixels coloured like its own
     core (the lower half of the limb, close to the bone line): all along an upper arm or a
@@ -507,7 +508,40 @@ def assign_parts(
         thin &= ~near
         torso &= ~near
     parts["torso"] = torso
+    if reclaim_orphans:
+        reclaim_limb_orphans(parts, bones, fits)
     return parts
+
+
+def reclaim_limb_orphans(
+    parts: dict[str, np.ndarray],
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+    min_px: int = 100,
+    inside: float = 0.8,
+) -> None:
+    """Give a limb the pieces of its own interior that the colour rule left on the torso. A limb
+    takes only pixels coloured like its core, so a white shin whose core is pale-shaded, a sleeve
+    over a gloved hand or a boot top is left behind as a loose piece of torso, lying where the
+    limb is. On the torso it stays put when the limb moves: the sweep sees it hang in the air
+    (sweep, 4B.2: Pim 91 → 7 defects, Mia 43 → 28, Bo 14 → 11). A piece of the torso that is
+    not joined to its main body and has `inside` of its pixels in one limb's corridor
+    (along the bone, within 1.2 radii) moves to that limb. Edits `parts` in place."""
+    torso = parts["torso"]
+    for full in components(torso)[1:]:
+        if int(full.sum()) < min_px:
+            continue
+        score, owner = 0.0, None
+        for name in LIMBS:
+            bone, r = bones[name], fits[name]["radius_px"]
+            t, d = _coords(torso.shape, bone["joint_px"], bone["end_px"])
+            corridor = (t >= -0.1) & (t <= 1.15) & (np.abs(d) <= 1.2 * r + 2)
+            share = float((full & corridor).sum()) / float(full.sum())
+            if share > score:
+                score, owner = share, name
+        if owner is not None and score >= inside:
+            parts[owner] = parts[owner] | full
+            parts["torso"] = parts["torso"] & ~full
 
 
 # ----------------------------------------------------------------------------------- face
@@ -979,6 +1013,26 @@ def hang_arms(folder: Path, view: dict[str, Any]) -> dict[str, float]:
     return turned
 
 
+def sam_agrees(key: np.ndarray, sam: np.ndarray) -> bool:
+    """Whether SAM's mask found the same figure as the colour key. SAM must cover the key
+    (a prompt that went wrong misses it), and may add to it: a pale shirt that is the sheet's
+    own colour is lost by the key, so SAM's mask can be much larger without being wrong (the
+    bird's front view: a white shirt, IoU 0.79, but SAM covered 94% of the key). A mask that is
+    mostly elsewhere is still refused."""
+    both = int((key & sam).sum())
+    return both >= 0.85 * max(1, int(key.sum())) and both >= 0.6 * max(1, int(sam.sum()))
+
+
+def fill_sam_holes(figure: np.ndarray, sam: np.ndarray) -> np.ndarray:
+    """The figure plus every region it encloses that SAM also calls figure. The colour key
+    fills only holes that are not the background's own colour (a white shirt inside a dark
+    outline, 13-15 from a white sheet, is still lost), and SAM's reach is limited to a band
+    around the key, so the middle of a wide white torso stayed open: the bird's shirt was an
+    outline with a hole, and its outline strokes came loose when the arm moved."""
+    enclosed = fill_holes(figure[::SCALE, ::SCALE])
+    return figure | (_upscale(enclosed, figure.shape) & sam)
+
+
 def _add_sam(
     film_root: Path,
     sheet: Path,
@@ -996,7 +1050,7 @@ def _add_sam(
         key = keys[sk.view]
         mask = np.asarray(Image.open(path)) > 127
         iou = float((mask & key).sum() / max(1, (mask | key).sum()))
-        if iou < 0.85:
+        if not sam_agrees(key, mask):
             figures[sk.view] = key
             notes[sk.view] = {
                 "method": "colour key",
@@ -1004,7 +1058,9 @@ def _add_sam(
                 "sam_rejected": True,
             }
         else:
-            figures[sk.view] = key | (mask & _grow(key, int(sk.height_px * 0.05)))
+            figures[sk.view] = fill_sam_holes(
+                key | (mask & _grow(key, int(sk.height_px * 0.05))), mask
+            )
             notes[sk.view] = {"method": "colour key + SAM 2.1", "sam_iou": round(iou, 3)}
     return figures, notes
 
@@ -1022,6 +1078,7 @@ def _cut_view(
     figure: np.ndarray,
     bg: np.ndarray,
     folder: Path,
+    reclaim_orphans: bool = False,
 ) -> _Cut:
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
@@ -1057,7 +1114,7 @@ def _cut_view(
             fits[thigh]["ok"] = True
             fits[thigh]["drift_judged"] = False
     head = head_mask(img, figure, sk)
-    parts = assign_parts(img, figure, head, bones, fits)
+    parts = assign_parts(img, figure, head, bones, fits, reclaim_orphans)
     rgb, anchors, face_notes = clean_face(img, head, sk)
     hidden, hidden_notes = complete_hidden(rgb, figure, parts, bones, fits, order)
     masks, pixels = add_caps(rgb, figure, parts, bones, fits, sk.height_px, order)
@@ -1210,6 +1267,7 @@ def build_puppet(
     sam: bool = True,
     three_quarter: Literal["klein", "sheet"] = "klein",
     regenerate_turn: bool = False,
+    reclaim_orphans: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1217,7 +1275,11 @@ def build_puppet(
 
     `three_quarter="klein"` (D-053) first redraws the three-quarter figure from the front with
     FLUX.2 klein (puppet/turn.py, best of a few seeds, made once and reused unless
-    `regenerate_turn`); "sheet" cuts SDXL's own three-quarter figure."""
+    `regenerate_turn`); "sheet" cuts SDXL's own three-quarter figure.
+
+    `reclaim_orphans` gives each limb the loose pieces of its own interior the colour rule left
+    on the torso (task 4B.2). It is off by default because it changes Kit's three-quarter shin,
+    which is held byte-identical until the owner approves."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1254,7 +1316,10 @@ def build_puppet(
     if sam:
         figures, silhouettes = _add_sam(film_root, sheet, skeletons, keys, folder)
 
-    cuts = {sk.view: _cut_view(img, sk, figures[sk.view], bgs[sk.view], folder) for sk in skeletons}
+    cuts = {
+        sk.view: _cut_view(img, sk, figures[sk.view], bgs[sk.view], folder, reclaim_orphans)
+        for sk in skeletons
+    }
     _match_face(cuts["front"], cuts["three_quarter"])
     rig = {
         "schema_version": 1,

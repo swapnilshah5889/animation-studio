@@ -26,6 +26,8 @@ from studio_core.puppet.build import (
     head_mask,
     limb_fit,
     recentre_shins,
+    reclaim_limb_orphans,
+    sam_agrees,
 )
 from studio_core.puppet.consistency import ViewCut, asked_turn, compare_views, face_offset
 from studio_core.puppet.design import CANVAS
@@ -498,6 +500,39 @@ def test_sam_joins_the_colour_key_unless_it_went_wrong(
     views = build_puppet(film, "kit", three_quarter="sheet").report["views"]
     assert views["front"]["silhouette"]["method"] == "colour key + SAM 2.1"
     assert views["three_quarter"]["silhouette"]["sam_rejected"]
+
+
+def test_a_loose_piece_of_torso_inside_a_limb_goes_to_the_limb() -> None:
+    bones = rig_bones(FRONT)
+    fits = {n: {"radius_px": 30.0} for n in build.LIMBS}
+    shape = (CANVAS[1], CANVAS[0])
+    torso = np.zeros(shape, bool)
+    pelvis = FRONT.joints["pelvis"]
+    torso[int(pelvis[1]) - 200 : int(pelvis[1]), int(pelvis[0]) - 60 : int(pelvis[0]) + 60] = True
+    parts = {n: np.zeros(shape, bool) for n in (*build.LIMBS, "head")}
+    shin = bones["shin_r"]
+    (jx, jy), (ex, ey) = shin["joint_px"], shin["end_px"]
+    mx, my = int((jx + ex) / 2), int((jy + ey) / 2)  # mid-shin: the colour rule left it
+    inside = np.zeros(shape, bool)
+    inside[my - 15 : my + 15, mx - 8 : mx + 8] = True
+    away = np.zeros(shape, bool)
+    away[20:50, 20:50] = True  # far from every limb: a wisp of hair, say
+    parts["torso"] = torso | inside | away
+    reclaim_limb_orphans(parts, bones, fits)
+    assert np.array_equal(parts["shin_r"], inside)
+    assert np.array_equal(parts["torso"], torso | away)  # the main body and the wisp stay
+
+
+def test_sam_may_add_a_pale_shirt_the_key_lost_but_not_miss_or_swamp_the_figure() -> None:
+    key = np.zeros((100, 100), bool)
+    key[10:90, 40:60] = True  # the figure the colour key found: 1600 px
+    shirt = key.copy()
+    shirt[30:60, 25:75] = True  # SAM adds a white shirt: the IoU is only 0.64
+    assert sam_agrees(key, shirt)
+    assert not sam_agrees(key, np.roll(key, 30, axis=1))  # SAM found something else
+    column = np.zeros_like(key)
+    column[:, 30:] = True  # SAM returned the whole column: covers the key, is mostly elsewhere
+    assert not sam_agrees(key, column)
 
 
 def _two_views(tq_skeleton: Skeleton, *, hat: bool = False, beak: bool = False) -> np.ndarray:
