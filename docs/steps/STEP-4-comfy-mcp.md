@@ -3,7 +3,7 @@
 > **Status: approved by the owner on 2026-10-22, as written (installs and proposed decisions
 > included, recorded in D-047).** Tasks 4.1-4.10 done. The varied-cast pass bar (D-060, 4 of 5)
 > is met (D-067): Kit, Bo, Pim and Mia pass; Bolt (a robot) is tracked manual cleanup carried
-> into Step 4B. Closing Step 4 is the owner's call.
+> into Step 4B. **Closed by the owner on 2026-10-27 (D-068).**
 
 **Goal:** an MCP server that turns words into the two kinds of art a shot needs:
 - a **character description** → a rigged cut-out puppet (`rig.json` + parts + a faceless head

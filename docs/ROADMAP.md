@@ -13,8 +13,8 @@ step inserted later gets a letter (4B) instead of renumbering the steps after it
 | 1 | Learn Synfig by hand + document its format | Owner + agent | `steps/STEP-1-synfig.md` (done) |
 | 2 | `synfig_mcp`: scene, rig, motion, render tools | Agent (owner reviews) | `steps/STEP-2-synfig-mcp.md` (done) |
 | 3 | `audio_mcp`: voices, lip-sync, music, sound effects, mix | Agent | `steps/STEP-3-audio-mcp.md` (done) |
-| 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | `steps/STEP-4-comfy-mcp.md` (approved, in progress) |
-| 4B | Animation quality: puppets that hold up on screen | Agent (owner reviews) | to be written |
+| 4 | `comfy_mcp`: character puppets, backgrounds, parallax layers | Agent | `steps/STEP-4-comfy-mcp.md` (done, D-068) |
+| 4B | Animation quality: puppets that hold up on screen | Agent (owner reviews) | `steps/STEP-4B-animation-quality.md` (draft, current) |
 | 5 | Director agent + `edit_mcp` + `qa_mcp`: first full film | **Owner + agent** | to be written |
 | 6 | OpenToonz backend + render containers (D-030–D-032) | Agent (owner reviews) | to be written |
 | 7 | Evals: measure every change | **Owner + agent** | to be written |
@@ -110,7 +110,8 @@ animate, and a text description of a place becomes a parallax background, with n
 cleanup allowed but tracked).
 
 Cut defects that remain after Step 4's own bar (outline dashes, seams, loose far-side limbs) are
-recorded and carried into Step 4B.
+recorded and carried into Step 4B. Step 4 closed on 2026-10-27 (D-068) with the cast pass bar met
+(4 of 5: Kit, Bo, Pim, Mia); Bolt, the robot, is carried into Step 4B.
 
 ## Step 4B: Animation quality
 Puppets that look finished on screen, not just correct in a test render. This is where the

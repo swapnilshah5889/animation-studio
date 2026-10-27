@@ -1330,3 +1330,10 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Process note:** the three sessions each committed only their own files and left the shared logs
   to this session, which worked without conflicts.
 
+### D-068: Step 4 closed, carry-overs go to Step 4B (owner, 2026-10-27)
+- **Decision:** Step 4 is closed on its pass bar (D-067: 4 of 5; Kit, Bo, Pim, Mia pass) and Step 4B
+  starts. Bolt (a robot) and the cut defects listed in D-067 are carried into
+  `docs/steps/STEP-4B-animation-quality.md` (draft).
+- **Why:** the bar was agreed in D-060 as the stopping rule; the remaining failures need a different
+  approach (a locator for non-organic characters, bending limbs), not more rule-tuning on one cast.
+

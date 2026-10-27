@@ -2,13 +2,24 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`) is functionally done: tasks 4.1–4.10 done and the cast
-pass bar met (4 of 5, D-067); closing it is the owner's call. The Step 5 brief is a draft. The owner chose to fix the puppet cut on a few varied characters before closing
+**Current step:** Step 4B (animation quality), draft brief awaiting review. Step 4 closed on
+2026-10-27 (D-068): tasks 4.1–4.10 done, cast pass bar met (4 of 5, D-067). The Step 5 brief is a draft. The owner chose to fix the puppet cut on a few varied characters before closing
 Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
 roadmap now ends in production-grade films (D-059): Step 4B (animation quality) comes next,
 and the old Step 7 is split into Steps 7–12. Open items: Pim's other cut failures (the eye finder is fixed, D-060), task 3.2b's Parler download (deferred), Docker's memory
 reservation, deleting the pre-Step-4 scratch files, Kit's and Bo's real voices (placeholders),
 and the hosted-vs-desktop decision (needed by Step 11).
+
+---
+
+## 2026-10-27: Step 4 closed (D-068); Step 4B opened
+
+The owner closed Step 4 and sent the carry-overs to Step 4B. `docs/steps/STEP-4B-animation-quality.md`
+is a draft for the owner's review (pose sweep first, then the cut defects, a locator for
+non-organic characters, bending limbs, hands, secondary motion and walking, a review reel).
+
+**Open questions for the owner:** approve the 4B brief and the production-grade bar's numbers; read
+`docs/steps/STEP-5-director.md` and say whether you write the director loop core.
 
 ---
 
