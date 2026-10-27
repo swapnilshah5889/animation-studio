@@ -2,13 +2,35 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4 (`comfy_mcp`): tasks 4.1–4.9 run; 4.10 (docs + the Step 5 brief)
-remains. The owner chose to fix the puppet cut on a few varied characters before closing
+**Current step:** Step 4 (`comfy_mcp`) is functionally done: tasks 4.1–4.10 done and the cast
+pass bar met (4 of 5, D-067); closing it is the owner's call. The Step 5 brief is a draft. The owner chose to fix the puppet cut on a few varied characters before closing
 Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
 roadmap now ends in production-grade films (D-059): Step 4B (animation quality) comes next,
 and the old Step 7 is split into Steps 7–12. Open items: Pim's other cut failures (the eye finder is fixed, D-060), task 3.2b's Parler download (deferred), Docker's memory
 reservation, deleting the pre-Step-4 scratch files, Kit's and Bo's real voices (placeholders),
 and the hosted-vs-desktop decision (needed by Step 11).
+
+---
+
+## 2026-10-27: Step 4: the cast pass bar is met, 4 of 5 (D-067); 4.10 and the Step 5 brief done
+
+**Done**
+- Mia over the bar: a stronger turn prompt, a turn measure that ignores hair, three cut fixes (coat
+  strip at the wrist, hair below the neck, a shin beside its bone). Sessions: turn-measure,
+  coat-arm-cut.
+- Task 4.10: learning notes (depth and layering, consistency without training), a Step 4 section in
+  benchmarks.md, the Step 4 brief status (session docs-4-10).
+- Step 5 brief drafted for the owner's review: `docs/steps/STEP-5-director.md` (session step5-brief).
+
+**Pass bar (rebuilt, SAM on):** Kit, Bo, Pim, Mia pass; Bolt misses. 4 of 5.
+
+**Verified:** the sessions report 478 tests passing and ruff clean; Kit's parts unchanged. I did
+not run the full suite again after the last merge, and nobody viewed Mia's final pose images.
+
+**Open questions for the owner**
+1. Close Step 4 now (the bar is met, Bolt goes to Step 4B), or fix Bolt first?
+2. Read and approve `docs/steps/STEP-5-director.md`; you decide if you write the director loop core.
+3. The production-grade bar's numbers (ROADMAP) still await your confirmation.
 
 ---
 

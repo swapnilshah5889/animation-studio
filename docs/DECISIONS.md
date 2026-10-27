@@ -1309,3 +1309,24 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Open:** Mia's turn (a stronger turn instruction in the redraw prompt, or another candidate);
   Bolt (a robot has no organic eyes or limbs for the cut's rules); the head-size check (10%).
 
+### D-067: The cast pass bar is met, 4 of 5 (2026-10-27)
+- **Result** (all five rebuilt with the current code, SAM on): Kit, Bo, Pim and Mia pass (limbs on
+  bones in both views, a face found in both, views consistent, turn at least 0.5; turns 1.08, 1.14,
+  0.57, 0.78). Bolt (robot, candidate c2) misses: front limbs, no eyes in the front view, views
+  inconsistent. This met D-060's bar.
+- **What got Mia over it** (three focused sessions plus one prompt change):
+  - A stronger three-quarter instruction in the klein redraw prompt (`turn.PROMPT`: body, hips and
+    feet turned about 45 degrees, far shoulder and leg partly hidden, far eye and cheek smaller)
+    lifted her best turn from 0.40 to 0.51. New redraws only; Kit, Bo and Pim keep theirs.
+  - The turn measure (`consistency.face_offset`) now uses the face's big dark blobs (large eyes)
+    when the head has any, else every mark, so a head of hair doesn't dilute it. Her turn reads
+    0.78; Kit, Bo and Pim are unchanged. Capping the head width alone was not enough.
+  - The cut (`build.py`): a forearm's spread zone no longer takes the coat's front edge beside the
+    wrist, hair hanging past the neck stays with the head (`_hair_below_the_neck`), and a covered
+    shin drawn beside its bone is slid onto the drawing (`recentre_shins`). Kit's parts are unchanged.
+- **Open:** Mia's bent-knee pose still breaks up and her far arm is unchanged; Bolt; the head-size
+  check (10%); dark seams between legs; nobody has looked at the final three-quarter pose images
+  of the coat-arm fixes. The limits (7%, 0.8, 0.5) come from five characters.
+- **Process note:** the three sessions each committed only their own files and left the shared logs
+  to this session, which worked without conflicts.
+

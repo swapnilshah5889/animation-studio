@@ -43,8 +43,9 @@ Rules fitted to one character fail on the next. The checks needed correcting as 
 - **Unchanged-Kit rule:** every fix was verified to leave Kit's part images byte-identical.
 
 ## Where it stops
-Mia misses on turn (0.40 best of six) and Bolt, a robot, on limbs and head size: the cut's
-rules assume organic limbs. Pass bar was 4 of 5; measured 3 of 5 (D-060, D-066).
+Bolt, a robot, misses on limbs, eyes and head size: the cut's rules assume organic limbs. Mia
+first missed on turn (0.40 best of six seeds) and was rescued by a stronger redraw prompt and a
+turn measure that ignores hair (D-067). Pass bar 4 of 5: met, with Kit, Bo, Pim and Mia.
 
 ## What LoRAs add in Step 9
 A trained character LoRA makes *new* drawings (new poses, expressions, scenes) look like the
