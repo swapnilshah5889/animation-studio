@@ -1,7 +1,9 @@
 # Step 4: `comfy_mcp`: character puppets and parallax backgrounds from text
 
 > **Status: approved by the owner on 2026-10-22, as written (installs and proposed decisions
-> included, recorded in D-047).** Work started with task 4.1.
+> included, recorded in D-047).** Tasks 4.1-4.10 done. Closed against a pass bar on a varied
+> cast (D-060): Kit, Bo and Pim pass; Mia and Bolt are tracked manual cleanup carried into
+> Step 4B (D-066: 3 of 5 measured, the bar was 4 of 5, so the owner's call on closing).
 
 **Goal:** an MCP server that turns words into the two kinds of art a shot needs:
 - a **character description** → a rigged cut-out puppet (`rig.json` + parts + a faceless head
@@ -157,14 +159,14 @@ default path:** LaMa's weights, DWPose's training data.
 
 ## Done when
 
-- [ ] The brief's decisions approved; the installs done and recorded in MODELS.md with licenses
-- [ ] A text description becomes a **rigged puppet** (front view, faceless head with face
+- [x] The brief's decisions approved; the installs done and recorded in MODELS.md with licenses
+- [x] A text description becomes a **rigged puppet** (front view, faceless head with face
       geometry) that `synfig_mcp` animates (wave, blink, lip-sync) in a test render, with no
-      manual steps
-- [ ] The three-quarter view is rigged too, or explicitly deferred by the owner (task 4.5)
-- [ ] A text description becomes a **parallax background** whose layers pan without holes
-- [ ] `comfy_mcp` exposes the tools over stdio; all are tested; the Inspector check covers it
-- [ ] A shot with a new character in a new place, made only through MCP tools, rendered
+      manual steps (holds for Kit, Bo and Pim only; Mia and Bolt need cleanup, D-060, D-066)
+- [x] The three-quarter view is rigged too, or explicitly deferred by the owner (task 4.5)
+- [x] A text description becomes a **parallax background** whose layers pan without holes
+- [x] `comfy_mcp` exposes the tools over stdio; all are tested; the Inspector check covers it
+- [x] A shot with a new character in a new place, made only through MCP tools, rendered
 - [ ] Learning notes, DECISIONS, PROGRESS, MODELS updated; Step 5 brief drafted; work committed
       and pushed
 

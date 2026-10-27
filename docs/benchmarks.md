@@ -324,3 +324,26 @@ rows were dry runs (`--dry-run`), copied here._
   loading. Before, the footprint was ~10 GB above PyTorch's own numbers: the MLX VAE and its
   buffers.
 - Longer cues barely change the peak: 9.6 GB at 30 s, 9.7 GB at 60 s (rows above).
+
+## Step 4: art generation (design, redraw, plate, depth, layers)
+
+_Collected 2026-10-22 to 2026-10-27 from `docs/PROGRESS.md` and `docs/DECISIONS.md`; one MacBook
+Pro M4, 24 GB, one model at a time, Ollama unloaded. Wall times, not repeated runs._
+
+| Stage | Time | Conditions |
+|---|---|---|
+| Design sheet (SDXL, normal mode) | 4-8 min each | Memory under pressure, swap nearly full (D-049 era). Fast mode (Lightning) 1-2 min but ignores the negative prompt |
+| Three-quarter redraw (FLUX.2 klein) | about 2.5 min per edit; 4+ min with a pose reference | Task 4.5 trial, 8 edits |
+| Three-quarter view per character | about 7.5 min the first time (three edits); 27 s on rebuild | Kit; existing redraws are reused |
+| Background plate finish | 327 s (about 5 min) | Draft c4, SDXL at about 3 MP |
+| Background drafts | 120-140 s each | Four demo drafts, task 4.6 |
+| Depth map (DA3 MONO-LARGE, 1512) | about 5 s | The meadow plate. 2016 is 3x slower; 2520 ran out of memory |
+| Layer fill (SDXL + ProMax repaint) | about 2.7 min each | 1536x576 fills |
+| Whole `split_depth_layers` | 8-14 min | Three fills plus memory pressure. A full-size fill took over 30 min with swap full |
+| Cast review build (Mia, Bolt) | about 28 min and 25 min | Whole run including design, with Docker reserving 8 GB |
+| Bird trial (Pim) | about 46 min | Docker at 8 GB reserved: about 3 GB VRAM free, the klein redraw swapped |
+
+**Docker memory effect (2026-10-27):** lowering Docker's VM from an 8 GB reservation to 2 GB
+dropped swap used from 14.6 GB to 3.5 GB. Qdrant was restarted afterwards (index intact).
+
+Not measured: per-character build time without a redraw (not recorded as a figure).
