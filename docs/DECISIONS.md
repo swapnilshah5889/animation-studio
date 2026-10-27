@@ -1231,3 +1231,26 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   skeleton's. Pim was not rebuilt with SAM or through MCP.
 - **Limits:** 0.75 and 40 come from three characters.
 
+### D-063: The far elbow disc (a half-applied D-062) and white leg highlights (2026-10-27)
+- **Correction to D-062:** `complete_hidden` decided "cut as drawn" for a far sleeve of its own
+  colour, but the painting loop in `_cut_view` still tested `t >= 0.5` and turned the arm into a
+  plain sleeve anyway, repainting the elbow disc from the forearm's outline-coloured edge: the solid
+  brown disc at Pim's far elbow. `complete_hidden` now returns `sleeve` and the loop uses it. Pim's
+  raised far arm shows the white sleeve and no disc; Kit and Bo are byte-identical.
+- **Far leg in the bent-knee pose:** the cause was not the near leg covering it (no pixel of the near
+  leg lies in the far leg's corridor; a prototype that completed such pixels changed nothing). Pale
+  highlights inside the leg, such as Pim's white shine on cream trousers, are not the leg's core
+  colour, so the colour rule left them on the torso, where they stay behind when the leg moves
+  (4,564 pale pixels on Pim's torso below the hips). `join_leg_highlights` gives a leg the pale
+  (luma over 235) pixels no limb owns that lie between its own pixels along a row, inside its corridor.
+- **Why only pale:** the same rule for any colour also moved 40-150 pixels of mid-tone shading and
+  dark seams on each of Kit's legs, and Kit had to stay unchanged. Dark seams between Bo's legs
+  (2,331 dark pixels on his torso below the hips) are therefore still left on the torso.
+- **Verified:** Kit's part images and rig are byte-identical before and after (SAM off, existing
+  redraws); Pim's three-quarter changes are the far arm, both shins, `thigh_l` and the torso, and Bo's
+  (both films) are the shins and torso. A unit test for the highlight rule and one for the sleeve
+  decision fail without their code. The suite passes.
+- **Still open:** Bo's and Kit's dark seam dashes between the legs; the bent-knee pose still shows a
+  wedge where the shin swings away (a rigid-part limit, joint caps cover part of it); Pim's `shin_l`
+  coverage 0.81 (needs 0.85); Pim was not rebuilt with SAM or through MCP.
+

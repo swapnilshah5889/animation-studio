@@ -79,6 +79,7 @@ LIMBS = (
 )  # fmt: skip
 END_LIMBS = {"forearm_l", "forearm_r", "shin_l", "shin_r"}  # hands and feet run past the joint
 CORRIDOR = 1.4  # limb radii either side of the bone line
+PALE_LUMA = 235  # a leg's highlight: lighter than this, it is white clothing's shine, not shading
 DARK_LUMA = 100  # outline pixels are darker than this (0-255)
 MARK_CONTRAST = 40  # face marks are this much darker than their surroundings (luma, 0-255)
 NEIGHBOURS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
@@ -335,6 +336,31 @@ def limb_fit(mask: np.ndarray, sk: Skeleton, bone: dict[str, Any]) -> dict[str, 
     }
 
 
+def join_leg_highlights(
+    img: np.ndarray,
+    mask: np.ndarray,
+    head: np.ndarray,
+    parts: dict[str, np.ndarray],
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+) -> None:
+    """Give each leg the pale highlights inside it, in place. A highlight on a leg (Pim's cream
+    trousers) isn't coloured like the leg's core, so the colour rule left it on the torso, where
+    it stays behind when the leg moves. Pale pixels no limb owns, with the leg's own pixels on
+    both sides of their row and inside its corridor, are the leg's. A coat hem or a tail lies to
+    one side of a leg, not between its edges. (Mid-tone shading and dark seams between a leg's
+    edges are left alone: that would change Kit.)"""
+    pale = (img @ np.array([0.299, 0.587, 0.114], dtype="float32")) > PALE_LUMA
+    for name in ("thigh_l", "shin_l", "thigh_r", "shin_r"):
+        bone, r = bones[name], fits[name]["radius_px"]
+        t, d = _coords(mask.shape, bone["joint_px"], bone["end_px"])
+        free = mask & ~head & ~np.any([parts[n] for n in LIMBS], axis=0)
+        mine = parts[name]
+        left = np.maximum.accumulate(mine, axis=1)
+        right = np.maximum.accumulate(mine[:, ::-1], axis=1)[:, ::-1]
+        parts[name] = mine | (free & pale & left & right & (t >= 0) & (t <= 1.0) & (np.abs(d) <= r))
+
+
 def assign_parts(
     img: np.ndarray,
     mask: np.ndarray,
@@ -389,6 +415,7 @@ def assign_parts(
             claimed |= holes
         parts[name] = mine
     parts["head"] = head
+    join_leg_highlights(img, mask, head, parts, bones, fits)
     taken = np.any([parts[n] for n in LIMBS], axis=0) | head
     torso = mask & ~taken
     # Fur wisps along a limb's outline fall just outside its corridor and would stay on the
@@ -739,6 +766,7 @@ def complete_hidden(
         ends = _disc(figure.shape, bone["joint_px"], r) | _disc(figure.shape, bone["end_px"], r)
         fills[name] = {
             "t": t_e,
+            "sleeve": sleeve,
             "stretch": (t >= 0) & (t < t_e + 0.05) & (np.abs(d) <= r),
             "whole": ((t >= 0) & (t <= 1) & (np.abs(d) <= r)) | ends,
         }
@@ -949,7 +977,7 @@ def _cut_view(
     luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
     for name, info in hidden.items():
         fore = "forearm" + name[-2:]
-        if name.startswith("upper") and info["t"] >= 0.5:
+        if name.startswith("upper") and info["sleeve"]:
             # Mostly hidden (it comes out from behind the body near the elbow): a plain sleeve
             # in the forearm's colour with a darker edge, instead of whatever lies over it.
             shape = info["whole"]

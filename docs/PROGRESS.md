@@ -12,6 +12,28 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-27: Step 4: the far elbow disc and white leg highlights (D-063)
+
+**Done**
+- The brown elbow disc was my D-062 left half-applied (the paint loop ignored the sleeve decision).
+  Fixed; Pim's raised far arm now shows the white sleeve.
+- The far leg falling apart: not the near leg covering it, but pale highlights left on the torso.
+  `join_leg_highlights` gives them to the leg (pale pixels between its own pixels, in its corridor).
+- Tests for each, which fail without their code.
+
+**Verified**
+- Kit byte-identical (parts and rig, SAM off); Pim and Bo (both films) change as listed in D-063.
+- 468 passed, models excluded; ruff clean.
+
+**Not done:** dark seam dashes between legs (Bo, Kit; fixing them changes Kit), the knee wedge of a
+rigid bend, `shin_l` coverage 0.81 on Pim, a Pim rebuild with SAM or through MCP. Mia and Bolt are
+not designed yet.
+
+**Note:** the full suite took 1 h 21 min wall once today, mostly waiting (the Mac likely slept);
+CPU time was about 2.5 min.
+
+---
+
 ## 2026-10-26: Step 4: Pim's loose arms: white clothes were cut out of the silhouette (D-062)
 
 **Diagnosed:** not the limb fit. D-057's gap rule left Pim's white shirt and sleeves (13-15 from the

@@ -166,6 +166,33 @@ def test_limbs_take_their_own_pixels_and_leave_the_tail() -> None:
     assert covered.max() == 1 and np.array_equal(covered == 1, figure)  # each pixel once
 
 
+def test_a_pale_highlight_inside_a_leg_goes_with_the_leg() -> None:
+    """Pim, the bird: white shine down the cream trousers. It isn't the leg's core colour, so the
+    colour rule left it on the torso, where it stays behind when the leg moves. Pale pixels
+    between a leg's own pixels join it; pale pixels beside it, or dark ones between, don't."""
+    h, w = 100, 80
+    rgb = np.full((h, w, 3), (120.0, 100.0, 90.0), dtype="float32")
+    mask = np.ones((h, w), dtype=bool)
+    rgb[:, 28:32] = (252, 252, 246)  # a highlight down the leg
+    rgb[:, 10:14] = (252, 252, 246)  # pale, but outside the leg
+    rgb[10:20, 18:22] = (30, 30, 30)  # a dark seam
+    mine = np.zeros((h, w), dtype=bool)
+    mine[:, 20:28] = mine[:, 32:40] = True  # the leg, split by the highlight
+    names = ("thigh_l", "shin_l", "thigh_r", "shin_r", "upper_arm_l", "forearm_l", "upper_arm_r",
+             "forearm_r", "torso")  # fmt: skip
+    parts = {n: np.zeros((h, w), dtype=bool) for n in names}
+    parts["thigh_l"] = mine
+    bone = {"joint_px": (30, 0), "end_px": (30, 99)}
+    far = {"joint_px": (5, 0), "end_px": (5, 1)}
+    bones = {n: far for n in names}
+    bones["thigh_l"] = bone
+    fits = {n: {"radius_px": 12.0} for n in names}
+    build.join_leg_highlights(rgb, mask, np.zeros((h, w), dtype=bool), parts, bones, fits)
+    assert parts["thigh_l"][50, 29] and parts["thigh_l"][50, 30]  # the highlight joined
+    assert not parts["thigh_l"][50, 11]  # pale but beside the leg, not between its edges
+    assert not parts["thigh_l"][15, 19]  # the dark seam beside the leg is not pale: left alone
+
+
 def test_the_face_is_painted_out_but_the_nose_stays() -> None:
     img = pixels()
     figure, _ = figure_mask(img, FRONT)
@@ -311,8 +338,8 @@ def test_a_far_sleeve_of_its_own_colour_is_cut_as_drawn() -> None:
     out halfway along, but a plain sleeve in the forearm's blue would be the wrong colour, and
     the drawn white one would stay on the torso when the arm moves."""
     rgb, figure, parts, bones, fits, names = _far_arm(45, (250, 245, 235), (140, 210, 240))
-    _, notes = complete_hidden(rgb, figure, parts, bones, fits, names)
-    assert notes["upper_arm_l"]["drawn"] == "fill", notes
+    fills, notes = complete_hidden(rgb, figure, parts, bones, fits, names)
+    assert notes["upper_arm_l"]["drawn"] == "fill" and not fills["upper_arm_l"]["sleeve"], notes
     assert parts["upper_arm_l"][60, 140] and not parts["torso"][60, 140]  # the sleeve moves
 
 
