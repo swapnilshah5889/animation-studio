@@ -1337,3 +1337,30 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Why:** the bar was agreed in D-060 as the stopping rule; the remaining failures need a different
   approach (a locator for non-organic characters, bending limbs), not more rule-tuning on one cast.
 
+### D-069: Step 4B started: the pose sweep, a placement track and walk, the bending-limb spike (2026-10-27)
+- **Pose sweep (4B.1, `88083e8`):** `scripts/pose_sweep.py` and `studio_core/preview/sweep.py` render every
+  motion's extreme poses on a magenta probe backdrop through the Synfig backend and count holes, seams
+  and detached pieces. First run on the five-character cast: Pim 91 defects (75 detached, 11 holes,
+  5 seams), Bolt 211 (59 holes, 119 seams, 33 detached), Mia 43 (36 seams, 7 detached), Kit 35 (33
+  seams, 1 hole, 1 detached), Bo 14. About 40 s per character, 204 s for all five on the CPU. It exits 1
+  on any defect. **Kit, the reference, has 35 defects**, mostly seams, so fixing them means changing
+  Kit's built parts, which needs the owner's approval (4B checkpoint 3).
+- **Placement track and walk (4B.6, `f3a0688`):** an additive placement path in the shot spec
+  (keyframed positions with a fixed easing set), a `move_character` verb and `synfig_mcp` tool, the
+  scene animates the placement group, and the walk cycle strides in time with the distance covered so
+  planted feet don't slide (a render test measures the slide); facing follows travel. 502 tests passed.
+  The front view keeps the march-in-place fallback. Walking in the three-quarter view for generated
+  characters still needs side-view art.
+- **Bending limbs spike (4B.4, `7c2ff98`, `docs/spikes/bending-limbs.md`):** three approaches rendered
+  for an elbow and a knee bent 70 degrees: B two parts with a cap (today), A Synfig Skeleton Deformation
+  on one limb image, C two parts with an overlap and an alpha ramp. A is the only one that really bends
+  the limb; it has artifacts (a pinched notch on the inner elbow, a crease at the inner knee, a limb
+  about 3-4% narrower at the bend, softer edges). Render cost is +0.03 to +0.04 s per limb per 1080p
+  frame over an empty canvas (about +0.1 to 0.16 s for four limbs, extrapolated, not measured on a
+  whole character), time barely depends on grid density (use 48x192). **Recommendation: A for arms and
+  legs behind a per-limb switch, with the two-part cut as the fallback.** It means the cut must produce
+  one limb image instead of two parts, which touches `puppet/build.py` and `schemas/rig.schema.json`.
+  Not yet decided by the owner; hands (4B.5) wait for that decision.
+- **Open:** whether to approve Kit's built parts changing (seams); the bending integration (4B.4
+  follow-up); the locator trial (4B.3) was still running.
+

@@ -12,6 +12,17 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-27: Step 4B kickoff (D-069)
+
+The owner approved the 4B brief. Parallel sessions: pose-sweep (done), placement-walk (done), bend-spike
+(done), locator-trial (running), cut-defects (started after the sweep).
+
+**Done:** 4B.1 pose sweep (394 defects across the five), 4B.6 placement track and walk, 4B.4 spike
+(recommends Skeleton Deformation per limb). **Open questions for the owner:** approve Kit's parts changing
+to fix seams; decide the bending approach before hands (4B.5) and the integration start.
+
+---
+
 ## 2026-10-27: Step 4 closed (D-068); Step 4B opened
 
 The owner closed Step 4 and sent the carry-overs to Step 4B. `docs/steps/STEP-4B-animation-quality.md`
