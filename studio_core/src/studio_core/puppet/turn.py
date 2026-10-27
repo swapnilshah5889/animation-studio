@@ -55,6 +55,8 @@ from studio_core.puppet.fit import fit_limbs
 from studio_core.puppet.skeleton import Skeleton, turnaround
 
 SEEDS = (1, 2, 3)
+EXTRA_SEEDS = (4, 5, 6)  # tried one by one when no seed turned the figure enough (Mia, Bolt)
+MIN_TURN = 0.5  # the three-quarter figure must turn at least this much of what was asked
 SIZE = (896, 1024)  # the front half's aspect (672x768) at ~0.9 MP, multiples of 16
 # The character's own description goes in, so the edit keeps what it wears and adds nothing.
 # (The first version named a scarf, Kit's, and gave Bo, a bear cub, a scarf too.)
@@ -185,7 +187,11 @@ def turn_design(
 ) -> Turned:
     """The chosen design with its three-quarter figure redrawn by FLUX.2 klein from the front
     (best of `seeds`). Reuses an existing result unless `regenerate` (new edits) or `replace`
-    (the existing edits placed and scored again, e.g. after this code changed; no model)."""
+    (the existing edits placed and scored again, e.g. after this code changed; no model).
+
+    If no seed turned the figure enough (`MIN_TURN`), the `EXTRA_SEEDS` are tried one by one
+    until one does, so a stubborn character costs more edits, not a failed build. A result that
+    was kept short of the turn is extended the same way the next time it is asked for."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise build.BuildError(f"{character_id!r} has no design candidates")
@@ -194,7 +200,11 @@ def turn_design(
         raise build.BuildError(f"no design chosen for {character_id!r}; choose one first")
     folder = turn_dir(film_root, character_id, candidate)
     if (folder / "sheet.png").is_file() and not (regenerate or replace):
-        return Turned(folder / "sheet.png", json.loads((folder / "choice.json").read_text()))
+        kept = json.loads((folder / "choice.json").read_text())
+        tried = kept["seeds"]
+        turned_enough = any(r["turn"] >= MIN_TURN for r in tried.values())
+        if turned_enough or all(f"s{s}" in tried for s in EXTRA_SEEDS):
+            return Turned(folder / "sheet.png", kept)
     if regenerate and folder.exists():
         shutil.rmtree(folder)
     folder.mkdir(parents=True, exist_ok=True)
@@ -211,7 +221,9 @@ def turn_design(
     height = float(ys.max() - ys.min())
     manifest = load_manifest()
     results: dict[str, dict[str, Any]] = {}
-    for seed in seeds:
+    pending = list(seeds)
+    while pending:
+        seed = pending.pop(0)
         graph = flux2_edit(
             manifest, prompt, references=["@front"], width=SIZE[0], height=SIZE[1], seed=seed
         )
@@ -235,6 +247,8 @@ def turn_design(
         placed = place(sheet, edited, height, tq)
         Image.fromarray(placed.astype("uint8")).save(out / "sheet.png")
         results[f"s{seed}"] = {"seconds": seconds, **score(placed)}
+        if not pending and not any(r["turn"] >= MIN_TURN for r in results.values()):
+            pending = [s for s in EXTRA_SEEDS if f"s{s}" not in results][:1]
     chosen = max(results, key=lambda k: results[k]["rank"])
     shutil.copy(folder / chosen / "sheet.png", folder / "sheet.png")
     choice = {

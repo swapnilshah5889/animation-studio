@@ -84,6 +84,7 @@ def film(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, list[in
     }))  # fmt: skip
     runs: list[int] = []
     pictures = {1: redrawn(hat=True), 2: redrawn(), 3: redrawn("front")}  # hat / good / unturned
+    pictures |= {4: redrawn("front"), 5: redrawn("front"), 6: redrawn()}  # the extra seeds
 
     def run_graph(film_root: Path, kind: str, graph: dict, **kw: Any) -> RunRecord:
         runs.append(kw["seed"])
@@ -135,3 +136,32 @@ def test_replace_reuses_the_edits(film: tuple[Path, list[int]]) -> None:
     turn_design(root, "kit", seeds=(2, 3))
     turned = turn_design(root, "kit", seeds=(2, 3), replace=True)
     assert runs == [2, 3] and turned.choice["chosen_seed"] == 2
+
+
+def test_more_seeds_are_tried_until_one_turns_the_figure(film: tuple[Path, list[int]]) -> None:
+    root, runs = film
+    turned = turn_design(root, "kit", seeds=(3,))  # unturned
+    assert runs == [3, 4, 5, 6]  # one extra at a time, stopping at the first that turns enough
+    assert turned.choice["chosen_seed"] == 6
+    turn_design(root, "kit", seeds=(3,))
+    assert runs == [3, 4, 5, 6]  # kept: no more edits
+
+
+def test_extra_seeds_are_not_tried_when_one_turned_enough(film: tuple[Path, list[int]]) -> None:
+    root, runs = film
+    turn_design(root, "kit")
+    assert runs == [1, 2, 3]
+
+
+def test_a_kept_result_short_of_the_turn_is_extended(film: tuple[Path, list[int]]) -> None:
+    root, _runs = film
+    first = turn_design(root, "kit", seeds=(3,), regenerate=True)
+    assert first.choice["chosen_seed"] == 6
+    # an older result that stopped at the unturned seed: extended the next time it is asked for
+    choice = json.loads((first.sheet.parent / "choice.json").read_text())
+    for seed in (4, 5, 6):
+        del choice["seeds"][f"s{seed}"]
+    choice["chosen_seed"] = 3
+    (first.sheet.parent / "choice.json").write_text(json.dumps(choice))
+    again = turn_design(root, "kit", seeds=(3,))
+    assert again.choice["chosen_seed"] == 6

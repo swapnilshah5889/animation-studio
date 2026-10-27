@@ -301,6 +301,30 @@ def _walk(mask: np.ndarray, x: float, y: float, nx: float, ny: float, limit: int
     return None
 
 
+FAR_COVERAGE = 0.8  # a far-side limb is judged on coverage only (it overlaps the body)
+
+
+def far_side_ok(fit: dict[str, Any]) -> bool:
+    """A three-quarter far-side limb passes on how much of its bone line lies on the figure.
+    0.8, not 0.85: a drawn sole sits a little short of the skeleton's ankle, so a shin that
+    follows the drawing scores 17 of 21 samples (0.81) on Kit, Bo and Pim alike."""
+    return bool(fit["coverage"] >= FAR_COVERAGE)
+
+
+LEG_FITS = 0.7  # the leg fit's score above which the skeleton is on the legs (puppet/fit.py)
+
+
+def touching_thigh_ok(fit: dict[str, Any], leg_report: dict[str, Any]) -> bool:
+    """A thigh whose legs touch (Bo's dungarees) has a cross-section that runs on into the other
+    leg, so its centre line reads as drifted by about a radius. The leg fit looks at the legs as
+    bars under the torso instead, and when it found the skeleton already on them, the thigh passes
+    on coverage alone."""
+    on_skeleton = leg_report.get("skeleton_score", 0.0) >= LEG_FITS and not leg_report.get(
+        "changed", False
+    )
+    return bool(fit["coverage"] >= 0.85 and (fit["drift"] <= 0.6 or on_skeleton))
+
+
 def limb_fit(mask: np.ndarray, sk: Skeleton, bone: dict[str, Any]) -> dict[str, Any]:
     """How the drawn limb sits on its bone: radius, centre-line offset, coverage."""
     (ax, ay), (bx, by) = bone["joint_px"], bone["end_px"]
@@ -966,8 +990,13 @@ def _cut_view(
         # runs on into the torso, so drift can't be read from it. Judge coverage only.
         for limb in LIMBS:
             if limb.endswith("_l"):
-                fits[limb]["ok"] = fits[limb]["coverage"] >= 0.85
+                fits[limb]["ok"] = far_side_ok(fits[limb])
                 fits[limb]["drift_judged"] = False
+    for side in ("l", "r"):
+        thigh = f"thigh_{side}"
+        if not fits[thigh]["ok"] and touching_thigh_ok(fits[thigh], limbs_fitted[f"leg_{side}"]):
+            fits[thigh]["ok"] = True
+            fits[thigh]["drift_judged"] = False
     head = head_mask(img, figure, sk)
     parts = assign_parts(img, figure, head, bones, fits)
     rgb, anchors, face_notes = clean_face(img, head, sk)

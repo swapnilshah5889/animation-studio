@@ -361,6 +361,21 @@ def test_a_mostly_hidden_far_arm_is_a_plain_sleeve_whatever_shows() -> None:
     assert notes["upper_arm_l"]["drawn"] == "sleeve", notes
 
 
+def test_a_far_shin_that_misses_the_short_sole_still_passes() -> None:
+    assert build.far_side_ok({"coverage": 0.81})  # 17 of 21 samples: the sole is short
+    assert not build.far_side_ok({"coverage": 0.76})  # a real gap: the bone leaves the figure
+
+
+def test_a_thigh_beside_a_touching_leg_is_judged_by_the_leg_fit() -> None:
+    """Bo's dungaree legs touch: the thigh's cross-section runs into the other leg and reads as
+    drifted by a radius, though the leg fit found the skeleton already on the legs."""
+    merged = {"coverage": 1.0, "drift": 1.09}
+    assert build.touching_thigh_ok(merged, {"skeleton_score": 0.71, "changed": False})
+    assert not build.touching_thigh_ok(merged, {"skeleton_score": 0.4, "changed": False})
+    assert not build.touching_thigh_ok(merged, {"skeleton_score": 0.8, "changed": True})
+    assert not build.touching_thigh_ok({"coverage": 0.5, "drift": 1.09}, {"skeleton_score": 0.8})
+
+
 def test_build_writes_a_valid_rig_with_both_views(film: Path) -> None:
     built = build_puppet(film, "kit", name="Kit", sam=False, three_quarter="sheet")
     folder = film / "characters" / "kit"

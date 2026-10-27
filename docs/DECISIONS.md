@@ -1289,3 +1289,23 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   are declined with a reason, not faked.
 - **Owner-led:** per AGENTS.md the agent loop core is the owner's to write; the agent proposes the
   design and a skeleton first.
+
+### D-066: The cast pass bar measured; metric calibration and more redraw seeds (2026-10-27)
+- **Measured** (Kit, Bo, Pim, Mia, Bolt rebuilt with the current code, SAM on): Kit, Bo and Pim
+  pass (limbs on bones in both views, a face found in both, views consistent, turn at least 0.5).
+  Mia (child) misses on turn 0.40 and one limb (`shin_r` drift 0.91); Bolt (robot, candidate c2)
+  misses on limbs, no eyes in the front view, and a head 115% as tall. **3 of 5; the bar is 4.**
+- **Two metric corrections** (they change reports, not the cut; Kit's part images are unchanged):
+  - far-side shin coverage 0.85 -> 0.8 (`FAR_COVERAGE`): a short drawn sole scores 0.81 on Kit,
+    Bo and Pim alike, with drift near zero.
+  - a thigh beside a touching leg passes on coverage when the leg fit found the skeleton already on
+    the legs (`touching_thigh_ok`): Bo's dungaree legs merge, so the thigh's cross-section reads as
+    drifted by a radius.
+- **More redraw seeds** (`turn.py`): when no seed of 1-3 turned the figure to 0.5, seeds 4-6 are
+  tried one at a time until one does, and an older kept result short of the turn is extended the
+  same way. It rescued Bolt c3 (seed 4, turn 0.77) but not Mia (best of six: 0.40).
+- **Found:** Bolt c3 with that redraw crashed in the build (head cut 77 px wide, so the face
+  anchors fell outside the head part). Bolt is built from c2 for now.
+- **Open:** Mia's turn (a stronger turn instruction in the redraw prompt, or another candidate);
+  Bolt (a robot has no organic eyes or limbs for the cut's rules); the head-size check (10%).
+

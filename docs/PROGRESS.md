@@ -12,6 +12,30 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-27: Step 4: the varied cast measured, 3 of 5 (D-066)
+
+**Done**
+- Mia (child) and Bolt (robot) designed and built through `scripts/cast_review.py` (about 28 min
+  and 25 min with Docker at 8 GB; Docker is now limited to 2 GB and swap dropped from 14.6 GB to
+  3.5 GB used).
+- Far-shin coverage 0.85 -> 0.8; touching-leg thigh judged by the leg fit; extra redraw seeds when
+  the turn is short. Tests for each; the retry tests fail without the code.
+- Qdrant restarted after the Docker change (sound index intact, 4,268 sounds).
+
+**Pass bar (rebuilt, SAM on):** Kit, Bo, Pim pass; Mia (turn 0.40, `shin_r`) and Bolt (limbs, eyes,
+head 115%) don't. 3 of 5; the bar is 4.
+
+**Verified:** 473 passed (models excluded), ruff clean; Kit's part images unchanged by these
+changes (they only affect reports and the seed retry).
+
+**Not done / open:** Mia's turn, Bolt, the head-size check, dark seams between legs, a Pim rebuild
+through MCP. Bolt c3's seed-4 redraw crashes the build (head cut too narrow); Bolt is on c2.
+
+**Next:** try a stronger turn instruction in the redraw prompt for Mia (new characters only; Kit
+and Bo keep their redraws), then decide with the owner whether Bolt goes to Step 4B.
+
+---
+
 ## 2026-10-27: Step 4: the far elbow disc and white leg highlights (D-063)
 
 **Done**
