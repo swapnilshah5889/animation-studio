@@ -5,6 +5,7 @@ follow the leg, the face is painted out but the nose stays, the arms hang at res
 turning the arms back reproduces the sheet. SAM is faked (no GPU)."""
 
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,7 @@ from studio_core.puppet.build import (
     figure_mask,
     head_mask,
     limb_fit,
+    recentre_shins,
 )
 from studio_core.puppet.consistency import ViewCut, asked_turn, compare_views, face_offset
 from studio_core.puppet.design import CANVAS
@@ -164,6 +166,63 @@ def test_limbs_take_their_own_pixels_and_leave_the_tail() -> None:
     assert at(parts["torso"], f["tail"]) and at(parts["torso"], f["tail_on_thigh"])
     covered = np.sum([m.astype(int) for m in parts.values()], axis=0)
     assert covered.max() == 1 and np.array_equal(covered == 1, figure)  # each pixel once
+
+
+def test_a_coat_edge_beside_the_wrist_stays_on_the_torso() -> None:
+    """Mia's wave: past the wrist the corridor widens for hands, and a strip of the coat's front
+    edge, in the sleeve's own colour, hung on the hand's outline and went with the forearm.
+    Only a hand's own colour may spread there."""
+    sk = FRONT
+    base = sheet()
+    draw = ImageDraw.Draw(base)
+    bones = rig_bones(sk)
+    bone = bones["forearm_l"]
+    r = limb_fit(figure_mask(pixels(), sk)[0], sk, bone)["radius_px"]
+    (ax, ay), (bx, by) = bone["joint_px"], bone["end_px"]
+    length = math.hypot(bx - ax, by - ay)
+    nx, ny = -(by - ay) / length, (bx - ax) / length
+    sx, sy = (bx + nx * 1.8 * r * (1 if nx > 0 else -1), by + ny * 1.8 * r * (1 if nx > 0 else -1))
+    draw.line([(bx, by), (sx, sy)], fill=DARK, width=4)  # the hand's outline reaches the strip
+    draw.rectangle([sx - 4, sy - 12, sx + 4, sy + 12], fill=FUR)
+    img = np.asarray(base).astype("float32")
+    figure, _ = figure_mask(img, sk)
+    fits = {n: limb_fit(figure, sk, bones[n]) for n in build.LIMBS}
+    parts = assign_parts(img, figure, head_mask(img, figure, sk), bones, fits)
+    assert at(figure, (sx, sy)) and not at(parts["forearm_l"], (sx, sy))
+    assert at(parts["forearm_l"], sk.joints["l_hand"])
+
+
+def test_hair_below_the_neck_line_stays_on_the_head() -> None:
+    """Mia's curls hang to her shoulders, past the neck line. The head ended there in a flat
+    cut and the rest stayed on the torso, so a turned head left a ragged band behind."""
+    j = FRONT.joints
+    (nx, ny), nose_y = j["neck"], j["nose"][1]
+    half = abs(j["l_shoulder"][0] - j["r_shoulder"][0]) / 2
+    base = sheet()
+    ImageDraw.Draw(base).rectangle(
+        [nx - half - 40, nose_y, nx - 0.5 * half, ny + 0.015 * FRONT.height_px], fill=FUR
+    )
+    img = np.asarray(base).astype("float32")
+    figure, _ = figure_mask(img, FRONT)
+    head = head_mask(img, figure, FRONT)
+    assert at(head, (nx - half - 25, ny + 6))
+    assert not at(head, face_points(FRONT)["scarf"])
+
+
+def test_a_shin_drawn_beside_its_bone_slides_onto_the_drawing() -> None:
+    """Mia's three-quarter shin_r (drift 0.9): the leg fit kept the skeleton behind a coat, and
+    the shin's bone ran 23 px beside the drawn leg."""
+    sk = FRONT
+    bones = rig_bones(sk)
+    (kx, ky), (_, ay) = bones["shin_r"]["joint_px"], bones["shin_r"]["end_px"]
+    figure = np.zeros(CANVAS[::-1], dtype=bool)
+    figure[int(ky) - 10 : int(ay) + 10, int(kx) + 22 - 40 : int(kx) + 22 + 40] = True
+    fits = {n: limb_fit(figure, sk, bones[n]) for n in ("shin_r", "shin_l")}
+    assert 0.6 < fits["shin_r"]["drift"] <= 1.2 and not fits["shin_r"]["ok"]
+    moved = recentre_shins(sk, bones, fits)
+    assert moved.joints["r_hip"] == sk.joints["r_hip"]
+    assert moved.joints["l_knee"] == sk.joints["l_knee"]  # no leg drawn there: left alone
+    assert limb_fit(figure, moved, rig_bones(moved)["shin_r"])["drift"] < 0.25
 
 
 def test_a_pale_highlight_inside_a_leg_goes_with_the_leg() -> None:

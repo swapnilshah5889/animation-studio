@@ -42,7 +42,7 @@ from __future__ import annotations
 import json
 import math
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
@@ -224,7 +224,31 @@ def head_mask(img: np.ndarray, mask: np.ndarray, sk: Skeleton) -> np.ndarray:
     # Eyes, nose and mouth are darker than any head colour and thin strokes vanish in the
     # opening: they come back as holes, which belong to the head.
     head[y0:y1, x0:x1] = fill_holes(head[y0:y1, x0:x1])
+    head = _hair_below_the_neck(img, mask, head, sk)
     return _between_the_cheeks(head & mask, mask, int(nose_y), int(neck_y))
+
+
+def _hair_below_the_neck(img: np.ndarray, mask: np.ndarray, head: np.ndarray, sk: Skeleton):
+    """Hair that hangs past the neck line (Mia's curls reach her shoulders) stays with the head,
+    or it is left behind on the torso, cut flat at the chin, when the head turns. Head-coloured
+    pixels joined to the head, from the neck line to a little below the shoulders and beyond
+    the shoulders' width, where no torso is; the colour test keeps a limb of another colour
+    out."""
+    neck_x, neck_y = sk.joints["neck"]
+    half = abs(sk.joints["l_shoulder"][0] - sk.joints["r_shoulder"][0]) / 2
+    bottom = max(sk.joints["l_shoulder"][1], sk.joints["r_shoulder"][1]) + 0.03 * sk.height_px
+    rows = np.arange(mask.shape[0])[:, None]
+    cols = np.arange(mask.shape[1])[None, :]
+    colors = _palette(img[head & (rows < sk.joints["nose"][1])], 10, min_share=0.03)
+    near = np.min([np.linalg.norm(img - c, axis=2) for c in colors], axis=0)
+    reach = mask & ~head & (near < 38) & (rows >= neck_y - 1) & (rows < bottom)
+    reach &= np.abs(cols - neck_x) > half
+    out = head.copy()
+    seed = _grow(head, 2)
+    for blob in components(reach):
+        if (blob & seed).any():
+            out |= blob
+    return out
 
 
 def _between_the_cheeks(head: np.ndarray, mask: np.ndarray, top: int, bottom: int) -> np.ndarray:
@@ -360,6 +384,28 @@ def limb_fit(mask: np.ndarray, sk: Skeleton, bone: dict[str, Any]) -> dict[str, 
     }
 
 
+def recentre_shins(sk: Skeleton, bones: dict[str, dict], fits: dict[str, dict]) -> Skeleton:
+    """A shin drawn clear of the body but beside its bone (the leg fit keeps the skeleton when
+    a coat hides the thighs and no bar scores better: Mia's three-quarter `shin_r`, drift
+    0.9) slides sideways onto the drawing: knee, ankle and foot move by the measured offset,
+    the hip stays. Only a shin that is fully covered and drifts by 0.6 to 1.2 radii; the far
+    side of a three-quarter view runs into the body, so its offset can't be read."""
+    joints = dict(sk.joints)
+    for side in ("l", "r"):
+        if sk.view == "three_quarter" and side == "l":
+            continue
+        fit, bone = fits[f"shin_{side}"], bones[f"shin_{side}"]
+        if fit["coverage"] < 0.85 or not 0.6 < fit["drift"] <= 1.2:
+            continue
+        (ax, ay), (bx, by) = bone["joint_px"], bone["end_px"]
+        length = math.hypot(bx - ax, by - ay)
+        dx, dy = -(by - ay) / length * fit["offset_px"], (bx - ax) / length * fit["offset_px"]
+        for n in ("knee", "ankle", "foot"):
+            x, y = joints[f"{side}_{n}"]
+            joints[f"{side}_{n}"] = (x + dx, y + dy)
+    return sk if joints == sk.joints else replace(sk, joints=joints)
+
+
 def join_leg_highlights(
     img: np.ndarray,
     mask: np.ndarray,
@@ -406,14 +452,22 @@ def assign_parts(
         t, d = _coords(mask.shape, bone["joint_px"], bone["end_px"])
         t_min = 0.0 if bone["parent"] == "torso" else -0.2
         t_max = 1.35 if name in END_LIMBS else 1.15
-        # Past the wrist or ankle (t > 0.85 of an end limb), paws and feet spread wider.
-        width = np.where((t > 0.85) & (name in END_LIMBS), 2.2 * r, CORRIDOR * r) + 2
-        corridor = mask & ~head & (t >= t_min) & (t <= t_max) & (np.abs(d) <= width)
+        in_range = mask & ~head & (t >= t_min) & (t <= t_max)
+        corridor = in_range & (np.abs(d) <= CORRIDOR * r + 2)
+        # Past the wrist or ankle (t > 0.85 of an end limb), paws and feet spread wider ...
+        spread = in_range & (t > 0.85) & (np.abs(d) <= 2.2 * r + 2) & ~corridor
+        if name not in END_LIMBS:
+            spread[:] = False
         core = corridor & (t >= 0.55) & (t <= 0.9) & (np.abs(d) <= 0.6 * r)
         if core.any():  # its own colours: a whole upper arm or thigh, a forearm or shin's top
             colors = _palette(img[core], 6, min_share=0.05)
             near = np.min([np.linalg.norm(img - c, axis=2) for c in colors], axis=0)
             corridor &= (near < 40) | (t > (1.0 if name not in END_LIMBS else 0.6))
+            # ... but a hand is not the sleeve's colour, while the coat's front edge beside the
+            # wrist is (Mia's forearm took a strip of it).
+            if name.startswith("forearm"):  # a shoe's colour can be the leg's (Kit's boots)
+                spread &= near >= 40
+        corridor |= spread
         score = np.abs(d) / r
         better = corridor & (score < best)
         best[better], owner[better] = score[better], i
@@ -978,6 +1032,11 @@ def _cut_view(
     sk, limbs_fitted = fit_limbs(figure, sk)
     bones = rig_bones(sk)
     fits = {limb: limb_fit(figure, sk, bones[limb]) for limb in LIMBS}
+    recentred = recentre_shins(sk, bones, fits)
+    if recentred is not sk:
+        sk = recentred
+        bones = rig_bones(sk)
+        fits = {limb: limb_fit(figure, sk, bones[limb]) for limb in LIMBS}
     # No limb much thicker than its mirror (the three-quarter view's near side may be wider).
     allow = 1.3 if sk.view == "front" else 1.6
     for limb in LIMBS:
