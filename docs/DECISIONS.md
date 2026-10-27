@@ -1254,3 +1254,15 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   wedge where the shin swings away (a rigid-part limit, joint caps cover part of it); Pim's `shin_l`
   coverage 0.81 (needs 0.85); Pim was not rebuilt with SAM or through MCP.
 
+### D-064: Controlled animation, not AI-generated video (owner, 2026-10-27)
+- **Decision:** the studio's output is **controlled animation**: rigged puppets, motions chosen by
+  name, exact lip-sync and camera (D-003, D-007). AI video generation (Higgsfield, Veo, Kling,
+  Runway, Seedance and similar, hosted or local) is not part of the main pipeline.
+- **Why:** the owner wants control over timing, acting and character consistency. A hosted video
+  model also breaks D-001 (fully local, no paid APIs) and costs about $15-100 a film in fees
+  (web prices, October 2026, unverified), against electricity for our pipeline.
+- **Consequence for Step 12:** "Tier 3" (AI keyframes with generated in-betweens, see ARCHITECTURE)
+  is no longer assumed to use a video model. It stays a later, optional idea, to be decided in its
+  own brief; Steps 4B to 11 aim at better controlled animation (bending limbs, hands, secondary
+  motion, walking), not at generated video.
+
