@@ -240,7 +240,7 @@ ARCHITECTURE, "Future tiers"):
 
 - **Tier 2, limited animation:** strong keyframes plus camera moves, parallax, mesh deformation,
   compositing effects and swapped drawings.
-- **Tier 3, full animation:** AI keyframes from a character LoRA, with motion generated between our
-  own start and end frames.
+- **Tier 3, full animation (D-064):** AI-made key scenes ("from" and "to" frames, kept on-model by a
+  character LoRA), with the in-betweens done by our own tools, not by a video-generation model.
 
 **Done when:** to be set in the step's brief, against the same production-grade bar.

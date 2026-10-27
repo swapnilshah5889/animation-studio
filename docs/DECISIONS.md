@@ -1254,15 +1254,23 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   wedge where the shin swings away (a rigid-part limit, joint caps cover part of it); Pim's `shin_l`
   coverage 0.81 (needs 0.85); Pim was not rebuilt with SAM or through MCP.
 
-### D-064: Controlled animation, not AI-generated video (owner, 2026-10-27)
-- **Decision:** the studio's output is **controlled animation**: rigged puppets, motions chosen by
-  name, exact lip-sync and camera (D-003, D-007). AI video generation (Higgsfield, Veo, Kling,
-  Runway, Seedance and similar, hosted or local) is not part of the main pipeline.
-- **Why:** the owner wants control over timing, acting and character consistency. A hosted video
-  model also breaks D-001 (fully local, no paid APIs) and costs about $15-100 a film in fees
-  (web prices, October 2026, unverified), against electricity for our pipeline.
-- **Consequence for Step 12:** "Tier 3" (AI keyframes with generated in-betweens, see ARCHITECTURE)
-  is no longer assumed to use a video model. It stays a later, optional idea, to be decided in its
-  own brief; Steps 4B to 11 aim at better controlled animation (bending limbs, hands, secondary
-  motion, walking), not at generated video.
-
+### D-064: AI creates the art; our tools do the animation (owner, 2026-10-27)
+- **Decision:** two halves, both the owner's:
+  - **AI creates the art, and should do it faster:** characters, places and, later, key scenes
+    ("from" and "to" frames) come from AI models driven by the director, with less manual
+    steering and less waiting per asset.
+  - **Controlled animation, not AI-generated video:** motion, in-betweens, timing, lip-sync and
+    camera are done by our rigged-puppet tools (D-003, D-007). Hosted or local video-generation
+    models (Higgsfield, Veo, Kling, Runway, Seedance and similar) are not part of the main
+    pipeline.
+- **Why:** the owner wants control over how things move and stay consistent, but wants the AI to
+  take charge of creating the characters and scenes. Hosted video also breaks D-001 (fully local, no
+  paid APIs) and costs about $15-100 a film in fees (web prices, October 2026, unverified).
+- **Consequence for Step 12:** "Tier 3" stays as the owner's idea: AI-made key scenes, with the
+  in-betweens done by our tools (pose and camera interpolation, optionally image interpolation),
+  not by a video model. It is decided in its own brief, after Step 9 (character LoRAs keep key
+  scenes on-model).
+- **Consequence for the roadmap:** a speed-and-autonomy goal for asset creation is added to the
+  steps that make the art (4, 4B) and to Step 5 (the director calls the art tools itself). Options
+  already identified: lower Docker's memory reservation, two sheets a round, a cheap pre-check
+  before a full sheet, cache rejected seeds, simpler layer fills, and a vision model to find faces.
