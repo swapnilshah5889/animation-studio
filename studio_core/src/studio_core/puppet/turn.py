@@ -61,7 +61,10 @@ SIZE = (896, 1024)  # the front half's aspect (672x768) at ~0.9 MP, multiples of
 # The character's own description goes in, so the edit keeps what it wears and adds nothing.
 # (The first version named a scarf, Kit's, and gave Bo, a bear cub, a scarf too.)
 PROMPT = (
-    "Turn this cartoon character, {description}, to a three-quarter view facing to the right. "
+    "Turn this cartoon character, {description}, to a clear three-quarter view facing to the "
+    "right: the whole body, the hips and the feet are turned about 45 degrees, so the far "
+    "shoulder and the far leg sit partly behind the near ones, and the face is seen in "
+    "three-quarter profile, with the far cheek and the far eye smaller than the near ones. "
     "The same character with the same face, ears, clothes, colours and flat storybook art "
     "style, wearing only what it wears in the picture. Full body, standing upright with the "
     "legs slightly apart and both arms held out from the body at about 25 degrees, the hands "
