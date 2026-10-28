@@ -24,6 +24,7 @@ from studio_core import placement
 from studio_core.audio.library import LibraryError, load_library
 from studio_core.config import REPO_ROOT
 from studio_core.film import Film
+from studio_core.hands import hand_bone
 from studio_core.motions import MotionError, animate
 from studio_core.rig import RigError, load_rig
 from studio_core.schema import CUE_TOLERANCE_S, validate
@@ -35,7 +36,9 @@ ID = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 # The placeholder puppet (Pip) that build_rig copies when no rig is given, until Step 4
 # generates real puppets.
 PLACEHOLDER_RIG = REPO_ROOT / "tests" / "fixtures" / "characters" / "pip"
-REMOVABLE = ("character", "action", "pose", "expression", "dialogue", "sound_effect", "movement")
+REMOVABLE = (
+    "character", "action", "pose", "expression", "hand", "dialogue", "sound_effect", "movement"
+)  # fmt: skip
 
 
 class SpecError(ValueError):
@@ -162,6 +165,9 @@ def check(film: FilmFolder, spec: dict[str, Any]) -> tuple[list[str], list[str]]
         except RigError as e:
             errors.append(str(e))
             continue
+        for hp in char.get("hands", []):
+            if hand_bone(view, hp["side"]) is None:
+                errors.append(f"{cid}: no {hp['side']} hand poses (its rig has no `hands`)")
         try:  # catches motions a rig can't do (missing limbs) and unknown pose bones
             animate(
                 view,
@@ -391,6 +397,31 @@ def add_expression(
     char["expressions"] = sorted(
         [*kept, {"expr": expr, "start_s": start_s}], key=lambda e: e["start_s"]
     )
+    return save(film, spec)
+
+
+def add_hand(
+    film: FilmFolder, shot_id: str, character_id: str, pose: str, start_s: float, side: str
+) -> list[str]:
+    """Which hand pose the character's `side` hand shows from start_s on. Replaces a pose of
+    the same hand at the same time. Refused for a character whose rig has no hands."""
+    spec = load(film, shot_id)
+    char = _character(spec, character_id)
+    rig = load_rig(film.rig_file(character_id), check_files=False)
+    view = rig.view(char.get("view"))
+    bone = hand_bone(view, side)
+    if bone is None:
+        raise SpecError(
+            f"{character_id!r} has no {side} hand poses: its rig has no `hands` "
+            f"(hands: {', '.join(view.get('hands', {})) or 'none'}). "
+            "Add them to the rig first (studio_core.hands.add_hands), or leave the hand as cut."
+        )
+    have = view["hands"][bone]["poses"]
+    if pose not in have:
+        raise SpecError(f"the {side} hand of {character_id!r} has no {pose!r} pose; it has {have}")
+    kept = [h for h in char.get("hands", []) if not (h["side"] == side and h["start_s"] == start_s)]
+    entry = {"side": side, "pose": pose, "start_s": start_s}
+    char["hands"] = sorted([*kept, entry], key=lambda h: h["start_s"])
     return save(film, spec)
 
 

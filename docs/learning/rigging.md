@@ -102,3 +102,18 @@ a hat, a lone front-view ear. Ear parts draw just behind the head, the tail behi
 with a cap disc painted from its own pixels that hides under the parent. Default builds are
 byte-identical. Moves with these bones come from the follow-through layer
 (docs/learning/motion-library.md).
+
+## Swappable hands (opt-in `hands`)
+
+A hand pose is a **switch**, like a mouth shape. The rig view may carry `hands` per forearm bone:
+the poses it has (`rest`, `fist`, `point`, `open`, `wave`), the wrist, the hand's width (from the
+cut hand, so the drawn hand matches the character) and a fill colour; the outline is the face's line
+colour. `rest` draws nothing: the hand is the end of the forearm image, as cut. The other poses are
+vector shapes (`studio_core/hands.py`) drawn over it in the forearm's local frame and linked to the
+forearm bone, so they follow the arm. A constant-key string track picks the pose, and motions add keys
+to a `("hand", forearm_bone)` channel that composes with the angle channels.
+
+Gotchas: the cut hand's pixels cannot be removed from the forearm image, so a drawn pose is drawn *on
+top* and is as wide as the cut hand (a narrower drawn hand could let the cut one peek out). The thumb is
+placed on the body side from the rest pose, so it is mirrored per arm. `add_hands(rig)` is the opt-in:
+a rig without `hands` renders byte-identically to before.

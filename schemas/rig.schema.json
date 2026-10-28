@@ -139,6 +139,13 @@
         "face": {
           "$ref": "#/$defs/face"
         },
+        "hands": {
+          "type": "object",
+          "description": "Swappable hand poses, keyed by the forearm bone the hand hangs on. Optional: a view without it keeps the hand as cut (the end of the forearm image) at all times. A drawn pose is a vector hand in the character's colours, switched over time like a mouth shape.",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/hand" }
+        },
         "bendable_limbs": {
           "type": "array",
           "description": "Limbs that are drawn as ONE image and bend smoothly at the joint (arms, legs), instead of two rigid parts. Optional: a view without it is the plain two-part rig. Each limb replaces every part carried by its two bones: when the engine bends limbs, those parts are not drawn and the limb image is drawn in the earliest draw_order slot of them. The parts stay in the rig as the fallback (two rigid pieces, used when bending is switched off) and because a child joint (a hand) attaches to a part of its parent bone.",
@@ -390,6 +397,26 @@
             }
           }
         }
+      }
+    },
+    "hand": {
+      "type": "object",
+      "description": "The hand at the end of one forearm: where the wrist is, how big the hand is, which poses exist and the colours the drawn poses use. `rest` is the hand as cut (nothing is drawn over it); any other pose is drawn in code over the end of the forearm image, pointing along the forearm's bone direction.",
+      "required": ["part", "wrist_px", "size_px", "poses", "fill"],
+      "additionalProperties": false,
+      "properties": {
+        "part": { "$ref": "#/$defs/id", "description": "The part (the forearm image) the hand is drawn with; it must be carried by this forearm bone." },
+        "wrist_px": { "$ref": "#/$defs/point_px", "description": "The wrist in pixels of `part`: where the drawn hand starts." },
+        "size_px": { "type": "number", "exclusiveMinimum": 0, "description": "Width of the hand across the wrist, in pixels: taken from the cut hand so a drawn hand matches the character." },
+        "poses": {
+          "type": "array",
+          "description": "Which hand poses this hand has. `rest` is required.",
+          "items": { "enum": ["rest", "fist", "point", "open", "wave"] },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "fill": { "$ref": "#/$defs/color", "description": "Fill colour of a drawn hand (the cut hand's own colour)." },
+        "outline": { "$ref": "#/$defs/color", "description": "Outline colour of a drawn hand. Defaults to the face's `line` colour." }
       }
     },
     "bendable_limb": {

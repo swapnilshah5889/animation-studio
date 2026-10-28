@@ -77,7 +77,8 @@
         },
         "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
         "expressions": { "type": "array", "items": { "$ref": "#/$defs/expression" } },
-        "poses": { "type": "array", "items": { "$ref": "#/$defs/pose" } }
+        "poses": { "type": "array", "items": { "$ref": "#/$defs/pose" } },
+        "hands": { "type": "array", "items": { "$ref": "#/$defs/hand_pose" } }
       }
     },
     "waypoint": {
@@ -120,6 +121,17 @@
       "additionalProperties": false,
       "properties": {
         "expr": { "enum": ["neutral", "happy", "sad", "surprised", "grumpy", "worried", "excited", "shy", "sleepy", "proud", "determined"] },
+        "start_s": { "$ref": "#/$defs/time_s" }
+      }
+    },
+    "hand_pose": {
+      "type": "object",
+      "description": "Which hand pose one hand shows from start_s on (until the next one). The character's rig must have hands.",
+      "required": ["side", "pose", "start_s"],
+      "additionalProperties": false,
+      "properties": {
+        "side": { "enum": ["left", "right"], "description": "The character's own left or right hand." },
+        "pose": { "enum": ["rest", "fist", "point", "open", "wave"] },
         "start_s": { "$ref": "#/$defs/time_s" }
       }
     },

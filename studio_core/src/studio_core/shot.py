@@ -26,6 +26,7 @@ from studio_core import placement
 from studio_core.audio.mix import mix_shot
 from studio_core.config import StudioConfig, load_config
 from studio_core.face import face_attachments
+from studio_core.hands import hand_attachments, hand_bone, hand_track, merge_attachments
 from studio_core.motions import animate
 from studio_core.rig import build_character, ground_offset_px, load_rig
 from studio_core.scene import DESIGN, PlacedCharacter, build_scene, load_background
@@ -77,6 +78,13 @@ def expression_track(expressions: list[dict[str, Any]], fps: int) -> str | Anima
     return Animated(
         "string", tuple(Waypoint(f, v, Interp.CONSTANT) for f, v in sorted(by_frame.items()))
     )
+
+
+def hand_tracks(tracks: dict[str, Animated]) -> dict[str, Animated | str]:
+    """Hand-pose tracks from the motions, each starting at `rest` from frame 0."""
+    return {
+        bone: hand_track([(w.frame, w.value) for w in t.waypoints]) for bone, t in tracks.items()
+    }
 
 
 def dialogue_mouth(film_dir: Path, lines: list[dict[str, Any]], fps: int) -> str | Animated:
@@ -138,6 +146,12 @@ def build_shot(
                 x, y = target[0] * DESIGN.width, target[1] * DESIGN.height
                 action["params"]["target"] = [2 * root.x - x if facing == "left" else x, y]
             actions.append(action)
+        hand_poses = []
+        for hp in ch.get("hands", []):  # set_hand: which hand, by the forearm bone that has it
+            bone = hand_bone(view, hp["side"])
+            if bone is None:
+                raise ShotError(f"{cid!r} has no {hp['side']} hand poses (its rig has no `hands`)")
+            hand_poses.append({"bone": bone, "pose": hp["pose"], "start_s": hp["start_s"]})
         anim = animate(
             view,
             actions,
@@ -147,6 +161,7 @@ def build_shot(
             scale=scale,
             seed=f"{shot['id']}:{cid}",
             poses=ch.get("poses"),
+            hand_poses=hand_poses,
             travel=travel,
         )
         attachments = None
@@ -159,6 +174,9 @@ def build_shot(
                 eyes=anim.eyes or "open",
                 mouth=dialogue_mouth(film_dir, lines, fps),
             )
+        attachments = merge_attachments(
+            attachments, hand_attachments(view, DESIGN, hand_tracks(anim.hands))
+        )
         built = build_character(
             rig,
             ch.get("view"),

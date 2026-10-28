@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 from studio_core import placement, shot_spec
 from studio_core.config import load_config
 from studio_core.face import EXPRESSIONS
+from studio_core.hands import HAND_POSES
 from studio_core.motions import MOTIONS
 from studio_core.rig import load_rig
 from studio_core.scene import CAMERA_MOVES
@@ -44,6 +45,7 @@ _SHOT = json.loads((SCHEMA_DIR / "shot.schema.json").read_text())["$defs"]
 # model sees can't drift from what the spec accepts.
 Motion = Literal[tuple(_SHOT["action"]["properties"]["motion"]["enum"])]  # type: ignore[valid-type]
 Expression = Literal[tuple(EXPRESSIONS)]  # type: ignore[valid-type]
+HandPose = Literal[tuple(HAND_POSES)]  # type: ignore[valid-type]
 CameraMove = Literal[tuple(CAMERA_MOVES)]  # type: ignore[valid-type]
 Ease = Literal[tuple(placement.EASES)]  # type: ignore[valid-type]
 View = Literal["front", "three_quarter"]
@@ -99,6 +101,10 @@ class CharacterInfo(BaseModel):
     name: str
     views: dict[str, list[str]] = Field(description="View name → bone names (for pose_at).")
     has_face: bool = Field(description="True if expressions, blinks and lip-sync work.")
+    hand_poses: list[str] = Field(
+        default_factory=list,
+        description="Hand poses set_hand can show ([] = the hand stays as drawn).",
+    )
 
 
 class BackgroundInfo(BaseModel):
@@ -225,8 +231,20 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 rig = load_rig(f.rig_file(cid), check_files=False)
                 views = {name: sorted(v["bones"]) for name, v in rig.data["views"].items()}
                 has_face = any("face" in v for v in rig.data["views"].values())
+                hands = {
+                    p
+                    for v in rig.data["views"].values()
+                    for h in v.get("hands", {}).values()
+                    for p in h["poses"]
+                }
                 chars.append(
-                    CharacterInfo(id=cid, name=rig.data["name"], views=views, has_face=has_face)
+                    CharacterInfo(
+                        id=cid,
+                        name=rig.data["name"],
+                        views=views,
+                        has_face=has_face,
+                        hand_poses=[p for p in HAND_POSES if p in hands],
+                    )
                 )
             backgrounds = []
             for bid in f.backgrounds():
@@ -453,6 +471,29 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             return update(f, shot_id, f"{character_id}: {expr} from {start_s}s", warnings)
 
     @tool()
+    def set_hand(
+        film: FilmArg,
+        shot_id: ShotArg,
+        character_id: CharArg,
+        pose: HandPose,
+        start_s: Seconds,
+        side: Annotated[
+            Literal["left", "right"],
+            Field(description="The character's own left or right hand."),
+        ] = "right",
+    ) -> ShotUpdate:
+        """Change which pose the character's hand shows from start_s on: rest (the hand as
+        drawn), fist, point, open or wave. Only for characters whose rig has hands (describe_film
+        lists them); the point, wave, talk_gesture, clap and think motions already pick their own
+        hand pose. The hand holds the pose until the next set_hand."""
+        with fixable():
+            f = open_film(film)
+            warnings = shot_spec.add_hand(f, shot_id, character_id, pose, start_s, side)
+            return update(
+                f, shot_id, f"{character_id}: {side} hand {pose} from {start_s}s", warnings
+            )
+
+    @tool()
     def apply_lipsync(
         film: FilmArg,
         shot_id: ShotArg,
@@ -577,8 +618,8 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         ] = None,
     ) -> ShotUpdate:
         """Undo part of a shot: remove a character (with its dialogue), or one of a character's
-        actions, poses or expressions, a character's whole movement path (kind 'movement'), or one
-        dialogue line or sound effect, by its index in describe_shot."""
+        actions, poses, expressions or hand poses, a character's whole movement path (kind
+        'movement'), or one dialogue line or sound effect, by its index in describe_shot."""
         with fixable():
             f = open_film(film)
             removed, warnings = shot_spec.remove_item(

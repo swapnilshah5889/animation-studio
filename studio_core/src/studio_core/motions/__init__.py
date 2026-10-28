@@ -4,6 +4,7 @@
     built = build_character(rig, None, space, offsets=anim.angles, shifts=anim.shifts,
                             attachments=face_attachments(view, space, eyes=anim.eyes or "open"))
 
+`hand_poses` are manual hand poses `{bone, pose, start_s}`.
 `actions` are the shot spec's `characters[].actions` (motion, start_s, duration_s, params).
 """
 
@@ -37,6 +38,7 @@ class Animation:
     angles: dict[str, Animated] = field(default_factory=dict)  # bone → offsets from rest (Angle)
     shifts: dict[str, Animated] = field(default_factory=dict)  # bone → joint shift (Vec, art px)
     eyes: Animated | None = None  # eye-state track for the face
+    hands: dict[str, Animated] = field(default_factory=dict)  # forearm bone → hand-pose track
     clips: list[Clip] = field(default_factory=list)
 
 
@@ -50,6 +52,7 @@ def animate(
     scale: float = 1.0,
     seed: str = "",
     poses: list[dict[str, Any]] | None = None,
+    hand_poses: list[dict[str, Any]] | None = None,
     travel: list[float] | None = None,
     secondary: bool = True,
 ) -> Animation:
@@ -91,6 +94,13 @@ def animate(
             Clip("pose", f, f, {("angle", b): [Key(f, float(a))] for b, a in pose["bones"].items()})
         )
 
+    for hp in hand_poses or []:  # manual hand poses (set_hand): one override key per change
+        f = frames(hp["start_s"], fps)
+        if f > n_frames - 1:
+            raise MotionError(f"hand pose at {hp['start_s']}s is after the end of the shot")
+        bone = hp["bone"]
+        clips.append(Clip("hand", f, f, {("hand", bone): [Key(f, hp["pose"], Interp.CONSTANT)]}))
+
     if secondary:
         energies = [float(a.get("params", {}).get("energy", 0.5)) for a in actions]
         layer = follow_through(
@@ -118,6 +128,10 @@ def animate(
         elif kind == "shift":
             out.shifts[bone] = Animated(
                 "vector", tuple(Waypoint(k.frame, k.value, k.interp) for k in keys)
+            )
+        elif kind == "hand":
+            out.hands[bone] = Animated(
+                "string", tuple(Waypoint(k.frame, k.value, Interp.CONSTANT) for k in keys)
             )
         elif kind == "eyes":
             out.eyes = Animated(

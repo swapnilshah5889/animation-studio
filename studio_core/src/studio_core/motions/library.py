@@ -64,6 +64,20 @@ class MotionContext:
         where = f" on the {side} side" if side else ""
         raise MotionError(f"this rig has no {role!r} bone{where}")
 
+    def hand(self, side: str, keys: list[tuple[int, str]]) -> dict[Channel, list[Key]]:
+        """Hand-pose keys (frame, pose) for `side`'s hand: {} when the rig has no hands there. A
+        pose the rig does not have becomes `rest`; keys all at rest add nothing."""
+        if not self.has("forearm", side):
+            return {}
+        bone = self.bone("forearm", side)
+        hand = self.view.get("hands", {}).get(bone)
+        if hand is None:
+            return {}
+        poses = [(f, p if p in hand["poses"] else "rest") for f, p in keys]
+        if all(p == "rest" for _, p in poses):
+            return {}
+        return {("hand", bone): [Key(f, p, Interp.CONSTANT) for f, p in poses]}
+
     def has(self, role: str, side: str | None = None) -> bool:
         try:
             self.bone(role, side)
@@ -122,9 +136,10 @@ def _clear_raise(
     hj = rest[head][0]
     lefts, rights = [], []
     for part in view["parts"].values():
-        if part["bone"] == head:
-            lefts.append(hj.x - part["pivot_px"][0])
-            rights.append(hj.x + part["size_px"][0] - part["pivot_px"][0])
+        if head in chain(view, part["bone"]):  # the head and what hangs from it (ears)
+            joint = rest[part["bone"]][0]
+            lefts.append(joint.x - part["pivot_px"][0])
+            rights.append(joint.x + part["size_px"][0] - part["pivot_px"][0])
     length = view["bones"][fore]["length_px"]
     outward = 1.0 if rest[upper][0].x > hj.x else -1.0  # which side of the head the arm is on
     edge = max(rights) if outward > 0 else min(lefts)
@@ -167,12 +182,14 @@ def wave(ctx: MotionContext) -> Clip:
         Key(t_end, s * raise_deg),
         Key(t_end + down, 0.0),
     ]
+    hand = ctx.hand(side, [(t0, "rest"), (t0 + up // 2, "wave"), (t_end + down // 2, "rest")])
     return _clip(
         ctx,
         "wave",
         {
             ("angle", ctx.bone("upper_arm", side)): upper,
             ("angle", ctx.bone("forearm", side)): fore,
+            **hand,
         },
     )
 
@@ -491,6 +508,11 @@ def point(ctx: MotionContext) -> Clip:
             Key(t1 + wind, 0.0),
             Key(t2 + wind + out, 0.0),
         ]
+    ch.update(
+        ctx.hand(
+            side, [(ctx.start, "rest"), (ctx.start + wind, "point"), (t2 + wind + out // 2, "rest")]
+        )
+    )
     return _clip(ctx, "point", ch)
 
 
@@ -502,9 +524,11 @@ def talk_gesture(ctx: MotionContext) -> Clip:
     beats = _cycles(ctx, 2, beat, ctx.frames(0.3))
     up_deg, fore_deg = ctx.lerp(10, 25), ctx.lerp(18, 40)
     upper, fore, head = [Key(ctx.start, 0.0)], [Key(ctx.start, 0.0)], [Key(ctx.start, 0.0)]
+    hand = [(ctx.start, "rest")]
     t = ctx.start
     for i in range(beats):
         t_hit, t_rel = t + beat // 3, t + beat
+        hand += [(t_hit, "open"), (t_rel - 1, "rest")]  # the palm opens on each beat
         upper += [Key(t_hit, s * up_deg), Key(t_rel, s * up_deg * 0.6)]
         fore += [Key(t_hit, s * fore_deg), Key(t_rel, s * fore_deg * 0.5)]
         head += [Key(t_hit, (3.0 if i % 2 == 0 else -3.0)), Key(t_rel, 0.0)]
@@ -519,6 +543,7 @@ def talk_gesture(ctx: MotionContext) -> Clip:
             ("angle", ctx.bone("upper_arm", side)): upper,
             ("angle", ctx.bone("forearm", side)): fore,
             ("angle", ctx.bone("head")): head,
+            **ctx.hand(side, hand),
         },
     )
 
@@ -699,6 +724,8 @@ def clap(ctx: MotionContext) -> Clip:
             Key(t_end, s * raise_deg),
             Key(t_end + down, 0.0),
         ]
+        # Open palms meet; a fist would read as punching, not clapping.
+        ch.update(ctx.hand(sd, [(t0, "rest"), (t_up, "open"), (t_end + down // 2, "rest")]))
     return _clip(ctx, "clap", ch)
 
 
@@ -750,6 +777,8 @@ def think(ctx: MotionContext) -> Clip:
         ("angle", ctx.bone("forearm", side)): _angles(pairs, s * ctx.lerp(130, 140)),
         ("angle", ctx.bone("head")): _angles(pairs, s * ctx.lerp(5, 11)),
     }
+    t_in, t_out = pairs[2][0], pairs[-1][0] - out // 2  # a fist at the head while it is held
+    ch.update(ctx.hand(side, [(ctx.start, "rest"), (t_in, "fist"), (t_out, "rest")]))
     return _clip(ctx, "think", ch)
 
 

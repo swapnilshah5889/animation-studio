@@ -25,6 +25,7 @@ TOOLS = {
     "apply_motion",
     "pose_at",
     "set_expression",
+    "set_hand",
     "apply_lipsync",
     "add_parallax_background",
     "camera_move",

@@ -196,6 +196,7 @@ def check_rig(data: dict[str, Any]) -> list[Issue]:
             )
 
         issues += _check_limbs(at, view)
+        issues += _check_hands(at, view)
 
         face = view.get("face")
         if face:
@@ -214,6 +215,41 @@ def check_rig(data: dict[str, Any]) -> list[Issue]:
                 for key, point in anchors.items():
                     if not _inside(point, size):
                         issues.append(Issue(f"{at}.face.{key}", f"outside the face part {size}"))
+    return issues
+
+
+def _check_hands(at: str, view: dict[str, Any]) -> list[Issue]:
+    """`hands`: keyed by a forearm bone, drawn with a part that bone carries, the wrist inside
+    that image, and `rest` (the hand as cut) among the poses."""
+    issues: list[Issue] = []
+    bones, parts = view["bones"], view["parts"]
+    for bone, hand in view.get("hands", {}).items():
+        where = f"{at}.hands.{bone}"
+        if bone not in bones:
+            issues.append(Issue(where, f"unknown bone {bone!r}"))
+        elif _role(bones, bone) != "forearm":
+            issues.append(
+                Issue(where, f"{bone!r} is not a forearm bone (role {_role(bones, bone)!r})")
+            )
+        part = hand["part"]
+        if part not in parts:
+            issues.append(Issue(f"{where}.part", f"unknown part {part!r}"))
+        else:
+            if parts[part]["bone"] != bone:
+                issues.append(
+                    Issue(
+                        f"{where}.part",
+                        f"{part!r} is carried by {parts[part]['bone']!r}, not {bone!r}",
+                    )
+                )
+            if not _inside(hand["wrist_px"], parts[part]["size_px"]):
+                issues.append(
+                    Issue(
+                        f"{where}.wrist_px", f"outside the {part!r} image {parts[part]['size_px']}"
+                    )
+                )
+        if "rest" not in hand["poses"]:
+            issues.append(Issue(f"{where}.poses", "must include 'rest' (the hand as cut)"))
     return issues
 
 
