@@ -12,6 +12,14 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-28: ear and tail bones and the hand-pose spike done (D-073)
+
+Ears and tails opt-in (Kit gains 5 sweep defects with them on, cause open); hands recommended as
+code-drawn vector shapes. Next: hands integration (rig `hands` switch, drawn shapes, motion hooks), the
+ear and tail follow-ups (the Kit +5 and test checks), then the review reel and docs.
+
+---
+
 ## 2026-10-28: bendable limbs in the cut and more acting done (D-072)
 
 Both pushed, opt-in or additive; 577 tests passed at the time. Next: hands and ear/tail bones (cut and

@@ -1431,3 +1431,31 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   head). `sleepy` needs half-closed eyes that an expression cannot set, and `laugh` has no mouth channel.
   Left unchanged: `nod` and `head_tilt` do not overshoot, `talk_gesture` beats have no hold.
 
+### D-073: Ear and tail bones (opt-in) and the hand-pose spike (2026-10-28)
+- **Ears and tails (`598242a`, `puppet/secondary.py`, `build_puppet(secondary=True)`, default off):**
+  an optional `follow` block per bone in the rig schema (`lag_s`, `damping`, `gain`); `check_rig` checks
+  ear and tail bones only where they exist (an ear's parent is the head, a tail's the torso or another
+  tail segment, at most 3 segments). Ears are the head-mask lobes above the eye line; the tail is the
+  torso piece outside the body hull attached by a narrow root; skirts, hems and scarf ends are refused
+  and the build continues without those bones, saying why in the report. Found: Kit both ears and a
+  3-segment tail in both views; Bo front ears only (his three-quarter ears and his tail are refused);
+  Pim and Mia none. `motions/follow.py`: each ear or tail segment is a damped spring chasing its
+  parent (ears lag 2-3 frames and overshoot about 16%, and splay on a nod; the tail sways with
+  idle_breathe, lifts while travelling and trails a walk's bob); rigs without these bones are unchanged
+  and Pip's tracks are identical on and off. Default builds of Kit, Bo, Pim, Mia are byte-identical.
+  611 tests passed. **Open: with the secondary cut on, Kit gains 5 pose-sweep defects (64 off, 69 on;
+  seam hairlines on wave and clap near the neck and shoulder) that persist with the new parts deleted,
+  so they come from the changed head and torso cut, cause not pinned; the session did not mutation-check
+  its tests; the tail's sway period, lift and bob gains are guesses; nothing renders ears or tail through
+  Synfig in a real shot yet.**
+- **Hand poses spike (`ca93b1f`, `docs/spikes/hand-poses.md`):** (A) procedural variants of the cut hand
+  rejected: it only reshapes the same pixels. (B) a klein redraw gives very good, on-model hands on Kit
+  (8 of 8; the redraw is about 1.5 times the cut paw's size with a tan cuff to refit) but costs 137 s per
+  hand (about 18 min of GPU per character for four poses with two seeds) and failed to cut out Bo's and
+  Mia's hands (arms against the body or a cream background). (C) hands drawn in code as vector shapes in
+  the character's fill and outline colours: all five shapes read as the pose on all three characters, under
+  10 ms, no GPU, no seed choice, but a generic cartoon glove, not Kit's ragged paw, and a hand-picked
+  size per character that should come from the cut hand's width. **Recommendation: C**, first step an
+  optional `hands` switch per forearm with only `rest` (the cut hand) and `fist`, proven in one Synfig
+  shot, then point, open, wave. Stills only; nothing rendered in Synfig; one arm.
+
