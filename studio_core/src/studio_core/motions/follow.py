@@ -183,8 +183,8 @@ def follow_through(
             target = [t + outward * splay * r for t, r in zip(target, rise, strict=True)]
         elif parent not in world:  # the tail's first segment takes the drivers
             sign = _lag_sign(view, bone)
-            amp, period = _lerp(2.0, 5.0, energy), _lerp(2.8, 1.8, energy) * fps
-            lift = _lerp(2.0, 6.0, energy)
+            amp, period = _lerp(3.0, 7.0, energy), _lerp(2.8, 1.8, energy) * fps
+            lift = _lerp(4.0, 10.0, energy)
             for f in range(n_frames):
                 sway = 0.0
                 for window in idle:
@@ -196,7 +196,7 @@ def follow_through(
                 run = 0.0
                 if travel is not None and f + 1 < len(travel) and ref_speed > 0:
                     run = min(1.0, (travel[f + 1] - travel[f]) * fps / ref_speed)
-                target[f] += sway + sign * _lerp(0.3, 0.6, energy) * rise[f] - sign * lift * run
+                target[f] += sway + sign * _lerp(0.8, 1.4, energy) * rise[f] - sign * lift * run
         sprung = simulate(target, lag_s, damping, fps, start=target[0])
         world[bone] = sprung
         limits = view["bones"][bone].get("limits_deg", {"min": -360, "max": 360})

@@ -105,6 +105,39 @@ def test_lobes_not_coloured_like_the_skull_are_refused() -> None:
     assert ears == {} and "not coloured like the skull" in note["reason"]
 
 
+def head_with_lobes(sk, lobes):
+    """A head with extra round lobes: (dx in head radii from the neck, y in px, radius in radii)."""
+    nx, _, _, r = head_geometry(sk)
+    head, rgb = head_with(sk, ears=())
+    m, im = Image.fromarray(head.astype("uint8") * 255), Image.fromarray(rgb.astype("uint8"))
+    for dx, cy, rad in lobes:
+        box = [nx + (dx - rad) * r, cy - rad * r, nx + (dx + rad) * r, cy + rad * r]
+        ImageDraw.Draw(m).ellipse(box, fill=255)
+        ImageDraw.Draw(im).ellipse(box, fill=FUR)
+    return np.asarray(m) > 127, np.asarray(im).astype("float32")
+
+
+def test_lobes_below_the_eyes_are_cheeks_not_ears() -> None:
+    eye_y, r = FRONT.joints["l_eye"][1], head_geometry(FRONT)[3]
+    head, rgb = head_with_lobes(
+        FRONT, [(-1.0, eye_y + 0.3 * r, 0.34), (1.0, eye_y + 0.3 * r, 0.34)]
+    )
+    ears, note = find_ears(head, rgb, FRONT)
+    assert ears == {} and "no lobes above the eyes" in note["reason"]
+
+
+def test_a_third_lobe_makes_the_head_ambiguous() -> None:
+    ty, r = head_geometry(FRONT)[2], head_geometry(FRONT)[3]
+    head, rgb = head_with(FRONT)
+    nx = head_geometry(FRONT)[0]
+    box = [nx - 1.7 * r, ty, nx - 1.1 * r, ty + 0.6 * r]
+    m, im = Image.fromarray(head.astype("uint8") * 255), Image.fromarray(rgb.astype("uint8"))
+    ImageDraw.Draw(m).ellipse(box, fill=255)
+    ImageDraw.Draw(im).ellipse(box, fill=FUR)
+    ears, note = find_ears(np.asarray(m) > 127, np.asarray(im).astype("float32"), FRONT)
+    assert ears == {} and "3 lobes" in note["reason"]
+
+
 def test_opening_removes_what_a_disc_cannot_fill() -> None:
     m = np.zeros((60, 60), dtype=bool)
     m[10:50, 10:50] = True
@@ -174,6 +207,25 @@ def test_a_scarf_end_high_on_the_body_is_not_a_tail() -> None:
     assert tail is None and note["reason"]
 
 
+def test_a_scarf_end_is_refused_for_being_too_high_not_for_some_other_reason() -> None:
+    torso, rgb = torso_with(FRONT, [(-0.4, -0.36, -0.1, -0.24)])
+    tail, note = find_tail(torso, rgb, FRONT)
+    assert tail is None and "too high" in note["reason"]
+
+
+def test_the_colour_trim_gives_the_body_coloured_root_back_to_the_torso() -> None:
+    torso, rgb = torso_with(FRONT, [(-0.4, -0.02, -0.05, 0.1)])
+    whole = find_tail(torso, rgb, FRONT)[0]
+    assert whole is not None
+    ys, xs = np.nonzero(whole["mask"])
+    jx, jy = whole["joints"][0]
+    far = np.hypot(xs - jx, ys - jy) > 0.08 * FRONT.height_px
+    painted = rgb.copy()
+    painted[ys[far], xs[far]] = BLUE  # the tail proper is another colour than the body
+    trimmed, note = find_tail(torso, painted, FRONT)  # the root, body-coloured, is given back
+    assert trimmed is None and "after the colour trim" in note["reason"]
+
+
 def test_a_body_with_nothing_outside_has_no_tail() -> None:
     torso, rgb = torso_with(FRONT)
     tail, note = find_tail(torso, rgb, FRONT)
@@ -213,6 +265,10 @@ def test_add_secondary_moves_pixels_to_new_parts_and_orders_them() -> None:
     # the ear's cap reaches into the head, painted with the ear's own colour
     cap = masks["ear_l"] & parts["head"] & ~ears_only(FRONT, head, rgb)["left"]["mask"]
     assert cap.any()
+    seg = find_tail(torso, np.where(torso[..., None], trgb, rgb), FRONT)[0]["segments"]
+    assert (masks[tails[0]] & masks["torso"]).any()  # the root cap reaches into the body
+    assert len(tails) > 1  # at an inner joint both segments hold the pixels around it
+    assert (masks[tails[0]] & seg[1]).any() and (masks[tails[1]] & seg[0]).any()
 
 
 def ears_only(sk, head, rgb):
@@ -326,6 +382,40 @@ def test_at_rest_the_cut_with_ears_composes_back_to_the_default_cut(fox_builds) 
     a, b = np.asarray(flat)[..., 3] > 127, np.asarray(split)[..., 3] > 127
     assert (a ^ b).sum() < 0.01 * a.sum()  # the silhouette is the same
     assert b.sum() > 0
+
+
+def test_a_raised_arm_still_clears_the_ears_that_are_now_parts_of_their_own(fox_builds) -> None:
+    """The wave and the clap stop the arm where the hand would pass behind the head's art; with
+    the ears cut out of the head image they must still count (Kit's pose sweep found 5 seams)."""
+    from studio_core.motions import animate
+
+    def arm_keys(built):
+        view = load_rig(built.rig_path).view("front")
+        action = {"motion": "wave", "start_s": 0.0, "params": {"side": "left", "energy": 1.0}}
+        clip = animate(view, [action], fps=24, n_frames=96).clips[0]
+        return {k: v for k, v in clip.channels.items() if k[0] == "angle"}
+
+    plain, both = fox_builds["plain"][1], fox_builds["secondary"][1]
+    assert arm_keys(both) == arm_keys(plain)
+
+
+def test_the_arm_raise_stops_at_an_ear_wider_than_the_head() -> None:
+    from studio_core.motions import MotionContext
+    from studio_core.motions.library import _clear_raise
+
+    rig = json.loads((Path(__file__).parent / "fixtures/characters/pip/rig.json").read_text())
+    view = rig["views"]["front"]
+    ctx = lambda v: MotionContext(view=v, fps=24, start=0, last_frame=99, seed="x")  # noqa: E731
+    bare = _clear_raise(ctx(view), "left", 160.0, 35.0)
+    head = view["parts"]["head"]
+    view["bones"]["ear_l"] = {
+        "role": "ear", "side": "left", "parent": "head", "direction_deg": 60, "length_px": 80,
+        "limits_deg": {"min": -35, "max": 35}, "attach": {"part": "head", "at_px": [150, 20]},
+    }  # fmt: skip
+    view["parts"]["ear_l"] = {
+        "file": head["file"], "size_px": [600, 60], "pivot_px": [0, 30], "bone": "ear_l",
+    }  # fmt: skip
+    assert _clear_raise(ctx(view), "left", 160.0, 35.0) < bare
 
 
 def test_a_rig_with_a_misplaced_ear_is_refused() -> None:

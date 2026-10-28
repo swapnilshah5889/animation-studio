@@ -10,6 +10,7 @@ import pytest
 from studio_core.config import REPO_ROOT
 from studio_core.motions import MOTIONS, Key, MotionContext, animate, follow_through
 from studio_core.motions.follow import secondary_bones, simulate, spring_params
+from studio_core.motions.timeline import sample
 from studio_core.rig import load_rig
 from studio_core.schema import validate
 from studio_core.sif import Angle, Vec
@@ -177,10 +178,10 @@ def test_the_tail_sways_with_idle_breathe_and_each_segment_trails_the_last() -> 
     assert t1[0] == 0.0 and max(abs(x) for x in t1) > 1.5  # sways, easing in from rest
     assert abs(t1[2]) < 0.5 * max(abs(x) for x in t1)  # the ramp-in starts gently
     # one sway per period (2.8 s at energy 0.5 -> 2.4 s): count the upward zero crossings
-    period = 2.8 + (1.8 - 2.8) * 0.5
+    period = 2.8 + (1.8 - 2.8) * 0.5  # a sway a little over two seconds
     crossings = [f for f in range(60, n - 1) if t1[f] < 0 <= t1[f + 1]]
     assert len(crossings) >= 2
-    assert (crossings[1] - crossings[0]) / FPS == pytest.approx(period, rel=0.15)
+    assert (crossings[1] - crossings[0]) / FPS == pytest.approx(period, rel=0.05)
     # offsets are relative to the parent: the second segment's angle in the world is t1 + t2,
     # and it turns after the first does, not with it
     w2 = [a + b for a, b in zip(t1, t2, strict=True)]
@@ -256,3 +257,62 @@ def test_a_pose_on_an_ear_is_kept_and_summed_with_the_layer() -> None:
     wp = {w.frame: w.value.degrees for w in anim.angles["ear_l"].waypoints}
     assert wp[72] == pytest.approx(20.0, abs=1.0)
     assert math.isfinite(Angle(0).degrees) and Vec(0, 0).x == 0
+
+
+# ------------------------------------------------------------- the tail's gains (looked at by eye
+# in renders/secondary/kit_follow.png: ears and tail read at preview size, none too big)
+
+
+def offset(layer, bone, frame):
+    return sample(layer.channels[("angle", bone)], frame)
+
+
+def test_the_tail_sway_has_a_few_degrees_and_a_period_that_shortens_with_energy() -> None:
+    peaks, periods = {}, {}
+    for energy in (0.0, 0.5, 1.0):
+        anim = run([{"motion": "idle_breathe", "start_s": 0, "params": {"energy": energy}}], n=360)
+        t1 = keys_of(anim, "tail_1", 360)
+        up = [f for f in range(60, 359) if t1[f] < 0 <= t1[f + 1]]
+        peaks[energy], periods[energy] = max(abs(x) for x in t1), (up[1] - up[0]) / FPS
+    assert peaks[0.0] == pytest.approx(3.6, abs=0.6)
+    assert peaks[0.5] == pytest.approx(5.9, abs=0.8)
+    assert peaks[1.0] == pytest.approx(8.2, abs=1.0)
+    assert periods[0.0] == pytest.approx(2.8, rel=0.05)
+    assert periods[1.0] == pytest.approx(1.8, rel=0.05)
+
+
+def test_the_sway_eases_in_from_rest_over_half_a_second() -> None:
+    anim = run([{"motion": "idle_breathe", "start_s": 0}], n=240)
+    t1 = keys_of(anim, "tail_1", 240)
+    assert max(abs(x) for x in t1[:7]) < 0.07 * max(abs(x) for x in t1)  # 1.1 without the ease
+
+
+def test_the_tail_lifts_while_the_character_travels_by_more_the_faster_it_goes() -> None:
+    n = 160
+    lifts = {}
+    for energy in (0.5, 1.0):
+        layer = follow_through(
+            VIEW, {}, [], fps=FPS, n_frames=n, energy=energy, travel=[8.0 * f for f in range(n + 1)]
+        )  # 8 px a frame: 0.37 of the body's height in px a second
+        lifts[energy] = offset(layer, "tail_1", 120)
+    assert lifts[0.5] == pytest.approx(2.6, abs=0.15)  # counter-clockwise: the tail points right
+    assert lifts[1.0] == pytest.approx(3.7, abs=0.15)
+
+
+def test_the_first_tail_segment_trails_the_bodys_rise_and_the_others_only_follow_it() -> None:
+    from studio_core.sif import Vec
+
+    rise = {("shift", "torso"): [Key(0, Vec(0, 0)), Key(10, Vec(0, 10))]}  # up 10 px, then held
+    layer = follow_through(VIEW, rise, [], fps=FPS, n_frames=160, energy=0.5)
+    assert offset(layer, "tail_1", 150) == pytest.approx(-11.0, abs=0.3)  # 1.1 degrees per px
+    for k in (2, 3):  # settled: they chase the segment before, which has stopped moving
+        assert (
+            abs(offset(layer, f"tail_{k}", 150)) < 0.3
+            if ("angle", f"tail_{k}") in layer.channels
+            else True
+        )
+
+
+def test_the_ears_lag_shortens_with_energy() -> None:
+    lags = [spring_params(VIEW, "ear_l", e)[0] for e in (0.0, 1.0)]
+    assert lags == pytest.approx([0.10, 0.06])
