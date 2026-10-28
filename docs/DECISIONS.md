@@ -1385,3 +1385,26 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   limb** as the bending approach (D-069), with the two-part cut as fallback. Kit's parts: still the
   owner's separate decision.
 
+### D-071: Locator seeds integrated (opt-in) and the Synfig side of bending limbs (2026-10-28)
+- **Locator (`ec23780`, `puppet/locate.py`, `build_puppet(locator=True)`, default off):** answers are
+  swapped left/right by geometry, cached in `characters/<id>/build/locator.json`, and used as seeds with
+  the pixel rules as the check. With it on, no part image changed for any of the five characters; Bolt's
+  eyes are found in the front view; Mia's eye that sat on her hair is corrected. About 17-19 s per build
+  with cached answers and 160-185 s when the model is asked (4 calls). Guards added to keep the four
+  passing characters from getting worse: a limb the rules measured is never overruled by a seed; a view
+  whose limbs all pass is left as the unseeded fit made it; an off-figure seed fails a part only when
+  the rules found nothing; a far eye in the three-quarter view keeps its inferred position and two eyes
+  may not land on one mark; the nose seed never creates a nose. Bolt's three-quarter `shin_l` still
+  fails (the seeds agree with the pixels). Not done: a hand-labelled error figure; exposure through the
+  `comfy_mcp` `build_puppet` tool.
+- **Bending limbs, Synfig side (`d8f8fc1`):** additive `views.<v>.bendable_limbs` in the rig schema (name,
+  bones [upper, lower], one limb image, `size_px`, `pivot_px`, `joint_px`); `sif.SkeletonDeformation`
+  (48x192 grid); `build_character(bend=)`, `build_shot` and `render_shot` take `bend=`; the two-part
+  parts stay in the rig as the fallback. A character without limbs builds a byte-identical `.sif`.
+  Four limbs on Pip at 1080p: +0.013 s for one frame, about +7 ms per frame in a 24-frame process
+  (0.87 s to 1.036 s). The bent silhouette is 0.9998 of the two-part render's (Pip's arm is a plain
+  capsule, so this does not test the pinch; nobody inspected the inner bend). 521 tests then passed.
+- **What the cut must produce next:** per limb, one PNG drawn straight in the rest pose with no cap and
+  the hidden joint region painted, plus the `bendable_limbs` entry; `joint_px` must match the lower
+  bone's attach offset within 3 px.
+

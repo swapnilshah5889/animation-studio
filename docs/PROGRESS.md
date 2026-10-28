@@ -12,6 +12,14 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-28: locator seeds and the Synfig side of bending limbs done (D-071)
+
+Both opt-in, both leave existing builds byte-identical. Next: the cut produces limb images (owns
+`puppet/build.py`), and more acting (motions, expressions, talk gestures); then hands, secondary motion,
+the review reel.
+
+---
+
 ## 2026-10-28: 4B.2 cut defects and 4B.3 locator trial done; two approvals (D-070)
 
 Pim's pose-sweep defects fell 91 to 7, Mia's 43 to 28, Bo's 14 to 11; Kit unchanged. The locator trial
