@@ -164,6 +164,8 @@ def check_rig(data: dict[str, Any]) -> list[Issue]:
                 )
             )
 
+        issues += _check_limbs(at, view)
+
         face = view.get("face")
         if face:
             if face["part"] not in parts:
@@ -181,6 +183,56 @@ def check_rig(data: dict[str, Any]) -> list[Issue]:
                 for key, point in anchors.items():
                     if not _inside(point, size):
                         issues.append(Issue(f"{at}.face.{key}", f"outside the face part {size}"))
+    return issues
+
+
+def _check_limbs(at: str, view: dict[str, Any]) -> list[Issue]:
+    """`bendable_limbs`: two bones in a parent-child chain, the joint inside the image and where
+    the rig's own joint is, no bone in two limbs, unique names."""
+    issues: list[Issue] = []
+    bones, parts = view["bones"], view["parts"]
+    seen_names: set[str] = set()
+    used: dict[str, str] = {}
+    for i, limb in enumerate(view.get("bendable_limbs", [])):
+        where = f"{at}.bendable_limbs[{i}]"
+        if limb["name"] in seen_names:
+            issues.append(Issue(f"{where}.name", f"limb {limb['name']!r} appears twice"))
+        seen_names.add(limb["name"])
+        upper, lower = limb["bones"]
+        unknown = [b for b in (upper, lower) if b not in bones]
+        for b in unknown:
+            issues.append(Issue(f"{where}.bones", f"unknown bone {b!r}"))
+        for b in (upper, lower):
+            if b in used and b not in unknown:
+                issues.append(Issue(f"{where}.bones", f"bone {b!r} is already in limb {used[b]!r}"))
+            used[b] = limb["name"]
+        if not unknown and bones[lower]["parent"] != upper:
+            issues.append(
+                Issue(
+                    f"{where}.bones",
+                    f"{lower!r} must be a child of {upper!r} (its parent is "
+                    f"{bones[lower]['parent']!r})",
+                )
+            )
+        for key in ("pivot_px", "joint_px"):
+            if not _inside(limb[key], limb["size_px"]):
+                issues.append(Issue(f"{where}.{key}", f"outside the limb image {limb['size_px']}"))
+        attach = bones[lower].get("attach") if not unknown else None
+        if attach and attach["part"] in parts:
+            pivot = parts[attach["part"]]["pivot_px"]
+            want = (attach["at_px"][0] - pivot[0], attach["at_px"][1] - pivot[1])
+            got = (
+                limb["joint_px"][0] - limb["pivot_px"][0],
+                limb["joint_px"][1] - limb["pivot_px"][1],
+            )
+            if abs(want[0] - got[0]) > 3 or abs(want[1] - got[1]) > 3:
+                issues.append(
+                    Issue(
+                        f"{where}.joint_px",
+                        f"the joint is {got} px from the pivot in the limb image but the rig's "
+                        f"{lower!r} joint is {want} px from the {upper!r} pivot",
+                    )
+                )
     return issues
 
 

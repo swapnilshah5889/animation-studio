@@ -25,6 +25,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 from studio_core.schema import validate
 from studio_core.sif import (
     Angle,
@@ -34,6 +36,7 @@ from studio_core.sif import (
     Group,
     ImportLayer,
     Layer,
+    SkeletonDeformation,
     SkeletonLayer,
     Space,
     Transform,
@@ -75,7 +78,7 @@ def load_rig(path: Path, *, check_files: bool = True) -> Rig:
             {
                 p["file"]
                 for v in data["views"].values()
-                for p in v["parts"].values()
+                for p in [*v["parts"].values(), *v.get("bendable_limbs", [])]
                 if not (rig.folder / p["file"]).is_file()
             }
         )
@@ -156,6 +159,11 @@ def ground_offset_px(view: dict[str, Any]) -> float:
     return -lowest
 
 
+def bendable_limbs(view: dict[str, Any]) -> list[dict[str, Any]]:
+    """The view's limbs drawn as one bending image ([] for a plain two-part rig)."""
+    return list(view.get("bendable_limbs", []))
+
+
 def _parents_first(view: dict[str, Any]) -> list[str]:
     return sorted(view["bones"], key=lambda b: len(chain(view, b)))
 
@@ -209,6 +217,76 @@ def _origin_value(
     )
 
 
+# Skeleton Deformation mesh for a limb drawn vertically (docs/spikes/bending-limbs.md)
+LIMB_GRID = (48, 192)
+LIMB_REACH = 1.1  # the influence radius is this x the limb's widest half-width
+
+
+def _limb_half_width_px(path: Path) -> float:
+    """Half the widest row of opaque pixels of a limb image."""
+    alpha = Image.open(path).convert("RGBA").getchannel("A").point(lambda a: 255 if a > 8 else 0)
+    box = alpha.getbbox()
+    return 1.0 if box is None else (box[2] - box[0]) / 2
+
+
+def _build_limb(
+    rig: Rig,
+    view: dict[str, Any],
+    limb: dict[str, Any],
+    pose: dict[str, Bone],
+    space: Space,
+    file_prefix: str,
+) -> tuple[Group, list[Bone]]:
+    """One limb image + a Skeleton Deformation: a static rest chain (the art as drawn) paired
+    with the animated pose chain (the rig's own two bones). Returns the group and the rest bones
+    (they go in the canvas skeleton, before any layer)."""
+    upper, lower = limb["bones"]
+    rest_pose = world_pose(view)
+    (up_pos, up_dir), (lo_pos, _) = rest_pose[upper], rest_pose[lower]
+    (pw, ph), (px, py), (jx, jy) = limb["size_px"], limb["pivot_px"], limb["joint_px"]
+    half_w = _limb_half_width_px(rig.folder / limb["file"])
+    width = space.length(half_w * LIMB_REACH)
+    to_lower = rotate(Vec(lo_pos.x - up_pos.x, lo_pos.y - up_pos.y), -up_dir)
+    upper_len = math.hypot(jx - px, jy - py)
+    lower_len = max(math.hypot(cx - jx, cy - jy) for cx in (0, pw) for cy in (0, ph))
+    ns = f"{rig.id}:rest:{limb['name']}"
+    rest_up = Bone(
+        f"{limb['name']} rest {upper}",
+        origin=Vec(space.length(up_pos.x), space.length(up_pos.y)),
+        angle=Angle(up_dir),
+        length=space.length(upper_len),
+        namespace=ns,
+        width=width,
+    )
+    rest_lo = Bone(
+        f"{limb['name']} rest {lower}",
+        parent=rest_up,
+        origin=Vec(space.length(to_lower.x), space.length(to_lower.y)),
+        angle=Angle(view["bones"][lower]["direction_deg"] - view["bones"][upper]["direction_deg"]),
+        length=space.length(lower_len),
+        namespace=ns,
+        width=width,
+    )
+    for bone, length in ((pose[upper], upper_len), (pose[lower], lower_len)):
+        bone.width = width
+        bone.length = space.length(length)
+    # The image sits where the art was drawn: its pivot on the rest shoulder.
+    origin = Vec(space.length(up_pos.x), space.length(up_pos.y))
+    tl = Vec(origin.x - space.length(px), origin.y + space.length(py))
+    br = Vec(origin.x + space.length(pw - px), origin.y - space.length(ph - py))
+    image = ImportLayer(limb["name"], f"{file_prefix}/{limb['file']}", tl=tl, br=br)
+    margin = space.length(10)  # the mesh covers the whole image
+    deform = SkeletonDeformation(
+        f"{limb['name']} bend",
+        pairs=[(rest_up, pose[upper]), (rest_lo, pose[lower])],
+        point1=Vec(tl.x - margin, tl.y + margin),
+        point2=Vec(br.x + margin, br.y - margin),
+        nx=LIMB_GRID[0],
+        ny=LIMB_GRID[1],
+    )
+    return Group(limb["name"], children=[image, deform]), [rest_up, rest_lo]
+
+
 def build_character(
     rig: Rig,
     view_name: str | None,
@@ -218,6 +296,7 @@ def build_character(
     offsets: dict[str, float | Animated] | None = None,
     shifts: dict[str, Animated] | None = None,
     attachments: dict[str, list[Layer]] | None = None,
+    bend: bool = True,
 ) -> BuiltCharacter:
     """Bones + linked parts for one view. `offsets` animate bones (Animated values hold Angle
     offsets from rest). `attachments` adds layers drawn in a part's local frame (units, the
@@ -225,7 +304,9 @@ def build_character(
     linked to the same bone: the procedural face rides on the head this way. `shifts` move a
     bone's joint: Animated Vec values in art pixels (y up) in the parent part's frame; on the root
     bone they move the whole character. Part paths become `file_prefix/<file>` (relative to the
-    .sif)."""
+    .sif). `bend` draws each of the view's `bendable_limbs` as one image bent along its two
+    bones (Skeleton Deformation) in place of the parts of those bones; False (or a view without
+    limbs) builds exactly the plain two-part rig."""
     view = rig.view(view_name)
     offsets = offsets or {}
     shifts = shifts or {}
@@ -255,9 +336,34 @@ def build_character(
             namespace=rig.id,  # .sif bone GUIDs derive from the rig id + bone name
         )
 
+    limbs = bendable_limbs(view) if bend else []
+    replaced: set[str] = set()  # parts drawn by their limb instead
+    slot: dict[str, list[dict[str, Any]]] = {}  # the part whose draw slot limbs take -> limbs
+    for limb in limbs:
+        owned = [p for p in view["draw_order"] if view["parts"][p]["bone"] in limb["bones"]]
+        replaced.update(owned)
+        slot.setdefault(owned[0] if owned else view["draw_order"][-1], []).append(limb)
+    rest_bones: list[Bone] = []
+
     children: list[Layer] = []
     for part_name in view["draw_order"]:
         part = view["parts"][part_name]
+        for limb in slot.get(part_name, []):
+            group, rest = _build_limb(rig, view, limb, bones, space, file_prefix)
+            children.append(group)
+            rest_bones.extend(rest)
+        if part_name in replaced:  # the limb draws it; keep what is attached to it
+            if attachments.get(part_name):
+                link = BoneLink(
+                    bones[part["bone"]],
+                    Transform(angle=Angle(-view["bones"][part["bone"]]["direction_deg"])),
+                )
+                children.append(
+                    Group(
+                        f"{part_name} attachments", transform=link, children=attachments[part_name]
+                    )
+                )
+            continue
         bone_spec = view["bones"][part["bone"]]
         image = ImportLayer.with_pivot(
             part_name,
@@ -275,4 +381,4 @@ def build_character(
             )
     ordered = list(bones.values())
     children.append(SkeletonLayer(f"{rig.id} skeleton", bones=ordered))
-    return BuiltCharacter(Group(f"{rig.id}-rig", children=children), ordered, bones)
+    return BuiltCharacter(Group(f"{rig.id}-rig", children=children), ordered + rest_bones, bones)

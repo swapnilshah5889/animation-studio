@@ -138,6 +138,13 @@
         },
         "face": {
           "$ref": "#/$defs/face"
+        },
+        "bendable_limbs": {
+          "type": "array",
+          "description": "Limbs that are drawn as ONE image and bend smoothly at the joint (arms, legs), instead of two rigid parts. Optional: a view without it is the plain two-part rig. Each limb replaces every part carried by its two bones: when the engine bends limbs, those parts are not drawn and the limb image is drawn in the earliest draw_order slot of them. The parts stay in the rig as the fallback (two rigid pieces, used when bending is switched off) and because a child joint (a hand) attaches to a part of its parent bone.",
+          "items": {
+            "$ref": "#/$defs/bendable_limb"
+          }
         }
       }
     },
@@ -357,6 +364,55 @@
               "$ref": "#/$defs/color"
             }
           }
+        }
+      }
+    },
+    "bendable_limb": {
+      "type": "object",
+      "description": "One limb image bent along a two-bone chain. The image is the limb drawn straight in the rest pose (as the parts are drawn).",
+      "required": [
+        "name",
+        "bones",
+        "file",
+        "size_px",
+        "pivot_px",
+        "joint_px"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/id",
+          "description": "Limb name, unique in the view, e.g. 'arm_l'."
+        },
+        "bones": {
+          "type": "array",
+          "description": "[upper bone, lower bone]: the lower bone's parent is the upper bone, e.g. ['upper_arm_l', 'forearm_l'].",
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ],
+          "items": false,
+          "minItems": 2
+        },
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*\\.png$",
+          "description": "PNG path relative to the character folder, e.g. 'parts/arm_l.png'."
+        },
+        "size_px": {
+          "$ref": "#/$defs/size_px"
+        },
+        "pivot_px": {
+          "$ref": "#/$defs/point_px",
+          "description": "The pixel that sits on the first (upper) bone's joint, e.g. the shoulder."
+        },
+        "joint_px": {
+          "$ref": "#/$defs/point_px",
+          "description": "The pixel on the second joint (the elbow or knee), where the limb bends. Its offset from pivot_px must match the lower bone's `attach` offset in the rig (within a few pixels)."
         }
       }
     }

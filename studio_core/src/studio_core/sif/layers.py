@@ -159,6 +159,49 @@ class SkeletonLayer(Layer):
         return {"name": self.desc, "bones": _BoneList(tuple(self.bones))}
 
 
+@dataclass(frozen=True)
+class _BonePairs:
+    pairs: tuple[tuple[Bone, Bone], ...]
+
+    def to_xml(self) -> ET.Element:
+        el = ET.Element("static_list", type="pair_bone_object_bone_object")
+        for rest, pose in self.pairs:
+            comp = ET.SubElement(
+                ET.SubElement(el, "entry"), "composite", type="pair_bone_object_bone_object"
+            )
+            for tag, bone in (("first", rest), ("second", pose)):
+                ET.SubElement(ET.SubElement(comp, tag), "bone", type="bone_object", guid=bone.guid)
+        return el
+
+
+@dataclass
+class SkeletonDeformation(Layer):
+    """Bends every layer BELOW it in the same canvas (put it after the image in a group).
+
+    `pairs` = (rest bone, pose bone): the rest chain is the art as drawn (static, parented to the
+    root), the pose chain is the animated skeleton. Both need `width` (the rest bone's width is
+    the influence radius; pixels outside every rest capsule vanish). The mesh covers the box
+    `point1`..`point2` (units, in the group's local space) with nx x ny cells: 48 x 192 for a limb
+    drawn vertically (docs/spikes/bending-limbs.md; coarser grids lose pixels)."""
+
+    pairs: list[tuple[Bone, Bone]] = field(default_factory=list)
+    point1: Vec = field(default_factory=lambda: Vec(-1, 1))
+    point2: Vec = field(default_factory=lambda: Vec(1, -1))
+    nx: int = 48
+    ny: int = 192
+    TYPE = "skeleton_deformation"
+    VERSION = "0.2"
+
+    def params(self) -> dict[str, object]:
+        return {
+            "bones": _BonePairs(tuple(self.pairs)),
+            "point1": self.point1,
+            "point2": self.point2,
+            "x_subdivisions": self.nx,
+            "y_subdivisions": self.ny,
+        }
+
+
 @dataclass
 class Canvas:
     """A whole .sif document."""

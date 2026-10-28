@@ -17,6 +17,7 @@ from studio_core.sif.layers import (
     ImportLayer,
     Layer,
     Rectangle,
+    SkeletonDeformation,
     SkeletonLayer,
     Switch,
 )
@@ -58,6 +59,7 @@ __all__ = [
     "Polygon",
     "Rectangle",
     "Region",
+    "SkeletonDeformation",
     "SkeletonLayer",
     "Space",
     "Spline",

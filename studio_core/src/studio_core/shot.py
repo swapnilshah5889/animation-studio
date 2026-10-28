@@ -92,8 +92,11 @@ def dialogue_mouth(film_dir: Path, lines: list[dict[str, Any]], fps: int) -> str
     return mouth_track(cues, fps) if cues else "X"
 
 
-def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) -> BuiltShot:
-    """Validate a shot spec and build its scene (to be saved at shots/<id>/scene.sif)."""
+def build_shot(
+    film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS, bend: bool = True
+) -> BuiltShot:
+    """Validate a shot spec and build its scene (to be saved at shots/<id>/scene.sif). `bend`
+    False draws every limb as two rigid parts, the fallback for bendable limbs."""
     issues = validate("shot", shot)
     if issues:
         raise ShotError(f"shot {shot.get('id', '?')} is invalid: " + "; ".join(map(str, issues)))
@@ -164,6 +167,7 @@ def build_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = DEFAULT_FPS) 
             offsets=dict(anim.angles),
             shifts=anim.shifts,
             attachments=attachments,
+            bend=bend,
         )
         placed.append(
             PlacedCharacter(
@@ -197,14 +201,15 @@ def render_shot(
     size: tuple[int, int] | None = None,
     audio: bool = True,
     keep_frames: bool = True,
+    bend: bool = True,
     cfg: StudioConfig | None = None,
 ) -> RenderedShot:
     """Build shots/<id>/scene.sif from shot.json, render it and encode shot.mp4 with dialogue
     (unless `audio` is False). `size` renders smaller than the 1920x1080 design (e.g. (640, 360)
-    for a quick preview)."""
+    for a quick preview). `bend=False` turns limb bending off: two rigid parts per limb."""
     cfg = cfg or load_config()
     shot = load_shot(film_dir, shot_id)
-    built = build_shot(film_dir, shot, fps=fps)
+    built = build_shot(film_dir, shot, fps=fps, bend=bend)
     folder = shot_dir(film_dir, shot_id)
     sif = built.canvas.save(folder / "scene.sif")
     frames_dir = folder / "frames"

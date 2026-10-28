@@ -34,6 +34,7 @@ class Bone:
     length: float = 1.0  # drawing / GUI only
     scalex: float = 1.0  # scales this bone and its children
     namespace: str = ""  # e.g. the character id, so two puppets never share GUIDs
+    width: float | None = None  # influence radius (units) when a Skeleton Deformation uses the bone
 
     @property
     def guid(self) -> str:
@@ -59,6 +60,9 @@ class Bone:
         ET.SubElement(el, "angle").append(value_xml(self.angle))
         ET.SubElement(el, "scalex").append(value_xml(float(self.scalex)))
         ET.SubElement(el, "length").append(value_xml(float(self.length)))
+        if self.width is not None:  # tags only for deformation bones: other rigs stay unchanged
+            for tag in ("width", "tipwidth"):
+                ET.SubElement(el, tag).append(value_xml(float(self.width)))
         return el
 
 

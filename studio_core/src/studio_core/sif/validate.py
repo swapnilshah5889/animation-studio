@@ -74,6 +74,38 @@ def validate_sif(path: Path) -> list[str]:
         if not link.get("type"):
             issues.append('<bone_link> is missing its type attribute (e.g. type="transformation")')
 
+    # Skeleton Deformation: needs pairs of defined bones with a width, a grid, and art below it.
+    for layer in root.iter("layer"):
+        if layer.get("type") != "skeleton_deformation":
+            continue
+        desc = layer.get("desc")
+        entries = layer.findall("param[@name='bones']/static_list/entry/composite")
+        if not entries:
+            issues.append(f"deformation {desc!r} has no (rest, pose) bone pairs")
+        widths = {
+            b.get("guid"): b.find("width") is not None and b.find("tipwidth") is not None
+            for b in (bones_el.findall("bone") if bones_el is not None else [])
+        }
+        for pair in entries:
+            first, second = pair.find("first/bone"), pair.find("second/bone")
+            if first is None or second is None:
+                issues.append(f"deformation {desc!r} has a pair without both bones")
+            elif first.get("guid") == second.get("guid"):
+                issues.append(f"deformation {desc!r} pairs a bone with itself")
+            elif not widths.get(first.get("guid"), False):
+                issues.append(
+                    f"deformation {desc!r}: rest bone {defined.get(first.get('guid'))!r} has no "
+                    "width/tipwidth (everything outside it would vanish)"
+                )
+        for name in ("x_subdivisions", "y_subdivisions"):
+            val = layer.find(f"param[@name='{name}']/integer")
+            if val is None or int(val.get("value", "0")) < 1:
+                issues.append(f"deformation {desc!r} needs {name} >= 1")
+        for canvas in root.iter("canvas"):
+            kids = [el for el in canvas if el.tag == "layer"]
+            if layer in kids and kids.index(layer) == 0:
+                issues.append(f"deformation {desc!r} is the first layer: nothing below to bend")
+
     # Imported images must exist (missing ones render blank without an error).
     for layer in root.iter("layer"):
         if layer.get("type") != "import":
