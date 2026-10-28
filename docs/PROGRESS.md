@@ -12,6 +12,14 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-28: bendable limbs in the cut and more acting done (D-072)
+
+Both pushed, opt-in or additive; 577 tests passed at the time. Next: hands and ear/tail bones (cut and
+rig, one session), acting follow-ups (sleepy eyes, laugh mouth, sneak and think pockets), the review
+reel with bending on and off at full size, docs. Still the owner's: Kit's parts, the bar's numbers.
+
+---
+
 ## 2026-10-28: locator seeds and the Synfig side of bending limbs done (D-071)
 
 Both opt-in, both leave existing builds byte-identical. Next: the cut produces limb images (owns

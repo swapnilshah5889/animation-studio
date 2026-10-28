@@ -1408,3 +1408,26 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   the hidden joint region painted, plus the `bendable_limbs` entry; `joint_px` must match the lower
   bone's attach offset within 3 px.
 
+### D-072: Bendable limbs in the cut (opt-in) and more acting (2026-10-28)
+- **Bendable limbs in the cut (`5461e3c`, `build_puppet(bendable=True)`, default off):** per arm and leg,
+  one limb image is the union of the two cut masks before the elbow or knee cap, with hidden stretches
+  and any joint gap painted from the limb's own pixels (`paint_from`), cropped tight, saved as
+  `parts/<view>/limb_<name>.png`, with a `bendable_limbs` entry in each view (`joint_px` from the
+  rig's attach offset, so the 3 px rule holds). The two-part images stay as the fallback. Default builds
+  hash-identically (29 files). On Kit, Bo and Pim a 70-degree elbow bends cleanly with no visible pinch;
+  the inner knee shows a mild narrowing; Mia's elbow was hidden by her hair in the crop. Cost: nothing
+  measurable at 800 px (0.43 vs 0.42 s per frame, dominated by Synfig start-up). **Bending does not
+  remove the joint seams** (front view, `sam=False` rebuilds, pose sweep on vs off: Kit seams 15 vs 20,
+  Bo 8 vs 7, Pim 4 vs 4, Mia 61 vs 57), so Mia's seams are mostly elsewhere. Mia's shin sits detached
+  from her thigh in both renders. Looked at only in 256 px tiles: two-part stays the default until the
+  owner has seen larger renders (they are part of the review reel, 4B.7). Not wired into the `comfy_mcp`
+  `build_puppet` tool or `scripts/cast_review.py`.
+- **More acting (`675555c`):** five expressions (excited, shy, sleepy, proud, determined; the original six
+  render exactly as before, pinned by hash) and seven motions (shrug, bow, look_around, sneak, clap,
+  laugh, think), each documented for what it does in the front view; `point` now anticipates and
+  overshoots by 5 degrees. `wave` and `walk_cycle` are unchanged. Pose sweep on Kit and Bo: no detached
+  parts; open items are the sneak hip pockets (Kit, 3 holes), `look_around` (Kit, 2 holes at the
+  three-quarter neck), and a `think` pocket that may be a false positive (negative space between arm and
+  head). `sleepy` needs half-closed eyes that an expression cannot set, and `laugh` has no mouth channel.
+  Left unchanged: `nod` and `head_tilt` do not overshoot, `talk_gesture` beats have no hold.
+
