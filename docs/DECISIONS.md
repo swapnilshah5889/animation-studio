@@ -1459,3 +1459,29 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   optional `hands` switch per forearm with only `rest` (the cut hand) and `fist`, proven in one Synfig
   shot, then point, open, wave. Stills only; nothing rendered in Synfig; one arm.
 
+### D-074: Hands polished, ear and tail follow-up closed (2026-10-28)
+- **Hands (`d18398f`, `a8c7901`; 36 new tests, mutation-checked, 655 passed then):** optional per-forearm
+  `hands` block (poses, wrist, size, fill, optional outline, optional `cover_px`), drawn fist/point/open/wave
+  as mitten-style vector shapes, a `hand` motion channel, `set_hand` in `synfig_mcp`, `add_hands(rig)`.
+  `wave` uses wave, `point` point, `talk_gesture` alternates open and rest, `think` fist, `clap` open (a
+  fist reads as punching). Polish: fill from the hand's interior, outline from its own darkest edge pixels
+  (Kit's halo fixed), and a stored `cover_px` backing hides the cut hand under every pose (pixels showing
+  at the wrist: fist 226/298/333/710 to 4/0/0/0 on Kit/Bo/Pim/Mia). About 70 mutants run, four weak tests
+  fixed. **Open:** drawn hands are generic gloves, not on-model paws (Kit's ragged paw becomes a clean
+  glove); Mia's shaded hand (`#cb7768` to `#fad8ba`) still differs from the flat fill; the backing makes
+  fists boxy; hands are not tuned for the three-quarter view; the cut hand cannot be removed from the
+  forearm image, so the drawn hand is drawn over it.
+- **Ears and tails follow-up (`d5cf64f`):** Kit's +5 sweep defects were not the cut. `_clear_raise` in
+  `motions/library.py` (it limits how high wave and clap raise an arm so the hand clears the head)
+  measured the head from parts on the head bone only; with ears as their own bones the head looked narrower
+  and the arms went higher, showing seams at the neck and shoulders. It now counts parts hanging off the
+  head (fix carried by `d18398f`, with a test). Kit's sweep with the secondary cut: 63 against 64 for the
+  default. About 46 mutations of the secondary code, tests strengthened; uncaught ones are listed in the
+  report (ear size symmetry, short-lobe, midline-lobe, same-side and no-round-skull rules in `find_ears`,
+  the tail's length check; two tests that need library edits). Tail gains raised after a Synfig look
+  (sway amplitude 3-7 deg, walk lift 4-10 deg, bob trail 0.8-1.4 deg/px) and **not re-rendered by eye
+  after the change**. The director needs no change: `describe_film` and `build_rig` already list the
+  bones and the follow-through is automatic. Default builds of Kit and Bo hash the same as before.
+  665 tests passed.
+- **Not done:** no ear-and-tail test through a real `render_shot` call.
+
