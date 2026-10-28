@@ -97,6 +97,35 @@ def _inside(point: list[float], size: list[int]) -> bool:
     return 0 <= point[0] <= size[0] and 0 <= point[1] <= size[1]
 
 
+def _role(bones: dict[str, Any], name: str) -> str:
+    """A bone's role, from its name (`arm_l` -> `arm`) when the rig does not say."""
+    spec = bones[name]
+    return spec.get("role", name[:-2] if name.endswith(("_l", "_r")) else name)
+
+
+def _check_secondary(at: str, bones: dict[str, Any]) -> list[Issue]:
+    """Ears and tails are optional, but where they exist: an ear hangs from the head and has a
+    side; a tail segment hangs from the torso or from another tail segment."""
+    issues: list[Issue] = []
+    for name, spec in bones.items():
+        role, parent = _role(bones, name), spec["parent"]
+        if role == "ear":
+            if spec.get("side") not in ("left", "right"):
+                issues.append(Issue(f"{at}.bones.{name}.side", "an ear needs side left or right"))
+            if parent in bones and _role(bones, parent) != "head":
+                issues.append(
+                    Issue(f"{at}.bones.{name}.parent", "an ear's parent must be the head")
+                )
+        elif role == "tail" and parent in bones and _role(bones, parent) not in ("torso", "tail"):
+            issues.append(
+                Issue(f"{at}.bones.{name}.parent", "a tail hangs from the torso or another tail")
+            )
+    tails = [n for n in bones if _role(bones, n) == "tail"]
+    if len(tails) > 3:
+        issues.append(Issue(f"{at}.bones", f"a tail has 1 to 3 segments, not {len(tails)}"))
+    return issues
+
+
 def check_rig(data: dict[str, Any]) -> list[Issue]:
     issues: list[Issue] = []
     if data["default_view"] not in data["views"]:
@@ -148,6 +177,8 @@ def check_rig(data: dict[str, Any]) -> list[Issue]:
                     break
                 seen.add(current)
                 current = bones[current]["parent"]
+
+        issues += _check_secondary(at, bones)
 
         for name, part in parts.items():
             if part["bone"] not in bones:

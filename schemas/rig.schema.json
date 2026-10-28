@@ -224,6 +224,31 @@
             }
           }
         },
+        "follow": {
+          "type": "object",
+          "description": "Optional tuning of the follow-through layer for a secondary bone (role `ear` or `tail`): the layer lags the bone behind its parent and lets it overshoot a little (studio_core.motions.follow). Every field is optional; the layer has defaults per role and scales them by the action's energy. Rigs without ear or tail bones never use it.",
+          "additionalProperties": false,
+          "properties": {
+            "lag_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "How long the bone trails its parent's turn, in seconds."
+            },
+            "damping": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1.5,
+              "description": "0.2 swings several times, 0.5 overshoots a little, 1 does not overshoot."
+            },
+            "gain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "description": "Scales the whole response; 0 switches follow-through off for this bone."
+            }
+          }
+        },
         "role": {
           "enum": [
             "torso",

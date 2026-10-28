@@ -1307,6 +1307,7 @@ def _cut_view(
     reclaim_orphans: bool = False,
     seeds: dict[str, Point] | None = None,
     bendable: bool = False,
+    secondary: bool = False,
 ) -> _Cut:
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
@@ -1361,6 +1362,11 @@ def _cut_view(
             pixels[name] = paint_from(pixels[name], parts[name], fill)
             masks[name] |= fill
             drawn[name] = fill
+    secondary_report = None
+    if secondary:  # ears and a tail as bones of their own (puppet/secondary.py)
+        from studio_core.puppet.secondary import add_secondary
+
+        order, secondary_report = add_secondary(rgb, figure, parts, masks, pixels, bones, sk, order)
     alpha = _alpha(img, figure, bg)
 
     parts_dir = folder / "parts" / sk.view
@@ -1462,6 +1468,8 @@ def _cut_view(
         "parts_px": {n: p["size_px"] for n, p in rig_parts.items()},
         "arms_turned_to_hang_deg": hung,
     }
+    if secondary_report is not None:
+        report["secondary"] = secondary_report
     if locator is not None:
         locator["parts"].update(face_notes["locator"])
         locator["flagged"] = sorted(
@@ -1526,6 +1534,7 @@ def build_puppet(
     reclaim_orphans: bool = False,
     locator: bool = False,
     bendable: bool = False,
+    secondary: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1546,7 +1555,14 @@ def build_puppet(
 
     `bendable` also cuts each arm and leg as ONE image (parts/<view>/limb_<name>.png, declared
     in the view's `bendable_limbs`) for the Skeleton Deformation bend (4B.4); the two parts stay
-    as the fallback. Off by default: with it off the part images and rig.json are unchanged."""
+    as the fallback. Off by default: with it off the part images and rig.json are unchanged.
+
+    `secondary` also cuts the ears (role `ear`, parent the head) and the tail (role `tail`, a
+    chain of 1-3 segments on the torso) into parts and bones of their own, for the motion
+    library's follow-through (puppet/secondary.py). A character without ears gets none, and a
+    detection that fails its tests is refused (the report's views.<view>.secondary says why);
+    the build goes on without those bones. Off by default: the part images and rig.json are
+    byte-identical."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1603,6 +1619,7 @@ def build_puppet(
             reclaim_orphans,
             seeds.get(sk.view),
             bendable,
+            secondary,
         )
         for sk in skeletons
     }

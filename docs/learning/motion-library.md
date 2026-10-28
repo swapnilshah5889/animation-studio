@@ -172,3 +172,24 @@ Timing review against the principles above: `point` lacked anticipation and foll
 now dips back a few degrees first and overshoots the target by 5° before settling. Not changed:
 `wave` and `walk_cycle` (approved); `nod` and `head_tilt` have ease at both ends but no overshoot;
 `talk_gesture` beats are hand-offs between poses with no hold on the stroke.
+
+## Follow-through for ears and tails (secondary bones)
+
+A secondary bone (role `ear`, `tail`) is never acted: it *reacts*. `motions/follow.py` is an
+additive layer that `animate` composes after the actions. Each bone is a damped spring chasing
+the angle its parent has at every frame; the bone's own offset is the lag (spring minus parent).
+A spring with damping z and frequency w trails a steady turn by 2z/w seconds, so the rig sets the
+*lag* (ear 0.06-0.10 s, about 2-3 frames) and the damping (0.5: overshoots about 16%), and the
+frequency follows. Because the spring is simulated per frame it is deterministic, and energy only
+scales gains and lags.
+
+- **Ears** also splay outward when the head or body drops (nods, bounces) and come back late.
+- **Tails** chain: each segment chases the one before, so the tip trails most. The first one
+  sways with `idle_breathe` (eased in over 0.5 s), lifts while the character travels, and trails
+  the body's bob in a walk (the sign comes from the way the tail points: up-pointing tails don't
+  trail a bob).
+- A bone's optional `follow` block (`lag_s`, `damping`, `gain`) tunes it; `gain: 0` switches it
+  off. Rigs without ear or tail bones get no layer at all, and `animate(secondary=False)` leaves
+  those bones at rest.
+- Gotcha: offsets are relative to the parent, so tail segment 2's *world* angle is the sum of
+  both offsets; test timing on the sum.

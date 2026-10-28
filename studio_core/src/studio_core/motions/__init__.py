@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from studio_core.motions.follow import follow_through
 from studio_core.motions.library import MOTIONS, MotionContext, MotionError
 from studio_core.motions.timeline import Clip, Key, compose, sample
 from studio_core.rig import clamp_offset
@@ -26,6 +27,7 @@ __all__ = [
     "MotionError",
     "animate",
     "compose",
+    "follow_through",
     "sample",
 ]
 
@@ -49,10 +51,13 @@ def animate(
     seed: str = "",
     poses: list[dict[str, Any]] | None = None,
     travel: list[float] | None = None,
+    secondary: bool = True,
 ) -> Animation:
     """Turn a character's actions into tracks. Unknown motions raise MotionError with the list of
     known ones; `travel` (distance covered per frame, from the placement path) makes walk_cycle
-    step across the frame; angle offsets are clamped to each bone's limits."""
+    step across the frame; angle offsets are clamped to each bone's limits. A rig with ear or tail
+    bones also gets the follow-through layer (motions/follow.py) after the actions, at the mean
+    energy of the actions; `secondary=False` leaves those bones at rest."""
     clips = []
     for action in actions:
         name = action["motion"]
@@ -85,6 +90,20 @@ def animate(
         clips.append(
             Clip("pose", f, f, {("angle", b): [Key(f, float(a))] for b, a in pose["bones"].items()})
         )
+
+    if secondary:
+        energies = [float(a.get("params", {}).get("energy", 0.5)) for a in actions]
+        layer = follow_through(
+            view,
+            compose(clips),
+            clips,
+            fps=fps,
+            n_frames=n_frames,
+            energy=sum(energies) / len(energies) if energies else 0.5,
+            travel=travel,
+        )
+        if layer is not None:
+            clips.append(layer)
 
     out = Animation(clips=clips)
     for (kind, bone), keys in compose(clips).items():

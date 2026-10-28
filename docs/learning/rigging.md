@@ -90,3 +90,15 @@ Preview every combination with `uv run scripts/preview_face.py` (written to
 Gotcha learned while testing: when measuring a colour in a render, antialiased edges of *other*
 art can come close to it (dark line art over pink ≈ dark red). Use a tight tolerance or a
 bounding box, or the centroid drifts.
+
+## Ears and tails as bones (opt-in cut)
+
+`build_puppet(secondary=True)` cuts the ears (`ear_l`, `ear_r`, role `ear`, parent the head) and
+the tail (`tail_1`..`tail_3`, role `tail`, a chain on the torso) into parts of their own
+(`puppet/secondary.py`). Ears are the head mask's lobes beyond a disc-opened skull; the tail is the
+torso piece outside the body hull, in its lower half, with a narrow root. Both are refused (the
+report says why, the build goes on) when the geometry or the colours do not fit: a hem, a scarf end,
+a hat, a lone front-view ear. Ear parts draw just behind the head, the tail behind everything, each
+with a cap disc painted from its own pixels that hides under the parent. Default builds are
+byte-identical. Moves with these bones come from the follow-through layer
+(docs/learning/motion-library.md).
