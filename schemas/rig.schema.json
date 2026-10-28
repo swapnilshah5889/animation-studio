@@ -416,7 +416,8 @@
           "minItems": 1
         },
         "fill": { "$ref": "#/$defs/color", "description": "Fill colour of a drawn hand (the cut hand's own colour)." },
-        "outline": { "$ref": "#/$defs/color", "description": "Outline colour of a drawn hand. Defaults to the face's `line` colour." }
+        "outline": { "$ref": "#/$defs/color", "description": "Outline colour of a drawn hand. Defaults to the face's `line` colour." },
+        "cover_px": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/point_px" }, "description": "The cut hand's outline in pixels of `part` (a convex polygon around every pixel of the hand beyond the wrist). Every drawn pose is drawn on a backing of this shape in the hand's colours, so no part of the cut hand shows beside a narrower pose. Optional: without it a pose can show the cut hand's edge." }
       }
     },
     "bendable_limb": {

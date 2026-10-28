@@ -1,6 +1,7 @@
 """Swappable hand poses: schema, shapes, switch tracks, motion hooks, set_hand, and renders."""
 
 import copy
+import dataclasses
 import hashlib
 import json
 import math
@@ -13,14 +14,19 @@ from PIL import Image
 
 from studio_core.config import REPO_ROOT, load_config
 from studio_core.hands import (
+    DEFAULT_LINE,
     DRAWN,
     HAND_POSES,
+    CutHand,
     HandGeometry,
     add_hands,
+    colour_distance,
     hand_attachments,
     hand_bone,
+    hand_outline,
     hand_switch,
     hand_track,
+    measure_cut_hand,
     measure_hand,
     pose_layers,
 )
@@ -118,6 +124,12 @@ def test_each_pose_stays_near_the_wrist_in_the_character_colours(pose: str) -> N
     assert ("Region", "fill", g.fill) in colours or ("Outline", "fill", g.fill) in colours
     assert all(layer.color in (g.fill, g.outline) for layer in layers)
     assert g.outline != g.fill
+    # outlines first (drawn under), then the fills: the outline colour shows as a rim
+    outlines = [layer for layer in layers if layer.desc == "outline"]
+    fills = [layer for layer in layers if layer.desc == "fill"]
+    assert outlines and fills and {layer.color for layer in outlines} == {g.outline}
+    assert {layer.color for layer in fills} == {g.fill}
+    assert layers.index(outlines[-1]) < layers.index(fills[0])
     assert any(isinstance(layer, (Outline, Region)) for layer in layers)
 
 
@@ -125,6 +137,19 @@ def test_the_poses_are_different_drawings() -> None:
     g = geometry()
     xmls = {p: repr(pose_layers(g, p)) for p in DRAWN}
     assert len(set(xmls.values())) == len(DRAWN)
+
+
+def test_the_waving_hand_is_the_open_hand_tipped() -> None:
+    g = geometry()
+
+    def tip_angle(pose: str) -> float:
+        far = max(
+            _points(pose_layers(g, pose)),
+            key=lambda p: math.hypot(p.x - g.wrist.x, p.y - g.wrist.y),
+        )
+        return math.degrees(math.atan2(far.y - g.wrist.y, far.x - g.wrist.x))
+
+    assert abs(tip_angle("wave") - tip_angle("open")) > 8
 
 
 def test_the_point_reaches_further_than_the_fist() -> None:
@@ -159,6 +184,122 @@ def test_the_outline_colour_defaults_to_the_face_line_and_can_be_set() -> None:
     assert g.outline == Color.hex(line)
     view["hands"]["forearm_l"]["outline"] = "#112233"
     assert HandGeometry.from_view(view, "forearm_l", SPACE).outline == Color.hex("#112233")
+    # no hand outline and a face line that is not the default: the face line, not the default
+    del view["hands"]["forearm_l"]["outline"]
+    view["face"]["colors"]["line"] = "#abcdef"
+    assert HandGeometry.from_view(view, "forearm_l", SPACE).outline == Color.hex("#abcdef")
+    del view["face"]["colors"]["line"]
+    assert HandGeometry.from_view(view, "forearm_l", SPACE).outline == Color.hex(DEFAULT_LINE)
+
+
+def arm_image(path: Path, ring: int = 9) -> None:
+    """A 30 px wide arm pointing down, an orange fill with a thick dark outline all round."""
+    img = Image.new("RGBA", (120, 200), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(20, 180):
+        for x in range(40, 70):
+            edge = x < 40 + ring or x >= 70 - ring or y >= 180 - ring
+            rim = x in (40, 69) or y in (20, 179)  # a pale 1 px anti-aliasing fringe
+            px[x, y] = (
+                (240, 240, 240, 255) if rim else (20, 20, 20, 255) if edge else (200, 120, 40, 255)
+            )
+    img.save(path)
+
+
+def test_the_fill_is_the_interior_not_a_median_dragged_dark_by_the_outline(tmp_path: Path) -> None:
+    arm_image(tmp_path / "forearm.png")  # the outline is more than half of the hand's pixels
+    cut = measure_cut_hand(tmp_path / "forearm.png", -90)
+    assert cut.fill == "#c87828"
+    flat = Image.new("RGBA", (120, 200), (0, 0, 0, 0))
+    flat.paste((10, 200, 90, 255), (40, 20, 70, 180))
+    flat.save(tmp_path / "flat.png")
+    assert measure_hand(tmp_path / "flat.png", -90)[2] == "#0ac85a"
+
+
+def test_the_edge_colour_is_the_cut_hands_own_dark_outline(tmp_path: Path) -> None:
+    arm_image(tmp_path / "forearm.png")
+    assert measure_cut_hand(tmp_path / "forearm.png", -90).edge == "#141414"
+    flat = Image.new("RGBA", (120, 200), (0, 0, 0, 0))  # no outline: nothing darker at the rim
+    flat.paste((200, 120, 40, 255), (40, 20, 70, 180))
+    flat.save(tmp_path / "flat.png")
+    cut = measure_cut_hand(tmp_path / "flat.png", -90)
+    assert cut.edge == cut.fill == "#c87828"
+
+
+def test_the_cover_contains_every_pixel_of_the_hand_beyond_the_wrist(tmp_path: Path) -> None:
+    arm_image(tmp_path / "forearm.png")
+    cut = measure_cut_hand(tmp_path / "forearm.png", -90)
+    xs = [p[0] for p in cut.cover]
+    ys = [p[1] for p in cut.cover]
+    assert min(xs) <= 40 and max(xs) >= 70 and max(ys) >= 180  # the hand's corners are inside
+    assert min(ys) >= cut.wrist[1] - 14  # ... and it starts at the wrist, not up the arm
+
+    def inside(x: float, y: float) -> bool:  # convex, so the signs of the edge cross products agree
+        sides = [
+            (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0])
+            for a, b in zip(cut.cover, cut.cover[1:] + cut.cover[:1], strict=True)
+        ]
+        return all(v >= -1e-6 for v in sides) or all(v <= 1e-6 for v in sides)
+
+    assert all(
+        inside(x + 0.5, y + 0.5) for x in range(40, 70) for y in range(int(cut.wrist[1]) + 1, 180)
+    )
+    assert not inside(10, 100)
+
+
+def test_the_outline_is_the_cut_hands_edge_only_when_the_face_line_is_far_from_it() -> None:
+    assert hand_outline("#3a241c", "#874b29", "#503c34") == "#3a241c"  # Kit: the line is a halo
+    assert hand_outline("#3a241c", "#3b2520", "#503c34") is None  # the line already matches it
+    assert (
+        hand_outline("#503c34", "#e0c0a0", "#503c34") is None
+    )  # no darker edge: no outline to match
+    assert hand_outline(None, "#874b29", "#503c34") is None
+    assert colour_distance("#000000", "#ffffff") == pytest.approx(441.67, abs=0.1)
+
+
+def test_add_hands_stores_the_cut_edge_as_the_outline_and_the_cover(monkeypatch) -> None:
+    import studio_core.hands as hands_module
+
+    real = hands_module.measure_cut_hand
+
+    def fake(path: Path, direction: float, edge: str | None) -> CutHand:
+        return dataclasses.replace(real(path, direction), edge=edge, fill="#503c34")
+
+    rig = load_rig(PIP / "rig.json")
+    line = rig.view()["face"]["colors"]["line"]
+    for edge, expected in (("#101010", "#101010"), (line, None), (None, None)):
+        monkeypatch.setattr(hands_module, "measure_cut_hand", lambda p, d, e=edge: fake(p, d, e))
+        hand = add_hands(rig)["views"]["front"]["hands"]["forearm_l"]
+        assert hand.get("outline") == expected
+        assert hand["fill"] == "#503c34"
+        assert len(hand["cover_px"]) >= 3  # the real cover is stored, and validates
+    assert validate("rig", add_hands(rig)) == []
+
+
+def width_of(layer: Region) -> float:
+    xs = [p.point.x for p in layer.spline.points]
+    return max(xs) - min(xs)
+
+
+def test_every_pose_is_drawn_on_the_cut_hands_cover() -> None:
+    g = geometry()
+    assert len(g.cover) >= 3
+    for pose in DRAWN:
+        layers = pose_layers(g, pose)
+        backs = [
+            layer
+            for layer in layers
+            if isinstance(layer, Region) and len(layer.spline.points) == len(g.cover)
+        ]
+        assert {layer.color for layer in backs} == {g.fill, g.outline}, pose
+        outline_back, fill_back = backs  # the rim first, a little bigger than the fill on top
+        assert width_of(outline_back) > width_of(fill_back) > 0
+        assert layers.index(outline_back) < layers.index(fill_back)
+        for c, p in zip(g.cover, fill_back.spline.points, strict=True):
+            assert (p.point.x, p.point.y) == pytest.approx((c.x, c.y))  # the fill is the cover
+    bare = copy.deepcopy(view_of(pip_with_hands()))
+    del bare["hands"]["forearm_l"]["cover_px"]
+    assert not HandGeometry.from_view(bare, "forearm_l", SPACE).cover  # optional: no backing then
 
 
 def test_the_hand_width_comes_from_the_cut_hand(tmp_path: Path) -> None:
@@ -329,7 +470,7 @@ def test_set_hand_records_and_the_shot_builds_with_the_switch(tmp_path: Path) ->
         {"side": "left", "pose": "open", "start_s": 1.0},
     ]
     xml = build_shot(film.root, spec).canvas.to_string()
-    assert "hand forearm_l" in xml and "hand forearm_r" not in xml
+    assert 'desc="hand forearm_l"' in xml and 'desc="hand forearm_r"' not in xml
     with pytest.raises(SpecError, match=r"no 'thumbs_up' pose"):
         add_hand(film, "s01_sh01", "pip", "thumbs_up", 1.0, "left")
 
@@ -376,7 +517,7 @@ def test_a_character_without_hands_builds_a_byte_identical_scene(tmp_path: Path)
     (film / "characters" / "pip" / "rig.json").write_text(json.dumps(add_hands(rig)))
     with_hands = build_shot(film, busy).canvas.to_string()
     assert hashlib.sha256(with_hands.encode()).hexdigest() != PLAIN_SHOT_HASHES[1]
-    assert "hand forearm_r" in with_hands
+    assert 'desc="hand forearm_r"' in with_hands
 
 
 # --------------------------------------------------------------------------- renders
@@ -421,7 +562,38 @@ def wrist_canvas(rig: Rig, bone: str) -> tuple[float, float, float]:
     )
 
 
+def cut_hand_peeking(rig: Rig, tmp_path: Path, bone: str) -> dict[str, int]:
+    """Per drawn pose: how many pixels near the wrist change when the cut hand is erased from the
+    forearm image, i.e. cut-hand pixels that show beside or under the drawn hand."""
+    view = rig.view()
+    hand = view["hands"][bone]
+    part = view["parts"][hand["part"]]
+    hidden = tmp_path / "hidden_rig"
+    shutil.copytree(rig.folder, hidden, ignore=shutil.ignore_patterns("build", "design"))
+    img = np.array(Image.open(hidden / part["file"]).convert("RGBA"))
+    ys, xs = np.mgrid[0 : img.shape[0], 0 : img.shape[1]]
+    d = math.radians(view["bones"][bone]["direction_deg"])
+    beyond = (xs - hand["wrist_px"][0]) * math.cos(d) - (ys - hand["wrist_px"][1]) * math.sin(d) > 0
+    img[beyond, 3] = 0
+    Image.fromarray(img).save(hidden / part["file"])
+    poses = ["rest", *DRAWN]
+    shown = render_poses(rig, tmp_path / "shown", bone, poses)
+    gone = render_poses(Rig(rig.data, hidden), tmp_path / "gone", bone, poses)
+    x, y, size = wrist_canvas(rig, bone)
+    yy, xx = np.mgrid[0 : CANVAS[1], 0 : CANVAS[0]]
+    near = np.hypot(xx - x, yy - y) < 1.6 * size
+    counts = {
+        p: int(((np.abs(a - b).sum(axis=2) > 30) & near).sum())
+        for p, a, b in zip(poses, shown, gone, strict=True)
+    }
+    assert counts["rest"] > 300, counts  # the cut hand is there to be covered
+    return counts
+
+
 def check_poses_differ_in_the_hand_area(rig: Rig, plain: Rig, tmp_path: Path, bone: str) -> None:
+    counts = cut_hand_peeking(rig, tmp_path / "peek", bone)
+    for pose in DRAWN:
+        assert counts[pose] <= 0.01 * counts["rest"], (pose, counts)  # none of the cut hand shows
     poses = ["rest", *DRAWN]
     frames = render_poses(rig, tmp_path / "hands", bone, poses)
     # `rest` with the switch in the scene is exactly the render of the rig without hands

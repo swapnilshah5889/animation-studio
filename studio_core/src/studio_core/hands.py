@@ -10,8 +10,9 @@ driven over time like the mouth:
 - `fist`, `point`, `open`, `wave`: drawn over the end of the forearm image
 
 The cut hand's pixels are part of the forearm image and cannot be taken out of it, so a drawn
-pose is drawn on top, as wide as the cut hand and a little longer. The cost: where the drawn hand
-is narrower than the cut one (a point's wrist) the cut hand's edge can peek out beside it.
+pose is drawn on top. A pose is narrower than the cut hand (a fist, a point's wrist), so the rig
+stores the cut hand's outline (`cover_px`, a convex hull measured from the image) and every pose
+is drawn on a backing of it, in the hand's fill and outline: no cut-hand pixel peeks out.
 
 Shapes are built in a canonical hand frame (origin at the wrist, +x along the arm outward, +y
 toward the thumb, units of the hand width `s`) and then turned into the part frame by the bone's
@@ -27,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from studio_core.rig import Rig, rotate, world_pose
 from studio_core.sif import (
@@ -132,6 +133,7 @@ class HandGeometry:
     poses: tuple[str, ...]
     fill: Color
     outline: Color
+    cover: tuple[Vec, ...] = ()  # the cut hand's outline in the part's frame (units)
 
     @classmethod
     def from_view(cls, view: dict[str, Any], bone: str, space: Space) -> HandGeometry:
@@ -159,6 +161,10 @@ class HandGeometry:
             poses=tuple(hand["poses"]),
             fill=Color.hex(hand["fill"]),
             outline=Color.hex(hand.get("outline") or colors.get("line", DEFAULT_LINE)),
+            cover=tuple(
+                Vec(space.length(cx - px), space.length(py - cy))
+                for cx, cy in hand.get("cover_px", [])
+            ),
         )
 
     def to_part(self, p: Pt, tilt_deg: float = 0.0) -> Vec:
@@ -202,12 +208,29 @@ def _body_layers(g: HandGeometry, shape: Shape, color: Color, grow: float, tag: 
     return out
 
 
+def _backing(g: HandGeometry, color: Color, grow: float, tag: str) -> list[Layer]:
+    """The cut hand's outline as a flat-sided shape, `grow` hand widths bigger all round: it
+    hides the cut hand under any pose."""
+    if not g.cover:
+        return []
+    cx = sum(p.x for p in g.cover) / len(g.cover)
+    cy = sum(p.y for p in g.cover) / len(g.cover)
+    pts = []
+    for p in g.cover:
+        dx, dy = p.x - cx, p.y - cy
+        d = math.hypot(dx, dy) or 1.0
+        k = 1 + grow * g.size / d
+        pts.append(Vec(cx + dx * k, cy + dy * k))
+    return [Region(tag, color=color, spline=smooth(pts, closed=True, tension=0.0))]
+
+
 def pose_layers(g: HandGeometry, pose: str) -> list[Layer]:
     """The vector shapes of one drawn pose: an outline pass, a fill pass over it (so fingers
     merge into one outlined silhouette), then the finger lines."""
     shape = SHAPES[pose]
-    lw = OUTLINE
-    layers = _body_layers(g, shape, g.outline, lw, "outline")
+    layers = _backing(g, g.outline, OUTLINE, "outline")
+    layers += _body_layers(g, shape, g.outline, OUTLINE, "outline")
+    layers += _backing(g, g.fill, 0.0, "fill")
     layers += _body_layers(g, shape, g.fill, 0.0, "fill")
     for c in shape.creases:
         pts = [g.to_part(c.a, shape.tilt_deg), g.to_part(c.b, shape.tilt_deg)]
@@ -282,12 +305,50 @@ def hand_bone(view: dict[str, Any], side: str) -> str | None:
 # --------------------------------------------------------------------------- adding hands
 
 
-def measure_hand(path: Path, direction_deg: float) -> tuple[Pt, float, str]:
-    """Wrist (pixels), hand width (pixels) and fill colour (hex) of the cut hand at the far end
-    of a forearm image, whose bone points along `direction_deg`. The hand is the last 12% of the
-    opaque pixels along that axis; its width is their mean width, its colour their median."""
+@dataclass(frozen=True)
+class CutHand:
+    wrist: Pt  # pixels
+    width: float  # pixels
+    fill: str  # hex: the median of the hand's interior (no outline or edge pixels)
+    edge: str | None  # hex: the darkest of the hand's edge pixels (its own outline), if it has one
+    cover: tuple[Pt, ...]  # pixels: a flat-sided shape that contains every pixel of the hand
+
+
+def _hex(rgb: np.ndarray) -> str:
+    r, g, b = (int(v) for v in rgb)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _hull(points: np.ndarray) -> list[Pt]:
+    """Convex hull (monotone chain) of an (n, 2) array."""
+    pts = sorted({(float(x), float(y)) for x, y in points})
+    if len(pts) < 3:
+        return pts
+
+    def half(seq: list[Pt]) -> list[Pt]:
+        out: list[Pt] = []
+        for q in seq:
+            while len(out) >= 2 and (
+                (out[-1][0] - out[-2][0]) * (q[1] - out[-2][1])
+                - (out[-1][1] - out[-2][1]) * (q[0] - out[-2][0])
+                <= 0
+            ):
+                out.pop()
+            out.append(q)
+        return out[:-1]
+
+    return half(pts) + half(pts[::-1])
+
+
+def measure_cut_hand(path: Path, direction_deg: float) -> CutHand:
+    """Wrist, width, colours and outline of the cut hand at the far end of a forearm image, whose
+    bone points along `direction_deg`. The hand is the last 12% of the opaque pixels along that
+    axis; its width is their mean width. Its fill is the median colour of the pixels that are not
+    near the edge (so the outline does not darken it); its `edge` is the darkest 30% of the edge
+    pixels; `cover` is the hull of every opaque pixel beyond the wrist, grown to a coarse grid."""
     rgba = np.array(Image.open(path).convert("RGBA"))
-    ys, xs = np.nonzero(rgba[..., 3] > 20)
+    opaque = rgba[..., 3] > 20
+    ys, xs = np.nonzero(opaque)
     if len(xs) == 0:
         raise ValueError(f"{path} has no opaque pixels")
     d = np.array([math.cos(math.radians(direction_deg)), -math.sin(math.radians(direction_deg))])
@@ -297,18 +358,70 @@ def measure_hand(path: Path, direction_deg: float) -> tuple[Pt, float, str]:
     thickness = max(1.0, float(t[band].max() - t[band].min()) + 1.0)
     width = float(band.sum()) / thickness
     centre = np.array([xs[band].mean(), ys[band].mean()])
-    wrist = centre + d * ((tip - 0.95 * width) - float(t[band].mean()))
+    wrist_t = tip - 0.95 * width
+    wrist = centre + d * (wrist_t - float(t[band].mean()))
     h, w = rgba.shape[:2]
     wrist = (float(np.clip(wrist[0], 0, w)), float(np.clip(wrist[1], 0, h)))
-    solid = rgba[ys[band], xs[band]][..., :3]
-    r, g, b = (int(v) for v in np.median(solid, axis=0))
-    return wrist, width, f"#{r:02x}{g:02x}{b:02x}"
+
+    mask = Image.fromarray(opaque.astype(np.uint8) * 255)
+
+    def eroded(radius: int) -> np.ndarray:
+        return np.array(mask.filter(ImageFilter.MinFilter(2 * radius + 1))) > 0
+
+    in_band = np.zeros_like(opaque)
+    in_band[ys[band], xs[band]] = True
+    inner = in_band & eroded(max(1, round(0.2 * width)))
+    if inner.sum() < 30:  # a tiny hand: the whole band
+        inner = in_band
+    fill = _hex(np.median(rgba[inner][..., :3], axis=0))
+    ring = in_band & ~eroded(max(1, round(0.08 * width))) & (rgba[..., 3] > 200)
+    edge = None
+    if ring.sum() >= 20:
+        px = rgba[ring][..., :3].astype(float)
+        dark = px[np.argsort(px @ [0.3, 0.59, 0.11])[: max(10, int(0.3 * len(px)))]]
+        edge = _hex(np.median(dark, axis=0))
+
+    beyond = t >= wrist_t
+    cell = max(1.0, width / 10)
+    cells = np.unique(np.stack([xs[beyond] // cell, ys[beyond] // cell], axis=1), axis=0)
+    corners = [
+        ((cx + dx) * cell, (cy + dy) * cell) for cx, cy in cells for dx in (0, 1) for dy in (0, 1)
+    ]
+    cover = tuple(_hull(np.array(corners))) if len(cells) else ()
+    return CutHand(wrist, width, fill, edge, cover)
+
+
+def measure_hand(path: Path, direction_deg: float) -> tuple[Pt, float, str]:
+    """Wrist (pixels), hand width (pixels) and fill colour (hex) of the cut hand."""
+    c = measure_cut_hand(path, direction_deg)
+    return c.wrist, c.width, c.fill
+
+
+def colour_distance(a: str, b: str) -> float:
+    """Euclidean distance between two hex colours, in 0-255 RGB steps."""
+    return math.dist(
+        tuple(int(a[i : i + 2], 16) for i in (1, 3, 5)),
+        tuple(int(b[i : i + 2], 16) for i in (1, 3, 5)),
+    )
+
+
+OUTLINE_SWAP = 60.0  # the cut hand's own edge replaces the face line colour when this far from it
+
+
+def hand_outline(edge: str | None, line: str, fill: str) -> str | None:
+    """The outline colour to store for a hand, or None to use the face's line colour: the cut
+    hand's own dark edge when it is far from the line colour (the line would show as a halo on
+    it) and visibly different from the fill (otherwise the hand has no outline to match)."""
+    if edge is None or colour_distance(edge, fill) < 25:
+        return None
+    return edge if colour_distance(edge, line) > OUTLINE_SWAP else None
 
 
 def add_hands(rig: Rig, poses: tuple[str, ...] = HAND_POSES) -> dict[str, Any]:
     """A copy of the rig's data with `hands` on every view's forearms (opt-in: build_puppet does
-    not call this). Wrist, width and colour come from the forearm image's hand end; the outline
-    is the face's line colour. Returns the data; validating and writing it is the caller's."""
+    not call this). Wrist, width, colours and the cut hand's outline come from the forearm image's
+    hand end; the outline colour is the face's line colour unless the cut hand's own edge is far
+    from it (`hand_outline`). Returns the data; validating and writing it is the caller's."""
     data = copy.deepcopy(rig.data)
     for view in data["views"].values():
         hands = {}
@@ -319,14 +432,20 @@ def add_hands(rig: Rig, poses: tuple[str, ...] = HAND_POSES) -> dict[str, Any]:
             if part_name is None:
                 continue
             part = view["parts"][part_name]
-            wrist, width, fill = measure_hand(rig.folder / part["file"], spec["direction_deg"])
+            cut = measure_cut_hand(rig.folder / part["file"], spec["direction_deg"])
             hands[bone] = {
                 "part": part_name,
-                "wrist_px": [round(wrist[0], 1), round(wrist[1], 1)],
-                "size_px": round(width, 1),
+                "wrist_px": [round(cut.wrist[0], 1), round(cut.wrist[1], 1)],
+                "size_px": round(cut.width, 1),
                 "poses": list(poses),
-                "fill": fill,
+                "fill": cut.fill,
             }
+            if cut.cover:
+                hands[bone]["cover_px"] = [[round(x, 1), round(y, 1)] for x, y in cut.cover]
+            line = view.get("face", {}).get("colors", {}).get("line", DEFAULT_LINE)
+            outline = hand_outline(cut.edge, line, cut.fill)
+            if outline:
+                hands[bone]["outline"] = outline
         if hands:
             view["hands"] = hands
     return data
