@@ -1099,6 +1099,111 @@ def hang_arms(folder: Path, view: dict[str, Any]) -> dict[str, float]:
     return turned
 
 
+BENDABLE = {  # bendable limb name -> its bones, upper first
+    "arm_l": ("upper_arm_l", "forearm_l"),
+    "arm_r": ("upper_arm_r", "forearm_r"),
+    "leg_l": ("thigh_l", "shin_l"),
+    "leg_r": ("thigh_r", "shin_r"),
+}
+
+
+def cut_limb(
+    rgb: np.ndarray,
+    figure: np.ndarray,
+    alpha: np.ndarray,
+    bg: np.ndarray,
+    parts: dict[str, np.ndarray],
+    pixels: dict[str, np.ndarray],
+    drawn: dict[str, np.ndarray],
+    bones: dict[str, dict],
+    fits: dict[str, dict],
+    limb: str,
+) -> tuple[np.ndarray, list[float], list[float]]:
+    """ONE image of a limb for the bend (4B.4), in the sheet's frame: the union of its two cut
+    parts as they were cut, without the elbow or knee disc that `add_caps` gives each part
+    (the bend makes its own curve there). Where the drawing leaves a gap at the joint (two
+    corridors at different angles), or the limb was hidden behind the body (`drawn`), the
+    pixels are painted from the limb's own. Returns the RGBA crop, the pivot (on the first
+    joint) and the second joint, both within the crop."""
+    upper, lower = BENDABLE[limb]
+    mask = parts[upper] | parts[lower]
+    rest = np.zeros_like(mask)
+    for name, m in parts.items():
+        if name not in (upper, lower):
+            rest |= m
+    joint = bones[lower]["joint_px"]
+    r = max(fits[upper]["radius_px"], fits[lower]["radius_px"])
+    colour = rgb.copy()
+    for name in (upper, lower):
+        if name in drawn:  # painted by complete_hidden, not cut from the sheet
+            colour[drawn[name]] = pixels[name][drawn[name]]
+            mask = mask | drawn[name]
+    gap = _disc(mask.shape, joint, r) & figure & ~mask & ~rest
+    colour = paint_from(colour, mask, gap)
+    mask = mask | gap
+    pivot = bones[upper]["joint_px"]
+    x0, y0, x1, y1 = _bbox(mask, pad=2)
+    x0, y0 = (
+        max(0, min(x0, int(pivot[0]) - 2, int(joint[0]) - 2)),
+        max(0, min(y0, int(pivot[1]) - 2, int(joint[1]) - 2)),
+    )
+    x1, y1 = (
+        min(mask.shape[1], max(x1, int(pivot[0]) + 3, int(joint[0]) + 3)),
+        min(mask.shape[0], max(y1, int(pivot[1]) + 3, int(joint[1]) + 3)),
+    )
+    a = np.where(mask, alpha, 0)
+    for name in (upper, lower):
+        if name in drawn:
+            a = np.where(drawn[name], 1.0, a)
+    a = a[y0:y1, x0:x1]
+    color = _unmix(colour[y0:y1, x0:x1], a, bg)
+    rgba = np.dstack([color, a * 255]).round().astype("uint8")
+    return rgba, [pivot[0] - x0, pivot[1] - y0], [joint[0] - x0, joint[1] - y0]
+
+
+def add_bendable_limbs(
+    folder: Path,
+    view: dict[str, Any],
+    limbs: dict[str, tuple[np.ndarray, list[float], list[float]]],
+    hung: dict[str, float],
+) -> None:
+    """Save each limb image as parts/<view>/limb_<name>.png, turned like its arm was (`hang_arms`:
+    the whole limb about the shoulder, so the elbow stays where the rig has it), and declare it
+    in the view's `bendable_limbs`. The two parts stay in the rig: the two-part fallback."""
+    entries = []
+    for limb, (rgba, pivot, _) in limbs.items():
+        upper, lower = BENDABLE[limb]
+        art = Image.fromarray(rgba, "RGBA")
+        delta = hung.get(upper, 0.0)
+        if delta:
+            c = (art.width / 2, art.height / 2)
+            out = art.rotate(delta, Image.Resampling.BICUBIC, expand=True)
+            c2 = (out.width / 2, out.height / 2)
+            pivot = list(_rotate_point(*pivot, c, c2, delta))
+            art = out
+        file = view["parts"][upper]["file"].replace(f"{upper}.png", f"limb_{limb}.png")
+        art.save(folder / file)
+        # the elbow is where the rig's lower bone attaches (so the schema's 3 px rule holds
+        # whatever the rounding of the turn)
+        attach = view["bones"][lower]["attach"]["at_px"]
+        own = view["parts"][upper]["pivot_px"]
+        entries.append(
+            {
+                "name": limb,
+                "bones": [upper, lower],
+                "file": file,
+                "size_px": [art.width, art.height],
+                "pivot_px": [round(pivot[0], 1), round(pivot[1], 1)],
+                "joint_px": [
+                    round(pivot[0] + attach[0] - own[0], 1),
+                    round(pivot[1] + attach[1] - own[1], 1),
+                ],
+            }
+        )
+    if entries:
+        view["bendable_limbs"] = entries
+
+
 def sam_agrees(key: np.ndarray, sam: np.ndarray) -> bool:
     """Whether SAM's mask found the same figure as the colour key. SAM must cover the key
     (a prompt that went wrong misses it), and may add to it: a pale shirt that is the sheet's
@@ -1201,6 +1306,7 @@ def _cut_view(
     folder: Path,
     reclaim_orphans: bool = False,
     seeds: dict[str, Point] | None = None,
+    bendable: bool = False,
 ) -> _Cut:
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
@@ -1337,6 +1443,16 @@ def _cut_view(
         },
     }
     hung = hang_arms(folder, view)
+    if bendable:
+        add_bendable_limbs(
+            folder,
+            view,
+            {
+                limb: cut_limb(rgb, figure, alpha, bg, parts, pixels, drawn, bones, fits, limb)
+                for limb in BENDABLE
+            },
+            hung,
+        )
     report = {
         "limbs_fitted": limbs_fitted,
         "hidden_limbs": hidden_notes,
@@ -1409,6 +1525,7 @@ def build_puppet(
     regenerate_turn: bool = False,
     reclaim_orphans: bool = False,
     locator: bool = False,
+    bendable: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1425,7 +1542,11 @@ def build_puppet(
     `locator` asks a local vision model where the eyes, nose, mouth and joints are
     (puppet/locate.py, cached in build/locator.json) and uses its answers as seeds for the
     pixel rules (D-070). Off by default: with it off nothing here changes. The build report
-    gets views.<view>.locator (flagged and failed parts)."""
+    gets views.<view>.locator (flagged and failed parts).
+
+    `bendable` also cuts each arm and leg as ONE image (parts/<view>/limb_<name>.png, declared
+    in the view's `bendable_limbs`) for the Skeleton Deformation bend (4B.4); the two parts stay
+    as the fallback. Off by default: with it off the part images and rig.json are unchanged."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1474,7 +1595,14 @@ def build_puppet(
 
     cuts = {
         sk.view: _cut_view(
-            img, sk, figures[sk.view], bgs[sk.view], folder, reclaim_orphans, seeds.get(sk.view)
+            img,
+            sk,
+            figures[sk.view],
+            bgs[sk.view],
+            folder,
+            reclaim_orphans,
+            seeds.get(sk.view),
+            bendable,
         )
         for sk in skeletons
     }
