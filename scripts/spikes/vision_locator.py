@@ -18,8 +18,6 @@ Qwen3-VL answers on a 0..1000 grid relative to the image (not pixels); the scrip
 from __future__ import annotations
 
 import argparse
-import base64
-import io
 import json
 import math
 import subprocess
@@ -33,61 +31,25 @@ from PIL import Image, ImageDraw
 from studio_core.comfy_runs import free_comfy
 from studio_core.ollama import Ollama
 from studio_core.puppet.fit import fit_limbs
+from studio_core.puppet.locate import (  # the prompts and calls live with the build stage
+    HALF,
+    KEYS,
+    MODEL,
+    PARTS,
+    PLAIN,
+    SOM,
+    VIEWS,
+    ask_json,
+    near_figure,
+    som_image,
+    to_px,
+)
 from studio_core.puppet.skeleton import turnaround
 
 ROOT = Path(__file__).resolve().parents[2]
 CAST = ROOT / "films" / "step4-cast" / "characters"
 OUT = ROOT / "films" / "step4-cast" / "spikes" / "vision_locator"
-MODEL = "qwen3-vl:8b-instruct"
 IDS = ("kit", "bo", "bird", "child", "robot")
-VIEWS = ("front", "three_quarter")
-HALF = 672
-
-JOINTS = ("shoulder", "elbow", "wrist", "hip", "knee", "ankle")
-# (our key, skeleton joint name). Left/right are the character's own, so "left" is screen-right
-# in the front view.
-PARTS: dict[str, str] = {
-    "left_eye": "l_eye",
-    "right_eye": "r_eye",
-    "nose_or_beak_tip": "nose",
-    "mouth_centre": "mouth",
-} | {f"{s}_{j}": f"{s[0]}_{j}" for j in JOINTS for s in ("left", "right")}
-KEYS = tuple(PARTS)
-
-POINT = {
-    "type": "object",
-    "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
-    "required": ["x", "y"],
-}
-SCHEMA = {
-    "type": "object",
-    "properties": {k: POINT for k in KEYS},
-    "required": list(KEYS),
-}
-GRID = (
-    "Coordinates are integers on a 0..1000 grid over the whole image: x=0 is the left edge, "
-    "x=1000 the right edge, y=0 the top edge, y=1000 the bottom edge. "
-    "'left' and 'right' are the character's OWN left and right (a character facing us has its "
-    "left side on the right of the image)."
-)
-PLAIN = (
-    "This image is a character design for a children's cartoon: one character standing. "
-    "Locate these points on the character: the centre of each eye, the tip of the nose or beak, "
-    "the centre of the mouth, and the centre of each joint: shoulders, elbows, wrists (where the "
-    "hand starts), hips, knees and ankles. For a robot or a creature use the equivalent parts. "
-    "If a part is hidden, give your best guess of where it would be. " + GRID
-)
-SOM = (
-    "This image is a character design for a children's cartoon. Numbered dots mark where a "
-    "template skeleton expects each part; the template does NOT match this drawing exactly, so "
-    "many dots are off. For every part below, give where it REALLY is on the drawing (it may be "
-    "far from its dot). Do not just copy the dot positions. Dots: {legend}. Parts: eyes (centre), "
-    "nose or beak tip, mouth centre, and the centre of each joint (shoulders, elbows, wrists = "
-    "where the hand starts, hips, knees, ankles). For a robot or creature use the equivalent "
-    "parts. If a part is hidden, guess where it would be. " + GRID
-)
-# the dots: skeleton joint -> number, in KEYS order
-SOM_JOINTS = {k: v for k, v in PARTS.items() if v != "mouth"}
 
 
 def ground_truth(cid: str, view: str) -> tuple[dict[str, tuple[float, float]], float, np.ndarray]:
@@ -129,28 +91,6 @@ def ground_truth(cid: str, view: str) -> tuple[dict[str, tuple[float, float]], f
     )
 
 
-def png_b64(img: Image.Image) -> str:
-    buf = io.BytesIO()
-    img.save(buf, "PNG")
-    return base64.b64encode(buf.getvalue()).decode()
-
-
-def som_image(crop: Image.Image, view: str) -> tuple[Image.Image, str]:
-    sk = turnaround((1344, 768))[VIEWS.index(view)]
-    x0 = 0 if view == "front" else HALF
-    img = crop.copy()
-    d = ImageDraw.Draw(img)
-    legend = []
-    for n, (key, joint) in enumerate(SOM_JOINTS.items(), 1):
-        x, y = sk.joints[joint]
-        x -= x0
-        d.ellipse([x - 11, y - 11, x + 11, y + 11], fill=(255, 40, 40), outline="white", width=2)
-        d.text((x - (6 if n > 9 else 3), y - 6), str(n), fill="white")
-        legend.append(f"{n}={key.replace('_', ' ')}")
-    legend.append(f"{len(SOM_JOINTS) + 1}=mouth centre (no dot)")
-    return img, "; ".join(legend)
-
-
 class MemSampler:
     """Peak resident memory of all ollama processes, sampled while a call runs."""
 
@@ -173,46 +113,6 @@ class MemSampler:
     def __exit__(self, *exc) -> None:
         self._stop.set()
         self._t.join()
-
-
-def ask_json(client: Ollama, img: Image.Image, prompt: str) -> tuple[dict | None, float, str]:
-    # `format` is not in the thin client's chat(); add it by wrapping the request
-    t = time.perf_counter()
-    payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt, "images": [png_b64(img)]}],
-        "stream": False,
-        "think": False,
-        "format": SCHEMA,
-        "options": {"temperature": 0, "num_predict": 900},
-        "keep_alive": "10m",
-    }
-    resp = client._request("/api/chat", payload)
-    secs = time.perf_counter() - t
-    text = resp.get("message", {}).get("content", "")
-    try:
-        return json.loads(text), secs, text
-    except json.JSONDecodeError:
-        return None, secs, text
-
-
-def to_px(ans: dict | None, size: tuple[int, int]) -> dict[str, tuple[float, float] | None]:
-    out: dict[str, tuple[float, float] | None] = {}
-    for k in KEYS:
-        p = (ans or {}).get(k)
-        try:
-            out[k] = (p["x"] / 1000 * size[0], p["y"] / 1000 * size[1])
-        except (TypeError, KeyError):
-            out[k] = None
-    return out
-
-
-def near_figure(mask: np.ndarray, p: tuple[float, float], tol: int = 12) -> bool:
-    x, y = round(p[0]), round(p[1])
-    h, w = mask.shape
-    if not (0 <= x < w and 0 <= y < h):
-        return False
-    return bool(mask[max(0, y - tol) : y + tol + 1, max(0, x - tol) : x + tol + 1].any())
 
 
 def annotate(crop: Image.Image, truth, pred, path: Path) -> None:

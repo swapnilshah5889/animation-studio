@@ -116,6 +116,7 @@ from typing import Any
 
 import numpy as np
 
+from studio_core.puppet.locate import FAIL_HEAD, KEEP_HEAD, near_figure
 from studio_core.puppet.skeleton import Skeleton, direction_deg
 
 RADIUS = 0.035  # nominal arm radius as a share of the figure's height (Kit's arms: ~0.033)
@@ -701,11 +702,154 @@ def fit_legs(figure: np.ndarray, sk: Skeleton) -> tuple[Skeleton, dict[str, Any]
     return replace(sk, joints=joints), report
 
 
+LIMB_JOINTS = {
+    "arm_r": ("r_shoulder", "r_elbow", "r_wrist"),
+    "arm_l": ("l_shoulder", "l_elbow", "l_wrist"),
+    "leg_r": ("r_hip", "r_knee", "r_ankle"),
+    "leg_l": ("l_hip", "l_knee", "l_ankle"),
+}
+
+
+LIMB_ALL = {
+    "arm_r": ("r_shoulder", "r_elbow", "r_wrist", "r_hand"),
+    "arm_l": ("l_shoulder", "l_elbow", "l_wrist", "l_hand"),
+    "leg_r": ("r_hip", "r_knee", "r_ankle", "r_foot"),
+    "leg_l": ("l_hip", "l_knee", "l_ankle", "l_foot"),
+}
+
+
+def _seeded_start(figure: np.ndarray, sk: Skeleton, seeds: dict[str, Point]) -> Skeleton:
+    """The skeleton with its limbs started at the locator's points (those on the figure; the
+    rest are ignored). Bone lengths stay the skeleton's: an arm hangs from the
+    seed shoulder toward the seed elbow, the forearm and hand toward the seed wrist. A leg's
+    joints take the seed's x and keep their heights."""
+    seeds = {n: p for n, p in seeds.items() if near_figure(figure, p)}
+    j = dict(sk.joints)
+    for side in ("r", "l"):
+        sh, el = j[f"{side}_shoulder"], j[f"{side}_elbow"]
+        wr, ha = j[f"{side}_wrist"], j[f"{side}_hand"]
+        if (new := seeds.get(f"{side}_shoulder")) is not None:
+            dx, dy = new[0] - sh[0], new[1] - sh[1]
+            sh, el, wr, ha = ((x + dx, y + dy) for x, y in (sh, el, wr, ha))
+        if (target := seeds.get(f"{side}_elbow")) is not None:
+            turn = _screen_deg(sh, target) - _screen_deg(sh, el)
+            el, wr, ha = (_rotate(p, sh, turn) for p in (el, wr, ha))
+        if (target := seeds.get(f"{side}_wrist")) is not None:
+            turn = _screen_deg(el, target) - _screen_deg(el, wr)
+            wr, ha = (_rotate(p, el, turn) for p in (wr, ha))
+        j[f"{side}_shoulder"], j[f"{side}_elbow"] = sh, el
+        j[f"{side}_wrist"], j[f"{side}_hand"] = wr, ha
+        for n in ("hip", "knee", "ankle"):
+            if (target := seeds.get(f"{side}_{n}")) is not None:
+                dx = target[0] - j[f"{side}_{n}"][0]
+                j[f"{side}_{n}"] = (target[0], j[f"{side}_{n}"][1])
+                if n == "ankle":
+                    j[f"{side}_foot"] = (j[f"{side}_foot"][0] + dx, j[f"{side}_foot"][1])
+    return replace(sk, joints=j)
+
+
+def _found(report: dict[str, Any]) -> bool:
+    """Did the fit see a drawn limb (so its result is pixel evidence), or keep the skeleton
+    because there was nothing arm- or leg-shaped to measure?"""
+    note = report.get("note") or ""
+    return not (note.startswith("no arm-shaped") or "can't be told apart" in note)
+
+
+def _seed_check(
+    figure: np.ndarray,
+    sk: Skeleton,
+    seeds: dict[str, Point],
+    template: Skeleton,
+    seeded: Skeleton,
+    reports: dict[str, Any],
+    seeded_reports: dict[str, Any],
+) -> Skeleton:
+    """Per limb, choose between the fit started at the skeleton's joints (`template`), the fit
+    started at the locator's (`seeded`) and the seed itself. A seed is a guess good to about 0.1
+    head heights, so a drawn limb the rules measured is never overruled by one:
+
+    1. the template fit saw the limb and every joint is within KEEP_HEAD of its seed: kept,
+       nothing changes (a drawing the rules fit stays exactly as it was);
+    2. the template fit saw the limb, but not near the seed: if the seeded fit sees it and
+       lands within KEEP_HEAD of every seed, it wins (the skeleton was the wrong start);
+       otherwise the template fit is kept and the joints are flagged `seed_off`;
+    3. the template fit saw nothing: the seeded fit if it sees the limb (flag `seed_off` for
+       a joint further than KEEP_HEAD), else the seed itself, per joint, flagged `seed`;
+       a joint of the seeded fit further than FAIL_HEAD from the seed is `disagree`.
+
+    A seed off the figure is ignored: `outside_ignored` when the rules saw the limb, `outside`
+    (the part fails) when they saw nothing."""
+    head_h = sk.joints["neck"][1] - sk.joints["head_top"][1]
+    keep, far = KEEP_HEAD * head_h, FAIL_HEAD * head_h
+    joints = dict(template.joints)
+    for limb, names in LIMB_JOINTS.items():
+        mine = {n: seeds[n] for n in names if n in seeds}
+        if not mine:
+            continue
+        on = {n: p for n, p in mine.items() if near_figure(figure, p)}
+        t, s = template.joints, seeded.joints
+        t_sees, s_sees = _found(reports[limb]), _found(seeded_reports[limb])
+        status = {n: "pixel" for n in mine}
+        if t_sees:
+            status |= {n: "outside_ignored" for n in mine if n not in on}
+            if all(math.dist(t[n], p) <= keep for n, p in on.items()):
+                pass
+            elif s_sees and all(math.dist(s[n], p) <= keep for n, p in on.items()):
+                joints |= {n: s[n] for n in joints if n in LIMB_ALL[limb]}
+            else:
+                for n, p in on.items():
+                    if math.dist(t[n], p) > keep:
+                        status[n] = "seed_off"
+        else:
+            status |= {n: "outside" for n in mine if n not in on}
+            if s_sees:
+                joints |= {n: s[n] for n in joints if n in LIMB_ALL[limb]}
+            for n, p in on.items():
+                d = math.dist(s[n], p) if s_sees else math.dist(t[n], p)
+                if s_sees and d > far:
+                    status[n] = "disagree"
+                elif d > keep:
+                    status[n] = "seed_off" if s_sees else "seed"
+                    if not s_sees:
+                        joints[n] = (p[0], t[n][1]) if limb.startswith("leg") else p
+            if not s_sees and any(st == "seed" for st in status.values()):
+                end = names[0][:2] + ("hand" if limb.startswith("arm") else "foot")
+                shift = (joints[names[2]][0] - t[names[2]][0], joints[names[2]][1] - t[names[2]][1])
+                joints[end] = (t[end][0] + shift[0], t[end][1] + shift[1])
+        reports[limb]["locator"] = {
+            n: {
+                "seed": [round(mine[n][0], 1), round(mine[n][1], 1)],
+                "status": status[n],
+                "off_head": round(math.dist(joints[n], mine[n]) / head_h, 2),
+            }
+            for n in mine
+        }
+    return replace(template, joints=joints)
+
+
 def fit_limbs(
-    figure: np.ndarray, sk: Skeleton, radius_px: float | None = None
+    figure: np.ndarray,
+    sk: Skeleton,
+    radius_px: float | None = None,
+    seeds: dict[str, Point] | None = None,
 ) -> tuple[Skeleton, dict[str, Any]]:
     """`fit_arms` then `fit_legs`: a copy of `sk` whose limbs follow the drawing, and one
-    report with `arm_r`, `arm_l`, `leg_r` and `leg_l`."""
+    report with `arm_r`, `arm_l`, `leg_r` and `leg_l`.
+
+    `seeds` (skeleton joint name -> point) are the vision locator's guesses (puppet/locate.py).
+    The limbs are then fitted a second time started at them, and each limb takes the better
+    answer by `_seed_check`, whose report goes in each limb's `locator`. Without seeds
+    nothing changes."""
+    fitted, report = _fit_all(figure, sk, radius_px)
+    if not seeds:
+        return fitted, report
+    seeded, seeded_report = _fit_all(figure, _seeded_start(figure, sk, seeds), radius_px)
+    return _seed_check(figure, sk, seeds, fitted, seeded, report, seeded_report), report
+
+
+def _fit_all(
+    figure: np.ndarray, sk: Skeleton, radius_px: float | None
+) -> tuple[Skeleton, dict[str, Any]]:
     sk, arms = fit_arms(figure, sk, radius_px)
     sk, legs = fit_legs(figure, sk)
     return sk, arms | legs

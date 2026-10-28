@@ -62,6 +62,7 @@ from studio_core.puppet.checks import (
 from studio_core.puppet.consistency import ViewCut, compare_views
 from studio_core.puppet.design import CANVAS, DesignError, design_dir, load_candidates
 from studio_core.puppet.fit import fit_limbs
+from studio_core.puppet.locate import FAILED, Point, settle
 from studio_core.puppet.segment import segment_sheet
 from studio_core.puppet.skeleton import (
     DRAW_ORDER,
@@ -567,8 +568,17 @@ def _blobs(mask: np.ndarray, min_px: int = 6) -> list[dict[str, Any]]:
     return out
 
 
+def _xy(p: Point) -> list[float]:
+    return [round(p[0], 1), round(p[1], 1)]
+
+
 def clean_face(
-    rgb: np.ndarray, head: np.ndarray, sk: Skeleton, *, no_nose: bool = False
+    rgb: np.ndarray,
+    head: np.ndarray,
+    sk: Skeleton,
+    *,
+    no_nose: bool = False,
+    seeds: dict[str, Point] | None = None,
 ) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
     """Paint out the drawn eyes, brows and mouth; keep the nose. Returns the new pixels, the
     face anchors in canvas pixels, and notes on what was found.
@@ -581,7 +591,12 @@ def clean_face(
     A face with no dark nose (a bird: a light beak, dark eyes) would give its eye to the nose
     and leave no eye. When the mark taken for the nose leaves no eye above it, the face is read
     again with no nose at all (`no_nose`): the marks are eyes, and the mouth is wherever the
-    skeleton has it."""
+    skeleton has it.
+
+    `seeds` (joint name -> point: `l_eye`, `r_eye`, `nose`, `mouth`) are the vision locator's
+    guesses (puppet/locate.py). Each part is settled by `locate.settle`: a mark the rules found
+    within 0.15 head heights of its seed is kept, else the mark nearest the seed, else the seed
+    itself (flagged); notes["locator"] says which, per part."""
     hx0, hy0, hx1, hy1 = _bbox(head)
     nose_row = int(sk.joints["nose"][1])
     xs = np.nonzero(head[nose_row])[0]
@@ -686,6 +701,29 @@ def clean_face(
         elif solid:
             nose = min(solid, key=lambda b: abs(b["cy"] - nose_row) + 0.5 * abs(b["cx"] - cx))
 
+    head_h = float(sk.joints["neck"][1] - sk.joints["head_top"][1])
+    locator: dict[str, Any] = {}
+    if seeds and nose is None and (seed := seeds.get("nose")) is not None:
+        # the rules found no nose: a solid mark by the model's nose, not by an eye's seed, is it
+        eye_seeds = [seeds[k] for k in ("l_eye", "r_eye") if k in seeds]
+        pool = [
+            b
+            for b in solid
+            if all(math.dist((b["cx"], b["cy"]), e) > 0.15 * head_h for e in eye_seeds)
+        ]
+        pt, how = settle(seed, None, [(b["cx"], b["cy"]) for b in pool], head, head_h)
+        if how == "pixel_near_seed":
+            nose = next(b for b in pool if (b["cx"], b["cy"]) == pt)
+        locator["nose"] = {
+            "seed": _xy(seed),
+            "status": how if how == "pixel_near_seed" and nose else "seed_unused",
+        }
+    elif seeds and nose is not None and (seed := seeds.get("nose")) is not None:
+        _, how = settle(seed, (nose["cx"], nose["cy"]), [], head, head_h)
+        # the rules found this nose: a seed that is off or elsewhere is flagged, not failed
+        flag = {"seed": "seed_off", "disagree": "seed_off", "outside": "outside_ignored"}
+        locator["nose"] = {"seed": _xy(seed), "status": flag.get(how, how)}
+
     def on_nose(b: dict[str, Any]) -> bool:
         return nose is not None and (
             abs(b["cx"] - nose["cx"]) <= nose["w"] / 2 + 2
@@ -724,7 +762,7 @@ def clean_face(
         and max(b["w"], b["h"]) <= (2 if no_nose else 4) * min(b["w"], b["h"])  # a dot, not a line
     ]
     if above == [] and nose is not None and not no_nose:
-        return clean_face(rgb, head, sk, no_nose=True)
+        return clean_face(rgb, head, sk, no_nose=True, seeds=seeds)
     top = min((b["cy"] for b in above), default=nose_y)
 
     def score(b: dict[str, Any]) -> float:  # big, and lower (eyes) rather than higher (brows)
@@ -756,6 +794,32 @@ def clean_face(
             )
             eyes = {side: first}
     mouth = [b for b in marks if b["cy"] > nose_y and abs(b["cx"] - nx) < 0.25 * row_w]
+    if seeds:
+        for side in ("left", "right"):
+            seed = seeds.get(f"{side[0]}_eye")
+            if seed is None:
+                continue
+            found = eyes.get(side)
+            # the other eye, if the rules (or the seed) placed it: one mark is one eye
+            others = [e for k, e in eyes.items() if k != side and not e.get("inferred")]
+            hidden = (found is not None and found.get("inferred")) or (found is None and others)
+            pixel = None if found is None or hidden else (found["cx"], found["cy"])
+            free = [b for b in marks if all(b is not e for e in others)]
+            pt, how = settle(seed, pixel, [(b["cx"], b["cy"]) for b in free], head, head_h)
+            twice = pt is not None and any(
+                math.dist(pt, (e["cx"], e["cy"])) <= 0.12 * row_w for e in others
+            )
+            if how in ("seed", "pixel_near_seed") and twice:
+                how = "inferred"  # two eyes on one spot: the model saw the same eye twice
+            elif how == "outside" and pixel is not None:
+                how = "outside_ignored"  # the rules found this eye: a bad seed can't fail it
+            elif how in ("seed", "pixel_near_seed") and hidden and sk.view != "front":
+                how = "inferred"  # a turned head's far eye may be hidden: keep the guess
+            elif how == "pixel_near_seed":
+                eyes[side] = next(b for b in free if (b["cx"], b["cy"]) == pt)
+            elif how == "seed":
+                eyes[side] = {"cx": pt[0], "cy": pt[1], "area": 0, "w": 0, "h": 0, "seeded": True}
+            locator[f"{side[0]}_eye"] = {"seed": _xy(seed), "status": how}
 
     remove = np.zeros_like(head)
     for b in marks:
@@ -773,8 +837,9 @@ def clean_face(
         eyes[other] = {**b, "cx": b["cx"] + dx, "cy": b["cy"] + dy, "inferred": True}
     at = {s: (eyes[s]["cx"], eyes[s]["cy"]) if s in eyes else skel[s] for s in ("left", "right")}
     eye_dist = max(abs(at["left"][0] - at["right"][0]), 0.15 * row_w)
-    if eyes:
-        e = max(eyes.values(), key=lambda b: b["area"])
+    drawn_eyes = [b for b in eyes.values() if not b.get("seeded")]
+    if drawn_eyes:
+        e = max(drawn_eyes, key=lambda b: b["area"])
         drawn = e["h"] * 1.1 if e["h"] > 0.6 * e["w"] else e["w"] * 0.9  # open eye or closed arc
     else:
         drawn = 0.45 * eye_dist
@@ -786,6 +851,22 @@ def clean_face(
     else:
         mx, my = nx, (nose["bottom"] if nose else nose_y) + 0.2 * eye_dist
         mw = 0.5 * eye_dist
+    if seeds and (seed := seeds.get("mouth")) is not None:
+        if mouth:
+            pt, how = settle(seed, (mx, my), [(b["cx"], b["cy"]) for b in mouth], head, head_h)
+            if how in ("seed", "pixel_near_seed"):
+                mx, my = pt
+            elif how == "outside":
+                how = "outside_ignored"
+        else:  # no mark to check it against: the rules' own guess stays
+            how = "pixel" if math.dist(seed, (mx, my)) <= 0.15 * head_h else "seed_off"
+        locator["mouth"] = {"seed": _xy(seed), "status": how}
+    chosen = {"l_eye": at["left"], "r_eye": at["right"], "mouth": (mx, my)}
+    if nose is not None:
+        chosen["nose"] = (nose["cx"], nose["cy"])
+    for key, part in locator.items():
+        if key in chosen and seeds:
+            part["off_head"] = round(math.dist(chosen[key], seeds[key]) / head_h, 2)
     outline = head & ~zone & (luma < DARK_LUMA)
     line = np.median(rgb[outline], axis=0) if outline.any() else np.array([70, 52, 48])
     anchors = {
@@ -801,11 +882,16 @@ def clean_face(
     notes = {
         "nose_found": nose is not None,
         "nose_px": [round(nose["cx"], 1), round(nose["cy"], 1)] if nose else None,
-        "eyes_found": sorted(k for k, b in eyes.items() if not b.get("inferred")),
+        "eyes_found": sorted(
+            k for k, b in eyes.items() if not b.get("inferred") and not b.get("seeded")
+        ),
         "mouth_marks": len(mouth),
         "marks_painted_over": len(marks),
         "head_width_px": round(row_w, 1),
     }
+    if seeds:
+        notes["eyes_seeded"] = sorted(k for k, b in eyes.items() if b.get("seeded"))
+        notes["locator"] = locator
     return cleaned, anchors, notes
 
 
@@ -1072,21 +1158,12 @@ class _Cut:
     for_consistency: ViewCut
 
 
-def _cut_view(
-    img: np.ndarray,
-    sk: Skeleton,
-    figure: np.ndarray,
-    bg: np.ndarray,
-    folder: Path,
-    reclaim_orphans: bool = False,
-) -> _Cut:
-    """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
-    parts, draw order and face block. Debug images go to build/<view>/."""
-    order = draw_order(sk.view)
-    # Limbs drawn elsewhere than the skeleton's (a klein three-quarter figure: arms at other
-    # angles and lengths, legs apart) are found first, so the bones and the cut follow the
-    # drawing (puppet/fit.py). A drawing that follows the skeleton is left as it is.
-    sk, limbs_fitted = fit_limbs(figure, sk)
+def _limb_fits(
+    figure: np.ndarray, sk: Skeleton, seeds: dict[str, Point] | None
+) -> tuple[Skeleton, dict[str, Any], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """The skeleton fitted to the drawn limbs (puppet/fit.py), its bones, and each limb's
+    `limb_fit` with the view's allowances. `seeds` start the fit at the locator's points."""
+    sk, limbs_fitted = fit_limbs(figure, sk, seeds=seeds)
     bones = rig_bones(sk)
     fits = {limb: limb_fit(figure, sk, bones[limb]) for limb in LIMBS}
     recentred = recentre_shins(sk, bones, fits)
@@ -1113,9 +1190,46 @@ def _cut_view(
         if not fits[thigh]["ok"] and touching_thigh_ok(fits[thigh], limbs_fitted[f"leg_{side}"]):
             fits[thigh]["ok"] = True
             fits[thigh]["drift_judged"] = False
+    return sk, limbs_fitted, bones, fits
+
+
+def _cut_view(
+    img: np.ndarray,
+    sk: Skeleton,
+    figure: np.ndarray,
+    bg: np.ndarray,
+    folder: Path,
+    reclaim_orphans: bool = False,
+    seeds: dict[str, Point] | None = None,
+) -> _Cut:
+    """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
+    parts, draw order and face block. Debug images go to build/<view>/."""
+    order = draw_order(sk.view)
+    # Limbs drawn elsewhere than the skeleton's (a klein three-quarter figure: arms at other
+    # angles and lengths, legs apart) are found first, so the bones and the cut follow the
+    # drawing (puppet/fit.py). A drawing that follows the skeleton is left as it is.
+    sk0 = sk
+    sk, limbs_fitted, bones, fits = _limb_fits(figure, sk0, seeds)
+    vetoed = False
+    if seeds:
+        # The pixel rules check the seeds: a seeded fit whose limbs pass fewer of limb_fit's
+        # checks than the unseeded one is thrown away (the report says so).
+        plain = _limb_fits(figure, sk0, None)
+        good = sum(f["ok"] for f in fits.values())
+        # a view whose limbs all pass is left as it is: a seed is a guess, not a measurement
+        if good < sum(f["ok"] for f in plain[3].values()) or all(
+            f["ok"] for f in plain[3].values()
+        ):
+            seeded_limbs = limbs_fitted
+            sk, limbs_fitted, bones, fits = plain
+            vetoed = True
+    locator = None
+    if seeds:
+        locator = _locator_report(seeded_limbs if vetoed else limbs_fitted, {} if vetoed else fits)
+        locator["limbs_vetoed"] = vetoed
     head = head_mask(img, figure, sk)
     parts = assign_parts(img, figure, head, bones, fits, reclaim_orphans)
-    rgb, anchors, face_notes = clean_face(img, head, sk)
+    rgb, anchors, face_notes = clean_face(img, head, sk, seeds=seeds)
     hidden, hidden_notes = complete_hidden(rgb, figure, parts, bones, fits, order)
     masks, pixels = add_caps(rgb, figure, parts, bones, fits, sk.height_px, order)
     drawn: dict[str, np.ndarray] = {}  # pixels made here, not cut: opaque wherever they are
@@ -1232,6 +1346,14 @@ def _cut_view(
         "parts_px": {n: p["size_px"] for n, p in rig_parts.items()},
         "arms_turned_to_hang_deg": hung,
     }
+    if locator is not None:
+        locator["parts"].update(face_notes["locator"])
+        locator["flagged"] = sorted(
+            k for k, p in locator["parts"].items() if p["status"] != "pixel"
+        )
+        locator["failed"] = sorted(k for k, p in locator["parts"].items() if p["status"] in FAILED)
+        locator["ok"] = not locator["failed"]
+        report["locator"] = locator
     debug = folder / "build" / sk.view
     debug.mkdir(parents=True, exist_ok=True)
     _debug_images(debug, img, rgb, parts, head)
@@ -1241,6 +1363,24 @@ def _cut_view(
         strip.alpha_composite(im, (900 * i, 0))
     strip.convert("RGB").save(debug / "poses.png")
     return _Cut(view, report, ViewCut(sk, parts))
+
+
+def _locator_report(
+    limbs_fitted: dict[str, Any], fits: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """The limb joints' locator verdicts, as one `parts` table. A joint whose seed was off the
+    figure, or that the two methods place more than 0.3 head heights apart, fails its limb's
+    check (`ok` is False) so `limbs_ok` says so; nothing raises."""
+    parts: dict[str, Any] = {}
+    for limb, rep in limbs_fitted.items():
+        for joint, info in rep.get("locator", {}).items():
+            parts[joint] = info
+            if info["status"] in FAILED:
+                kind = ("upper_arm", "forearm") if limb.startswith("arm") else ("thigh", "shin")
+                for bone in kind:
+                    fits[f"{bone}_{limb[-1]}"]["ok"] = False
+                    fits[f"{bone}_{limb[-1]}"]["locator"] = f"{joint}: {info['status']}"
+    return {"parts": parts}
 
 
 def _match_face(front: _Cut, other: _Cut) -> None:
@@ -1268,6 +1408,7 @@ def build_puppet(
     three_quarter: Literal["klein", "sheet"] = "klein",
     regenerate_turn: bool = False,
     reclaim_orphans: bool = False,
+    locator: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1279,7 +1420,12 @@ def build_puppet(
 
     `reclaim_orphans` gives each limb the loose pieces of its own interior the colour rule left
     on the torso (task 4B.2). It is off by default because it changes Kit's three-quarter shin,
-    which is held byte-identical until the owner approves."""
+    which is held byte-identical until the owner approves.
+
+    `locator` asks a local vision model where the eyes, nose, mouth and joints are
+    (puppet/locate.py, cached in build/locator.json) and uses its answers as seeds for the
+    pixel rules (D-070). Off by default: with it off nothing here changes. The build report
+    gets views.<view>.locator (flagged and failed parts)."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1305,19 +1451,31 @@ def build_puppet(
     img = np.asarray(Image.open(sheet).convert("RGB")).astype("float32")
     skeletons = list(turnaround(CANVAS))
     folder = film_root / "characters" / character_id
+    seeds: dict[str, dict[str, Point]] = {}
+    if locator:  # before the rebuild clears build/, which holds the cache
+        from studio_core.puppet.locate import load_cache, locate_sheet
+
+        seeds, located = locate_sheet(sheet, load_cache(folder))
     for stale in ("parts", "build"):  # a rebuild starts clean (SAM's run lands in build/)
         if (folder / stale).exists():
             shutil.rmtree(folder / stale)
     keys, bgs = {}, {}
     for sk in skeletons:
         keys[sk.view], bgs[sk.view] = figure_mask(img, sk)
+    if locator:
+        from studio_core.puppet.locate import save_cache
+
+        (folder / "build").mkdir(parents=True, exist_ok=True)
+        save_cache(folder, located)
     figures = keys
     silhouettes = {sk.view: {"method": "colour key"} for sk in skeletons}
     if sam:
         figures, silhouettes = _add_sam(film_root, sheet, skeletons, keys, folder)
 
     cuts = {
-        sk.view: _cut_view(img, sk, figures[sk.view], bgs[sk.view], folder, reclaim_orphans)
+        sk.view: _cut_view(
+            img, sk, figures[sk.view], bgs[sk.view], folder, reclaim_orphans, seeds.get(sk.view)
+        )
         for sk in skeletons
     }
     _match_face(cuts["front"], cuts["three_quarter"])
