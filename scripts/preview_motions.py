@@ -49,6 +49,13 @@ ORDER = [
     "point",
     "walk_cycle",
     "jump",
+    "shrug",
+    "bow",
+    "look_around",
+    "sneak",
+    "clap",
+    "laugh",
+    "think",
 ]
 
 
@@ -124,12 +131,17 @@ def cell(motion: str, energy: float, work: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--energy", type=float, default=0.6)
+    parser.add_argument("--only", nargs="+", choices=ORDER, help="render just these motions")
+    parser.add_argument(
+        "--still", type=float, help="also write one PNG contact sheet: every cell at this second"
+    )
     args = parser.parse_args()
     assert set(ORDER) == set(MOTIONS), "preview must show every motion"
+    order = [m for m in ORDER if not args.only or m in args.only]
 
     OUT.mkdir(parents=True, exist_ok=True)
     cells = []
-    for motion in ORDER:
+    for motion in order:
         work = OUT / f"e{args.energy:g}" / motion
         shutil.rmtree(work, ignore_errors=True)
         work.mkdir(parents=True)
@@ -138,14 +150,14 @@ def main() -> int:
         print(f"rendered {motion}")
 
     ffmpeg = str(load_config().path("tools", "ffmpeg"))
-    layout = "|".join(f"{(i % 3) * W}_{(i // 3) * H}" for i in range(9))
-    out = OUT / f"motions_e{args.energy:g}.mp4"
+    layout = "|".join(f"{(i % 3) * W}_{(i // 3) * H}" for i in range(len(cells)))
+    out = OUT / f"motions_e{args.energy:g}{'_subset' if args.only else ''}.mp4"
     cmd = [ffmpeg, "-y", "-v", "error"]
     for c in cells:
         cmd += ["-i", str(c)]
     cmd += [
         "-filter_complex",
-        f"xstack=inputs=9:layout={layout}",
+        f"xstack=inputs={len(cells)}:layout={layout}",
         "-c:v",
         "libx264",
         "-crf",
@@ -156,6 +168,14 @@ def main() -> int:
     ]
     subprocess.run(cmd, check=True)
     print(f"wrote {out}")
+    if args.still is not None:
+        png = out.with_suffix(".png")
+        subprocess.run(
+            [ffmpeg, "-y", "-v", "error", "-ss", str(args.still), "-i", str(out),
+             "-frames:v", "1", str(png)],
+            check=True,
+        )  # fmt: skip
+        print(f"wrote {png}")
     return 0
 
 

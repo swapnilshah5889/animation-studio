@@ -265,3 +265,156 @@ def test_rendered_jump_lifts_the_character(tmp_path: Path) -> None:
         )
 
     assert abs((top(frames[0]) - top(frames[-1])) - 160) <= 3  # risen 160 art px (scale 1)
+
+
+# --------------------------------------------------------------------------- acting motions
+
+ACTING = ("shrug", "bow", "look_around", "sneak", "clap", "laugh", "think")
+
+
+def _peak(clip: Clip) -> float:
+    """The biggest excursion on any channel (degrees for angles, art px for shifts)."""
+    peaks = []
+    for (kind, _), keys in clip.channels.items():
+        if kind == "angle":
+            peaks += [abs(k.value) for k in keys]
+        elif kind == "shift":
+            peaks += [max(abs(k.value.x), abs(k.value.y)) for k in keys]
+    return max(peaks)
+
+
+@pytest.mark.parametrize("name", ACTING)
+def test_acting_motions_scale_with_energy_and_stay_inside_joint_limits(name: str) -> None:
+    small = MOTIONS[name](ctx(params={"energy": 0.0}))
+    big = MOTIONS[name](ctx(params={"energy": 1.0}))
+    assert _peak(big) > _peak(small) > 0
+    for (kind, bone), keys in big.channels.items():  # the raw clip, before animate() clamps it
+        if kind == "angle":
+            lim = VIEW["bones"][bone]["limits_deg"]
+            assert all(lim["min"] <= k.value <= lim["max"] for k in keys), (name, bone)
+
+
+@pytest.mark.parametrize(
+    ("name", "lo", "hi"),
+    [("shrug", 28, 45), ("bow", 36, 50), ("look_around", 35, 60), ("clap", 40, 60),
+     ("laugh", 24, 40), ("think", 55, 70), ("sneak", 20, 120)],
+)  # fmt: skip
+def test_acting_motions_start_on_time_and_have_a_natural_length(
+    name: str, lo: int, hi: int
+) -> None:
+    clip = MOTIONS[name](ctx())
+    assert clip.start == 24 and lo <= clip.end - 24 <= hi, clip.end - 24
+    assert min(k.frame for keys in clip.channels.values() for k in keys) == 24
+    for keys in clip.channels.values():
+        assert len(keys) >= 4 and [k.frame for k in keys] == sorted({k.frame for k in keys})
+
+
+@pytest.mark.parametrize("name", ["shrug", "bow", "think"])
+def test_posed_motions_anticipate_hold_and_honour_the_duration(name: str) -> None:
+    clip = MOTIONS[name](ctx())
+    head = next(k for c, k in clip.channels.items() if c[1] in ("head", "upper_arm_r"))
+    vals = [k.value.y if isinstance(k.value, Vec) else k.value for k in head]
+    peak_at = max(range(len(vals)), key=lambda i: abs(vals[i]))
+    assert vals[1] * vals[peak_at] <= 0  # first move is the opposite one: anticipation
+    assert abs(vals[peak_at + 1]) < abs(vals[peak_at])  # a moving hold, not a freeze
+    short = MOTIONS[name](ctx(duration=FPS * 2))
+    long = MOTIONS[name](ctx(duration=FPS * 4))
+    assert long.end - long.start > short.end - short.start
+    assert abs((long.end - long.start) - FPS * 4) <= 4
+
+
+def test_shrug_and_bow_and_think_choose_their_limbs() -> None:
+    assert {c[1] for c in MOTIONS["shrug"](ctx()).channels} >= {
+        "head",
+        "upper_arm_l",
+        "upper_arm_r",
+    }
+    assert {c[1] for c in MOTIONS["bow"](ctx()).channels} == {"torso", "head"}  # bows sink
+    think_r = MOTIONS["think"](ctx(params={"side": "right"}))
+    think_l = MOTIONS["think"](ctx(params={"side": "left"}))
+    assert ("angle", "upper_arm_r") in think_r.channels and (
+        "angle",
+        "upper_arm_l",
+    ) not in think_r.channels
+    assert max(k.value for k in think_l.channels[("angle", "upper_arm_l")]) > 60
+    assert min(k.value for k in think_r.channels[("angle", "upper_arm_r")]) < -60  # mirrored
+    shrug = MOTIONS["shrug"](ctx(params={"side": "right"}))
+    assert min(k.value for k in shrug.channels[("angle", "head")]) < 0  # tilts to its right
+
+
+def test_look_around_glances_both_ways_and_repeats() -> None:
+    def xs(**params: object) -> list[float]:
+        clip = MOTIONS["look_around"](ctx(params=params))
+        return [k.value.x for k in clip.channels[("shift", "head")]]
+
+    left, right = xs(side="left"), xs(side="right")
+    assert max(left) > 0 > min(left) and max(left) > -min(left)  # first glance is the bigger
+    assert left == [-x for x in right]  # mirrored
+    one, two = xs(cycles=1), xs(cycles=2)
+    assert len(two) > len(one) and sum(1 for x in two if x > 4) > sum(1 for x in one if x > 4)
+
+
+def test_clap_counts_its_claps_and_clears_a_big_head() -> None:
+    for n in (1, 4):
+        fore = MOTIONS["clap"](ctx(params={"cycles": n})).channels[("angle", "forearm_l")]
+        together = [k for k in fore if k.value >= 40]
+        assert len(together) == n, n
+    arms = MOTIONS["clap"](ctx()).channels
+    assert 90 <= max(k.value for k in arms[("angle", "upper_arm_l")]) <= 150
+    assert arms[("angle", "upper_arm_l")][2].value == -arms[("angle", "upper_arm_r")][2].value
+
+
+def test_laugh_bounces_squints_and_ends_open() -> None:
+    clip = MOTIONS["laugh"](ctx())
+    body = [k.value.y for k in clip.channels[("shift", "torso")]]
+    assert body.count(0) >= 4 and min(body) < 0 and body[0] == body[-1] == 0
+    eyes = [(k.frame, k.value) for k in clip.channels[("eyes", "")]]
+    assert [v for _, v in eyes] == ["open", "half", "half", "open"] and eyes[-1][0] == clip.end
+    # Headlag: the head's bounce keys sit one frame after the body's (overlap).
+    head = [k.frame for k in clip.channels[("shift", "head")]]
+    assert head[1] == [k.frame for k in clip.channels[("shift", "torso")]][1] + 1
+    assert len(MOTIONS["laugh"](ctx(params={"cycles": 8})).channels[("shift", "torso")]) > len(
+        clip.channels[("shift", "torso")]
+    )
+
+
+def test_sneak_is_a_low_small_walk_in_place_and_across_the_frame() -> None:
+    place = MOTIONS["sneak"](ctx(params={"energy": 1.0}))
+    walk = MOTIONS["walk_cycle"](ctx(params={"energy": 1.0}))
+    body = [k.value.y for k in place.channels[("shift", "torso")]]
+    assert min(body) < -4 and body[0] == body[-1] == 0  # crouches, and stands up again
+    peak = lambda c: max(k.value for k in c.channels[("angle", "thigh_l")])  # noqa: E731
+    assert abs(peak(place)) < abs(peak(walk)) or place.end > walk.end
+    # Travelling: planted-foot strides cover the distance, still crouched, still ends at rest.
+    travel = [min(f, 120) * 2.0 for f in range(240)]  # 2 px per frame for 5 s... then stops
+    moving = MOTIONS["sneak"](ctx(start=0, travel=travel, params={"energy": 0.5}))
+    assert moving.motion == "sneak"
+    ys = [k.value.y for k in moving.channels[("shift", "torso")]]
+    assert min(ys) < -2 and ys[0] == 0 and ys[-1] == 0
+
+
+def test_acting_motions_compose_with_idle_and_blink() -> None:
+    for name in ACTING:
+        actions = [
+            {"motion": "idle_breathe", "start_s": 0},
+            {"motion": "blink", "start_s": 0},
+            {"motion": name, "start_s": 1},
+        ]
+        both = animate(VIEW, actions, fps=FPS, n_frames=240, seed="pip")
+        alone = animate(VIEW, actions[2:], fps=FPS, n_frames=240, seed="pip")
+        assert both.eyes is not None
+        assert set(alone.angles) | set(alone.shifts) <= set(both.angles) | set(both.shifts), name
+        if name == "laugh":  # the laugh owns the eyes while it lasts, blinks resume after
+            window = [w for w in both.eyes.waypoints if 24 <= w.frame <= 24 + 40]
+            assert {w.value for w in window} <= {"open", "half"}
+        else:
+            assert {w.value for w in both.eyes.waypoints} == {"open", "half", "closed"}
+
+
+def test_point_anticipates_and_overshoots() -> None:
+    clip = MOTIONS["point"](ctx(params={"target": [1700, 300]}, root_px=Vec(960, 900)))
+    vals = [k.value for k in clip.channels[("angle", "upper_arm_l")]]
+    hold = vals[3]  # the settled value
+    assert vals[1] < 0  # wind-up the other way first
+    assert vals[2] > hold > 90  # flicks past the target (5°), then settles
+    assert vals[0] == vals[-1] == 0

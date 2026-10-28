@@ -98,7 +98,7 @@
       "additionalProperties": false,
       "properties": {
         "motion": {
-          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "jump", "point", "talk_gesture"]
+          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "jump", "point", "talk_gesture", "shrug", "bow", "look_around", "sneak", "clap", "laugh", "think"]
         },
         "start_s": { "$ref": "#/$defs/time_s" },
         "duration_s": { "type": "number", "exclusiveMinimum": 0, "description": "Defaults to the motion's natural length." },
@@ -119,7 +119,7 @@
       "required": ["expr", "start_s"],
       "additionalProperties": false,
       "properties": {
-        "expr": { "enum": ["neutral", "happy", "sad", "surprised", "grumpy", "worried"] },
+        "expr": { "enum": ["neutral", "happy", "sad", "surprised", "grumpy", "worried", "excited", "shy", "sleepy", "proud", "determined"] },
         "start_s": { "$ref": "#/$defs/time_s" }
       }
     },

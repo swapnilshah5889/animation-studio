@@ -149,3 +149,97 @@ def test_rendered_face_turns_with_the_head_and_mouths_differ(tmp_path: Path) -> 
     expect = (neck[0] + rel.x, neck[1] - rel.y)
     c1 = (sum(p[0] for p in turned) / len(turned), sum(p[1] for p in turned) / len(turned))
     assert abs(c1[0] - expect[0]) < 1.5 and abs(c1[1] - expect[1]) < 1.5, (c1, expect)
+
+
+# --------------------------------------------------------------------------- expressions
+
+OLD_EXPRESSIONS = ("neutral", "happy", "sad", "surprised", "grumpy", "worried")
+NEW_EXPRESSIONS = ("excited", "shy", "sleepy", "proud", "determined")
+# sha256 (first 16 hex) of repr() of each original expression's brow group and rest mouth,
+# taken before the new expressions were added: they must render exactly as before.
+OLD_HASHES = {
+    "brow": dict(
+        zip(
+            OLD_EXPRESSIONS,
+            (
+                "4b96e339791b3bba",
+                "669da35608da4e9f",
+                "0199d7de30b3c883",
+                "331c19e938c8ee2d",
+                "f8b3d0c9ada064ac",
+                "a087a500ed82febe",
+            ),
+            strict=True,
+        )
+    ),
+    "rest": dict(
+        zip(
+            OLD_EXPRESSIONS,
+            (
+                "a21a7e75bf06d161",
+                "01fff230ee01e542",
+                "1d5de4c882d2dabc",
+                "84e07ad634b0520a",
+                "064cacafd81cec59",
+                "4ac6d84cf8199676",
+            ),
+            strict=True,
+        )
+    ),
+}
+
+
+def _brow_pose(expr: str) -> tuple[float, float]:
+    """(offset of the brow's middle above its anchor, inner-minus-outer height), in eye heights,
+    measured on the drawn brow of the character's left eye."""
+    g = FaceGeometry.from_view(load_rig(PIP).view(), SPACE)
+    brows = face_layers(load_rig(PIP).view(), SPACE)[2]
+    group = next(c for c in brows.children if c.desc == expr)
+    pts = [p.point for p in group.children[0].spline.points]  # the left brow: inner, mid, outer
+    inner, outer = pts[0], pts[-1]
+    return (
+        (inner.y + outer.y) / 2 - g.brow_l.y
+    ) / g.eye_h, (inner.y - outer.y) / g.eye_h  # fmt: skip
+
+
+def test_original_expressions_render_exactly_as_before() -> None:
+    import hashlib
+
+    layers = face_layers(load_rig(PIP).view(), SPACE)
+    brows, rest = layers[2], layers[3].children[-1]
+    digest = lambda g: hashlib.sha256(repr(g).encode()).hexdigest()[:16]  # noqa: E731
+    assert {g.desc: digest(g) for g in brows.children if g.desc in OLD_EXPRESSIONS} == OLD_HASHES[
+        "brow"
+    ]
+    assert {g.desc: digest(g) for g in rest.children if g.desc in OLD_EXPRESSIONS} == OLD_HASHES[
+        "rest"
+    ]
+    assert EXPRESSIONS[:6] == OLD_EXPRESSIONS  # new ones are appended
+
+
+def test_new_expressions_are_registered_kid_safe_and_all_distinct() -> None:
+    assert set(NEW_EXPRESSIONS) <= set(EXPRESSIONS) and len(EXPRESSIONS) >= 10
+    assert len({_brow_pose(e) for e in EXPRESSIONS}) == len(EXPRESSIONS)  # no two alike
+
+
+def test_brow_angle_and_offset_of_each_new_expression() -> None:
+    (n_off, _), (h_off, _) = _brow_pose("neutral"), _brow_pose("happy")
+    (_, s_tilt), (_, g_tilt) = _brow_pose("sad"), _brow_pose("grumpy")
+    e_off, e_tilt = _brow_pose("excited")
+    assert e_off > h_off > n_off and abs(e_tilt) < 0.1  # round and high, higher than happy
+    _, sh_tilt = _brow_pose("shy")
+    assert sh_tilt > 0.1 and sh_tilt < s_tilt  # inner ends up (tentative), less than sad
+    sl_off, sl_tilt = _brow_pose("sleepy")
+    assert sl_off < n_off and sl_tilt > 0  # lower than neutral, outer ends drooping
+    p_off, p_tilt = _brow_pose("proud")
+    assert p_off > n_off and -0.4 < p_tilt < 0  # lifted, inner a touch down
+    d_off, d_tilt = _brow_pose("determined")
+    assert d_off < p_off and g_tilt < d_tilt < -0.1  # a shallow V, half as steep as grumpy
+
+
+def test_new_rest_mouths_differ_from_each_other() -> None:
+    rest = face_layers(load_rig(PIP).view(), SPACE)[3].children[-1]
+    shapes = {g.desc: repr(g.children) for g in rest.children}
+    assert len(set(shapes.values())) == len(EXPRESSIONS)
+    excited = next(g for g in rest.children if g.desc == "excited")
+    assert any(layer.desc == "teeth" for layer in excited.children)  # an open grin

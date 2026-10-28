@@ -472,13 +472,24 @@ def point(ctx: MotionContext) -> Clip:
     hold = (ctx.duration - into - out) if ctx.duration else ctx.frames(1.2)
     t1 = ctx.start + into
     t2 = t1 + max(1, hold)
-    keys = [Key(ctx.start, 0.0), Key(t1, offset), Key(t2, offset), Key(t2 + out, 0.0)]
+    # Anticipation: the arm dips back a few degrees first. Overshoot: it swings 5° past the target
+    # and settles, so the point has a flick rather than a glide.
+    wind, past = ctx.frames(0.1), math.copysign(5.0, offset)
+    back = -math.copysign(min(6.0, abs(offset) * 0.1), offset)
+    keys = [
+        Key(ctx.start, 0.0),
+        Key(ctx.start + wind, back),
+        Key(t1 + wind, offset + past),
+        Key(t1 + wind + ctx.frames(0.12), offset),
+        Key(t2 + wind, offset),
+        Key(t2 + wind + out, 0.0),
+    ]
     ch: dict[Channel, list[Key]] = {("angle", bone): keys}
     if ctx.has("forearm", side):
         ch[("angle", ctx.bone("forearm", side))] = [
             Key(ctx.start, 0.0),
-            Key(t1, 0.0),
-            Key(t2 + out, 0.0),
+            Key(t1 + wind, 0.0),
+            Key(t2 + wind + out, 0.0),
         ]
     return _clip(ctx, "point", ch)
 
@@ -512,6 +523,236 @@ def talk_gesture(ctx: MotionContext) -> Clip:
     )
 
 
+# --------------------------------------------------------------------------- acting motions
+# Small reusable beats for children's shorts. All are front-view safe: parts rotate in the
+# picture plane and joints shift, nothing turns toward or away from the viewer. Each ends at rest.
+
+Pairs = list[tuple[int, float]]
+
+
+def _envelope(
+    start: int, anticipate: int, into: int, hold: int, out: int, relax: float = 0.92
+) -> Pairs:
+    """(frame, fraction of the peak) keys for a pose that is reached, held and released:
+    a small opposite move first (anticipation, -12%), the peak, a 'moving hold' that relaxes a
+    little instead of freezing, then back to rest."""
+    pairs: Pairs = [(start, 0.0)]
+    t = start
+    if anticipate:
+        t += anticipate
+        pairs.append((t, -0.12))
+    t += into
+    pairs.append((t, 1.0))
+    if hold >= 2:
+        pairs.append((t + hold // 2, relax))
+        t += hold
+        pairs.append((t, (1.0 + relax) / 2))
+    else:
+        t += 1
+        pairs.append((t, 1.0))
+    pairs.append((t + out, 0.0))
+    return pairs
+
+
+def _angles(pairs: Pairs, amp: float) -> list[Key]:
+    return [Key(f, frac * amp) for f, frac in pairs]
+
+
+def _shifts(pairs: Pairs, dx: float, dy: float) -> list[Key]:
+    return [Key(f, Vec(dx * frac, dy * frac)) for f, frac in pairs]
+
+
+def _hold(ctx: MotionContext, into: int, out: int, anticipate: int, default_s: float) -> int:
+    """Frames to hold the pose: what is left of a requested duration, else `default_s`."""
+    if ctx.duration:
+        return max(1, ctx.duration - into - out - anticipate)
+    return ctx.frames(default_s)
+
+
+def shrug(ctx: MotionContext) -> Clip:
+    """Shrug ("I don't know"): the head rises toward the shoulders and tilts, both arms open out
+    a little with the forearms turned up, hold, and relax. Front view: the shoulders are not
+    parts, so the head lift and the open arms carry it. `side` is the way the head tilts."""
+    side = ctx.params.get("side", "left")
+    ant, into, out = ctx.frames(0.08), ctx.frames(0.16), ctx.frames(0.32)
+    pairs = _envelope(ctx.start, ant, into, _hold(ctx, into, out, ant, 0.7), out)
+    ch: dict[Channel, list[Key]] = {
+        ("shift", ctx.bone("head")): _shifts(pairs, 0, ctx.lerp(4, 10)),
+        ("angle", ctx.bone("head")): _angles(pairs, SIGN[side] * ctx.lerp(4, 10)),
+    }
+    for sd in SIGN:
+        if ctx.has("upper_arm", sd):
+            ch[("angle", ctx.bone("upper_arm", sd))] = _angles(pairs, SIGN[sd] * ctx.lerp(12, 28))
+        if ctx.has("forearm", sd):
+            ch[("angle", ctx.bone("forearm", sd))] = _angles(pairs, SIGN[sd] * ctx.lerp(25, 55))
+    return _clip(ctx, "shrug", ch)
+
+
+def bow(ctx: MotionContext) -> Clip:
+    """Bow politely: a small rise first, then the head dips and the body sinks, hold, and rise
+    again. Front view: a real bow pitches the head and torso forward, which a flat cut-out
+    cannot do, so the head drops (more than the body) the way nod does, but slower and deeper."""
+    ant, into, out = ctx.frames(0.1), ctx.frames(0.45 - 0.1 * ctx.energy), ctx.frames(0.5)
+    pairs = _envelope(ctx.start, ant, into, _hold(ctx, into, out, ant, 0.6), out)
+    return _clip(
+        ctx,
+        "bow",
+        {
+            ("shift", ctx.bone("torso")): _shifts(pairs, 0, -ctx.lerp(3, 8)),
+            ("shift", ctx.bone("head")): _shifts(pairs, 0, -ctx.lerp(14, 32)),
+        },
+    )
+
+
+def look_around(ctx: MotionContext) -> Clip:
+    """Glance one way, then the other, and come back to centre. Front view: the head cannot
+    turn, so it slides sideways a little and leans into each glance; the face stays front-on.
+    `side` is the first glance (the character's own side); `cycles` repeats the left-right pair."""
+    side = ctx.params.get("side", "left")
+    cycles = int(ctx.params.get("cycles", 1))
+    move, dwell = ctx.frames(0.25 - 0.08 * ctx.energy), ctx.frames(0.5)
+    reach, lean = ctx.lerp(3, 7), ctx.lerp(4, 9)
+    first = 1.0 if side == "left" else -1.0  # the character's left is the viewer's right (+x)
+    shift: list[Key] = [Key(ctx.start, Vec(0, 0))]
+    tilt: list[Key] = [Key(ctx.start, 0.0)]
+    t = ctx.start + ctx.frames(0.08)  # anticipation: a small move the other way first
+    shift.append(Key(t, Vec(-first * reach * 0.15, 0)))
+    tilt.append(Key(t, first * lean * 0.15))
+    for i in range(2 * cycles):
+        amount = first * (1.0 if i % 2 == 0 else -0.8)  # the return glance is a little shorter
+        t += move
+        shift.append(Key(t, Vec(amount * reach, 0)))
+        tilt.append(Key(t, -amount * lean))
+        t += dwell
+        shift.append(Key(t, Vec(amount * reach * 0.94, 0)))  # moving hold
+        tilt.append(Key(t, -amount * lean * 0.94))
+    t += move
+    shift.append(Key(t, Vec(0, 0)))
+    tilt.append(Key(t, 0.0))
+    head = ctx.bone("head")
+    return _clip(ctx, "look_around", {("shift", head): shift, ("angle", head): tilt})
+
+
+def sneak(ctx: MotionContext) -> Clip:
+    """Tiptoe: a walk made slow, small and low. The body crouches a little and the steps and arm
+    swings are short. Across the frame (the placement moves) the feet stay planted like
+    walk_cycle; standing still it marches softly in place. Front view: no toes to point, so
+    'low and small' carries it."""
+    quiet = MotionContext(
+        view=ctx.view,
+        fps=ctx.fps,
+        start=ctx.start,
+        last_frame=ctx.last_frame,
+        duration=ctx.duration,
+        params={**ctx.params, "energy": ctx.energy * 0.3},
+        root_px=ctx.root_px,
+        scale=ctx.scale,
+        seed=ctx.seed,
+        travel=ctx.travel,
+    )
+    walk = walk_cycle(quiet)
+    crouch, ramp = ctx.lerp(5, 10), ctx.frames(0.25)
+    root = ("shift", ctx.bone("torso"))
+    last = walk.end
+    channels = {c: list(keys) for c, keys in walk.channels.items()}
+    channels[root] = [
+        Key(
+            k.frame,
+            Vec(
+                k.value.x,
+                k.value.y
+                - crouch * min(1.0, (k.frame - walk.start) / ramp, (last - k.frame) / ramp),
+            ),
+            k.interp,
+        )
+        for k in channels[root]
+    ]
+    return Clip("sneak", walk.start, walk.end, channels)
+
+
+def clap(ctx: MotionContext) -> Clip:
+    """Clap overhead, as in cheering: both arms rise and the forearms swing together and apart
+    in quick beats, then lower. Front view: arms only move in the picture plane, so a chest-level
+    clap is out of reach (an elbow bends one way); the clap happens above the head and the
+    raise stops early on a big head, as wave does. `cycles` is the number of claps."""
+    claps = _cycles(ctx, 4, 2 * ctx.frames(0.14), ctx.frames(0.8))
+    up, down, half = ctx.frames(0.4 - 0.1 * ctx.energy), ctx.frames(0.45), ctx.frames(0.14)
+    apart, together = ctx.lerp(8, 18), ctx.lerp(40, 65)
+    raise_deg = min(_clear_raise(ctx, sd, ctx.lerp(130, 150), swing=together) for sd in SIGN)
+    t0 = ctx.start
+    t_up = t0 + up
+    times = [t_up]
+    for _ in range(claps):  # open, then together
+        times += [times[-1] + half, times[-1] + 2 * half]
+    t_end = times[-1] + half
+    ch: dict[Channel, list[Key]] = {}
+    for sd in SIGN:
+        s = SIGN[sd]
+        fore = [Key(t0, 0.0), Key(t_up, s * apart * 0.5)]
+        for i, t in enumerate(times[1:]):
+            fore.append(Key(t, s * (apart if i % 2 == 0 else together), C if i % 2 else E))
+        fore += [Key(t_end, s * apart * 0.5), Key(t_end + down, 0.0)]
+        ch[("angle", ctx.bone("forearm", sd))] = fore
+        ch[("angle", ctx.bone("upper_arm", sd))] = [
+            Key(t0, 0.0),
+            Key(t_up, s * raise_deg),
+            Key(t_end, s * raise_deg),
+            Key(t_end + down, 0.0),
+        ]
+    return _clip(ctx, "clap", ch)
+
+
+def laugh(ctx: MotionContext) -> Clip:
+    """Laugh: the body bounces in quick beats, the head follows a frame behind and leans back,
+    the arms jiggle, and the eyes squint (half-closed) for the length of the laugh. The mouth is
+    the character's expression, not part of the motion: pair it with set_expression happy or
+    excited (or lip-sync a laughing line). Front view: all bounce and tilt in the picture plane."""
+    beat = ctx.frames(0.22 - 0.07 * ctx.energy)
+    n = _cycles(ctx, 4, 2 * beat, 0)
+    bounce, jiggle, lean = ctx.lerp(2, 6), ctx.lerp(2, 6), ctx.lerp(3, 8)
+    side = ctx.params.get("side", "left")
+    t0, t_end = ctx.start, ctx.start + 2 * n * beat
+    body, head, tilt = [Key(t0, Vec(0, 0))], [Key(t0, Vec(0, 0))], [Key(t0, 0.0)]
+    arms: dict[str, list[Key]] = {sd: [Key(t0, 0.0)] for sd in SIGN if ctx.has("upper_arm", sd)}
+    for i in range(1, 2 * n + 1):
+        t = t0 + i * beat
+        edge = 0.5 if i in (1, 2 * n - 1) else 1.0  # the first and last bounce are smaller
+        up = i % 2 == 1
+        body.append(Key(t, Vec(0, -bounce * edge if up else 0)))  # dips: no gap at the hips
+        head.append(Key(t + 1 if i < 2 * n else t, Vec(0, -bounce * 0.6 * edge if up else 0)))
+        tilt.append(Key(t, SIGN[side] * lean * edge * (1 if up else 0.4) if i < 2 * n else 0.0))
+        for sd, keys in arms.items():
+            keys.append(Key(t, -SIGN[sd] * jiggle * edge if up else 0.0))  # inward: no pocket
+    eyes = [Key(t0, "open", Interp.CONSTANT), Key(t0 + 2, "half", Interp.CONSTANT)]
+    eyes += [Key(t_end - 2, "half", Interp.CONSTANT), Key(t_end, "open", Interp.CONSTANT)]
+    ch: dict[Channel, list[Key]] = {
+        ("shift", ctx.bone("torso")): body,
+        ("shift", ctx.bone("head")): head,
+        ("angle", ctx.bone("head")): tilt,
+        ("eyes", ""): eyes,
+    }
+    for sd, keys in arms.items():
+        ch[("angle", ctx.bone("upper_arm", sd))] = keys
+    return _clip(ctx, "laugh", ch)
+
+
+def think(ctx: MotionContext) -> Clip:
+    """Think: one hand comes up beside the head with the elbow out, the head tilts the other
+    way, hold (the pose relaxes slightly instead of freezing), then lower. Front view: the hand
+    reaches the side of the head, not the chin, which is in front of the arm's plane; a real
+    chin-rub needs the arm in front of the body."""
+    side = ctx.params.get("side", "right")
+    s = SIGN[side]
+    ant, into, out = ctx.frames(0.1), ctx.frames(0.45), ctx.frames(0.5)
+    pairs = _envelope(ctx.start, ant, into, _hold(ctx, into, out, ant, 1.6), out)
+    ch: dict[Channel, list[Key]] = {
+        ("angle", ctx.bone("upper_arm", side)): _angles(pairs, s * ctx.lerp(70, 80)),
+        ("angle", ctx.bone("forearm", side)): _angles(pairs, s * ctx.lerp(130, 140)),
+        ("angle", ctx.bone("head")): _angles(pairs, s * ctx.lerp(5, 11)),
+    }
+    return _clip(ctx, "think", ch)
+
+
 MOTIONS: dict[str, Callable[[MotionContext], Clip]] = {
     "idle_breathe": idle_breathe,
     "blink": blink,
@@ -522,4 +763,11 @@ MOTIONS: dict[str, Callable[[MotionContext], Clip]] = {
     "jump": jump,
     "point": point,
     "talk_gesture": talk_gesture,
+    "shrug": shrug,
+    "bow": bow,
+    "look_around": look_around,
+    "sneak": sneak,
+    "clap": clap,
+    "laugh": laugh,
+    "think": think,
 }

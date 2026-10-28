@@ -140,3 +140,35 @@ placement group's scale flips on the frame the direction changes).
 Gotchas: the legs swing in the image plane, which is right for side-on art and a waddle on
 front-view art (Pip); the generated three-quarter cast needs real side-view art for a convincing
 walk. A pause (two waypoints at one position) mid-walk freezes the legs mid-step.
+
+## Acting vocabulary (task 4B acting)
+
+Seven more motions and five more expressions, so a short can act beyond waving and pointing.
+Each motion takes `energy`, most take `side` / `cycles` / `duration_s`; all end at rest and are
+front-view safe (parts rotate in the picture plane, joints shift; nothing turns toward the viewer).
+
+| motion | what it does in the front view |
+|---|---|
+| `shrug` | head lifts and tilts, both arms open a little with forearms up, hold, relax |
+| `bow` | the head drops (more than the body), hold, rise; a real forward pitch is impossible flat |
+| `look_around` | head slides sideways a few px and leans into each glance, then the other way; no turn |
+| `sneak` | a slow, small, crouched walk: planted-foot strides across the frame, a soft march in place |
+| `clap` | both arms rise and the forearms meet overhead (`cycles` claps); chest-level claps are out of reach because elbows bend one way |
+| `laugh` | body dips in beats, head a frame behind, arms jiggle inward, eyes squint; the mouth is the expression (pair with `happy`/`excited`) |
+| `think` | one hand rises beside the head, head tilts away; not to the chin (it is in front of the arm's plane) |
+
+Shared shape (`_envelope`): a small opposite move first (anticipation), the peak, a *moving hold*
+that relaxes about 8% instead of freezing, then release. Bounces dip (never lift) the hips and
+arm jiggles go inward, because lifting a part away from the body opens a visible gap in a cut-out
+(the pose sweep found it on `laugh`).
+
+New expressions are brows plus a rest mouth only (eye states stay open/half/closed and are driven
+by blinks): `excited` (high round brows, open grin), `shy` (inner ends up, small smile pulled to
+one side), `sleepy` (low flat brows, tiny flat mouth; use half eyes), `proud` (lifted brows, broad
+smirk), `determined` (shallow V, firm mouth). The six original expressions are pinned by hash in
+`tests/test_face.py`, so they render exactly as before.
+
+Timing review against the principles above: `point` lacked anticipation and follow-through, so it
+now dips back a few degrees first and overshoots the target by 5° before settling. Not changed:
+`wave` and `walk_cycle` (approved); `nod` and `head_tilt` have ease at both ends but no overshoot;
+`talk_gesture` beats are hand-offs between poses with no hold on the stroke.

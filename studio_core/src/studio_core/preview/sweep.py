@@ -71,6 +71,10 @@ SIDED = {
     "point": ("upper_arm",),
     "talk_gesture": ("upper_arm",),
     "head_tilt": ("head",),
+    "shrug": ("head",),
+    "look_around": ("head",),
+    "laugh": ("head",),
+    "think": ("upper_arm", "forearm"),
 }
 SKIPPED = ("blink",)  # moves only the eyes, which the face drawing owns
 

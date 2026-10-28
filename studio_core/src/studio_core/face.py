@@ -38,7 +38,19 @@ from studio_core.sif import (
     smooth,
 )
 
-EXPRESSIONS = ("neutral", "happy", "sad", "surprised", "grumpy", "worried")
+EXPRESSIONS = (
+    "neutral",
+    "happy",
+    "sad",
+    "surprised",
+    "grumpy",
+    "worried",
+    "excited",
+    "shy",
+    "sleepy",
+    "proud",
+    "determined",
+)
 EYE_STATES = ("open", "half", "closed")
 MOUTHS = ("A", "B", "C", "D", "E", "F", "G", "H", "X")
 
@@ -51,6 +63,11 @@ BROWS = {
     "surprised": (0.45, 0.0, 0.3),
     "grumpy": (-0.1, 0.35, 0.0),
     "worried": (0.2, -0.3, 0.1),
+    "excited": (0.38, -0.05, 0.28),  # high and round, brighter than happy
+    "shy": (0.1, -0.22, 0.08),  # a little raised, inner ends up: tentative, with a sideways smile
+    "sleepy": (-0.14, -0.12, 0.02),  # low and flat, outer ends drooping (pair with half eyes)
+    "proud": (0.18, 0.06, 0.2),  # lifted, inner ends a touch down: chin-up confidence
+    "determined": (-0.05, 0.2, 0.0),  # low, a shallow V (half as steep as grumpy) over a firm mouth
 }
 DEFAULT_COLORS = {
     "line": "#463430",
@@ -263,6 +280,20 @@ def _rest_mouths(g: FaceGeometry) -> dict[str, list[Layer]]:
         ],
         "grumpy": curve((-0.5, -0.05), (0, 0), (0.5, -0.08)),
         "worried": curve((-0.55, 0), (-0.2, 0.06), (0.2, -0.06), (0.55, 0)),
+        # An open grin: the mouth is a D-shaped bowl with a row of teeth, brighter than happy.
+        "excited": [
+            Region("inside", color=inside, spline=ellipse(at(0, -0.12), 0.7 * u, 0.42 * u)),
+            Region(
+                "teeth", color=g.colors["eye_white"], spline=ellipse(at(0, 0.14), 0.5 * u, 0.1 * u)
+            ),
+            Outline("rim", color=line, width=lw, spline=ellipse(at(0, -0.12), 0.7 * u, 0.42 * u)),
+        ],
+        # A small smile pulled to one side (the viewer's right end sits higher).
+        "shy": curve((-0.4, 0.0), (-0.05, -0.1), (0.4, 0.12)),
+        "sleepy": curve((-0.3, 0.0), (0, -0.05), (0.3, 0.0)),
+        # A broad closed smile whose one corner is higher: a smirk of pride.
+        "proud": curve((-0.7, 0.04), (-0.3, -0.2), (0.3, -0.22), (0.72, 0.18)),
+        "determined": curve((-0.5, 0.0), (0, -0.04), (0.5, 0.05)),
     }
 
 
