@@ -12,6 +12,15 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-28: 4B.2 cut defects and 4B.3 locator trial done; two approvals (D-070)
+
+Pim's pose-sweep defects fell 91 to 7, Mia's 43 to 28, Bo's 14 to 11; Kit unchanged. The locator trial
+says seeds, not pivots. The owner approved the locator-as-seeds integration and Skeleton Deformation per
+limb. Next sessions: locator integration (owns `puppet/build.py`) and the Synfig side of bending limbs
+(rig schema, `rig.py`, `sif/`), in parallel; the cut producing limb images follows.
+
+---
+
 ## 2026-10-27: Step 4B kickoff (D-069)
 
 The owner approved the 4B brief. Parallel sessions: pose-sweep (done), placement-walk (done), bend-spike

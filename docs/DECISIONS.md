@@ -1364,3 +1364,24 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Open:** whether to approve Kit's built parts changing (seams); the bending integration (4B.4
   follow-up); the locator trial (4B.3) was still running.
 
+### D-070: Cut defects (4B.2), the locator trial (4B.3), and two approvals (owner, 2026-10-28)
+- **Cut defects (`60fe24b`):** pose-sweep defects before to after: Pim 91 to 7, Mia 43 to 28, Bo 14 to
+  11 (with fix 3 on); Kit not swept and byte-identical. Fixes: SAM's mask is accepted when it covers the
+  colour key and adds the pale shirt the key lost (`sam_agrees`; Pim was rejected at IoU 0.79 though it
+  covered 94% of the key); enclosed regions SAM also calls figure are filled (`fill_sam_holes`, Pim's
+  torso hole); cut-off torso pieces of 100 px or more with 80% or more inside one limb's corridor go
+  to that limb (`reclaim_limb_orphans`). **The third is opt-in** (`build_puppet(reclaim_orphans=True)`):
+  with it on, Kit's three-quarter `shin_l` and torso change, so it stays off until the owner approves
+  Kit's parts changing. Default builds change only 9 of Pim's images. Left: Mia's 24 shoulder and elbow
+  seams (a bend problem for 4B.4), Mia's hair pieces in head_tilt, Bo's jump and wave seams and holes.
+- **Locator trial (`17c0bf5`, `docs/spikes/vision-locator.md`):** qwen3-vl 8B finds where parts are
+  (median about 0.1 head heights, no failed answers, about 29 s and 8 GB per image) and found Bolt's
+  eyes and limbs where the pixel rules missed them, but 19% of joint points are over 0.15 head heights
+  off and answers move up to 0.33 between runs: seeds, not pivots. It swaps left and right in 68 of 70
+  pairs, so sides must be matched by geometry. Bolt's accuracy was judged by eye on one image.
+- **Approved by the owner:** (1) integrate the locator as **seeds with the pixel rules as the check**
+  (a pixel result within about 0.15 head heights of the seed is kept; otherwise the seed is used and
+  flagged; a disagreement over 0.3 fails the build for a human look); (2) **Skeleton Deformation per
+  limb** as the bending approach (D-069), with the two-part cut as fallback. Kit's parts: still the
+  owner's separate decision.
+
