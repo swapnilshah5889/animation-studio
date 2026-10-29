@@ -17,6 +17,7 @@ from studio_core.models import load_manifest
 from studio_core.puppet import build
 from studio_core.puppet.build import (
     BuildError,
+    add_caps,
     assign_parts,
     build_puppet,
     clean_face,
@@ -521,6 +522,55 @@ def test_a_loose_piece_of_torso_inside_a_limb_goes_to_the_limb() -> None:
     reclaim_limb_orphans(parts, bones, fits)
     assert np.array_equal(parts["shin_r"], inside)
     assert np.array_equal(parts["torso"], torso | away)  # the main body and the wisp stay
+
+
+def test_a_foot_sole_beside_the_ankle_and_a_small_sliver_go_to_the_limb() -> None:
+    bones = rig_bones(FRONT)
+    fits = {n: {"radius_px": 30.0} for n in build.LIMBS}
+    shape = (CANVAS[1], CANVAS[0])
+    torso = np.zeros(shape, bool)
+    pelvis = FRONT.joints["pelvis"]
+    torso[int(pelvis[1]) - 200 : int(pelvis[1]), int(pelvis[0]) - 60 : int(pelvis[0]) + 60] = True
+    parts = {n: np.zeros(shape, bool) for n in (*build.LIMBS, "head")}
+    shin = bones["shin_r"]
+    (jx, jy), (ex, ey) = shin["joint_px"], shin["end_px"]
+    # a sole lying flat past the ankle and 1.7 radii to the side of the bone: wider than the
+    # shin's corridor, inside the spread a foot gets (the old rule left it hanging on the torso)
+    sole = np.zeros(shape, bool)
+    sole[int(ey) - 5 : int(ey) + 15, int(ex) - 62 : int(ex) - 47] = True
+    # a 36 px sliver of the shin's outline, 1.3 radii out: under the old 100 px limit
+    sliver = np.zeros(shape, bool)
+    my = int((jy + ey) / 2)
+    sliver[my : my + 12, int(jx) - 38 : int(jx) - 35] = True
+    parts["torso"] = torso | sole | sliver
+    reclaim_limb_orphans(parts, bones, fits)
+    assert np.array_equal(parts["shin_r"], sole | sliver)
+    assert np.array_equal(parts["torso"], torso)
+
+
+def test_the_underlay_reaches_under_hair_that_overhangs_the_body() -> None:
+    bones = rig_bones(FRONT)
+    fits = {n: {"radius_px": 5.0} for n in build.LIMBS}
+    shape = (CANVAS[1], CANVAS[0])
+    nx, ny = (int(v) for v in bones["head"]["joint_px"])
+    body = np.zeros(shape, bool)
+    body[ny - 10 : ny + 300, nx - 150 : nx + 150] = True  # torso, shoulders at the neck line
+    head = np.zeros(shape, bool)
+    head[ny - 300 : ny + 40, nx - 120 : nx + 120] = True  # hair down over the shoulders
+    parts = {n: np.zeros(shape, bool) for n in (*build.LIMBS, "head")}
+    parts["torso"], parts["head"] = body & ~head, head
+    rgb = np.full((*shape, 3), 128.0, dtype="float32")
+    figure = body | head
+    height = 1000.0
+    plain, _ = add_caps(rgb, figure, parts, bones, fits, height)
+    under, _ = add_caps(rgb, figure, parts, bones, fits, height, underlay=True)
+    reach = round(build.UNDERLAY * height)
+    low, high = (ny + 20, nx + 100), (ny - 200, nx + 100)  # hair by the shoulder, and its crown
+    assert not plain["torso"][low]  # a nod would show the magenta gap there
+    assert under["torso"][low]
+    assert not under["torso"][high]  # far from the body: stays on the head alone
+    assert reach > 5
+    assert np.array_equal(under["head"], plain["head"])  # the front part is unchanged
 
 
 def test_sam_may_add_a_pale_shirt_the_key_lost_but_not_miss_or_swamp_the_figure() -> None:

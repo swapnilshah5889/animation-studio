@@ -79,6 +79,7 @@ LIMBS = (
     "thigh_l", "shin_l", "thigh_r", "shin_r",
 )  # fmt: skip
 END_LIMBS = {"forearm_l", "forearm_r", "shin_l", "shin_r"}  # hands and feet run past the joint
+UNDERLAY = 0.03  # of the figure's height: how far the part behind the head reaches under it
 CORRIDOR = 1.4  # limb radii either side of the bone line
 PALE_LUMA = 235  # a leg's highlight: lighter than this, it is white clothing's shine, not shading
 DARK_LUMA = 100  # outline pixels are darker than this (0-255)
@@ -518,7 +519,7 @@ def reclaim_limb_orphans(
     parts: dict[str, np.ndarray],
     bones: dict[str, dict],
     fits: dict[str, dict],
-    min_px: int = 100,
+    min_px: int = 30,
     inside: float = 0.8,
 ) -> None:
     """Give a limb the pieces of its own interior that the colour rule left on the torso. A limb
@@ -527,7 +528,10 @@ def reclaim_limb_orphans(
     limb is. On the torso it stays put when the limb moves: the sweep sees it hang in the air
     (sweep, 4B.2: Pim 91 → 7 defects, Mia 43 → 28, Bo 14 → 11). A piece of the torso that is
     not joined to its main body and has `inside` of its pixels in one limb's corridor
-    (along the bone, within 1.2 radii) moves to that limb. Edits `parts` in place."""
+    (along the bone, within CORRIDOR radii; past the wrist or ankle of an end limb, where hands
+    and feet spread, within 2.2 radii) moves to that limb. Pieces of `min_px` pixels count: on
+    Pim a dozen slivers of 30-150 px and a foot sole past the ankle stayed behind a 100 px
+    limit and a 1.2 radius corridor. Edits `parts` in place."""
     torso = parts["torso"]
     for full in components(torso)[1:]:
         if int(full.sum()) < min_px:
@@ -536,7 +540,9 @@ def reclaim_limb_orphans(
         for name in LIMBS:
             bone, r = bones[name], fits[name]["radius_px"]
             t, d = _coords(torso.shape, bone["joint_px"], bone["end_px"])
-            corridor = (t >= -0.1) & (t <= 1.15) & (np.abs(d) <= 1.2 * r + 2)
+            corridor = (t >= -0.1) & (t <= 1.15) & (np.abs(d) <= CORRIDOR * r + 2)
+            if name in END_LIMBS:
+                corridor |= (t > 0.5) & (t <= 1.35) & (np.abs(d) <= 2.2 * r + 2)
             share = float((full & corridor).sum()) / float(full.sum())
             if share > score:
                 score, owner = share, name
@@ -988,6 +994,7 @@ def add_caps(
     fits: dict[str, dict],
     height_px: float,
     order: tuple[str, ...] = DRAW_ORDER,
+    underlay: bool = False,
 ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
     """Each part's final mask and pixels, with discs over the joints.
 
@@ -995,7 +1002,11 @@ def add_caps(
     - Neck, shoulders and hips: only the part drawn *behind* gets a disc, painted from its own
       colours (the torso behind the head and arms, the thighs behind the torso). It is hidden
       at rest, and fills the gap when either part turns. A disc on the front part would
-      change the rest look (a pale circle of chin on the scarf)."""
+      change the rest look (a pale circle of chin on the scarf).
+    - `underlay`: the part behind the head also gets the head's pixels within UNDERLAY of the
+      body (hair over a shoulder, a hat brim), painted from its own colours. The neck disc is
+      small, so when the head nods or turns the hair that overhangs the shoulder leaves a thin
+      gap there (the sweep's seams on Mia's neck line). Hidden at rest, like the discs."""
     masks = {name: m.copy() for name, m in parts.items()}
     pixels = {name: rgb.copy() for name in parts}
     rank = {name: i for i, name in enumerate(order)}
@@ -1014,6 +1025,12 @@ def add_caps(
         disc = _disc(mask.shape, joint, r) & mask & ~parts[behind]
         pixels[behind] = paint_from(pixels[behind], parts[behind], disc)
         masks[behind] |= disc
+        if underlay and child == "head":
+            body = mask & ~parts["head"]
+            band = parts["head"] & _grow(body, round(UNDERLAY * height_px)) & _shrink(mask, 3)
+            band &= ~masks[behind]
+            pixels[behind] = paint_from(pixels[behind], parts[behind], band)
+            masks[behind] |= band
     return masks, pixels
 
 
@@ -1308,6 +1325,7 @@ def _cut_view(
     seeds: dict[str, Point] | None = None,
     bendable: bool = False,
     secondary: bool = False,
+    underlay: bool = False,
 ) -> _Cut:
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
@@ -1338,7 +1356,7 @@ def _cut_view(
     parts = assign_parts(img, figure, head, bones, fits, reclaim_orphans)
     rgb, anchors, face_notes = clean_face(img, head, sk, seeds=seeds)
     hidden, hidden_notes = complete_hidden(rgb, figure, parts, bones, fits, order)
-    masks, pixels = add_caps(rgb, figure, parts, bones, fits, sk.height_px, order)
+    masks, pixels = add_caps(rgb, figure, parts, bones, fits, sk.height_px, order, underlay)
     drawn: dict[str, np.ndarray] = {}  # pixels made here, not cut: opaque wherever they are
     luma = rgb @ np.array([0.299, 0.587, 0.114], dtype="float32")
     for name, info in hidden.items():
@@ -1535,6 +1553,7 @@ def build_puppet(
     locator: bool = False,
     bendable: bool = False,
     secondary: bool = False,
+    underlay: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1562,7 +1581,11 @@ def build_puppet(
     library's follow-through (puppet/secondary.py). A character without ears gets none, and a
     detection that fails its tests is refused (the report's views.<view>.secondary says why);
     the build goes on without those bones. Off by default: the part images and rig.json are
-    byte-identical."""
+    byte-identical.
+
+    `underlay` lets the torso reach under the head's hair and hat where they overhang the body
+    (add_caps), so a nod or a turn opens no thin gap there (the sweep's neck-line seams). Off by
+    default because it changes Kit's torso image."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1620,6 +1643,7 @@ def build_puppet(
             seeds.get(sk.view),
             bendable,
             secondary,
+            underlay,
         )
         for sk in skeletons
     }
