@@ -8,10 +8,10 @@ from typing import Any
 
 import pytest
 from mcp import Client
-from qa_mcp.server import create_server
 from test_qa_checks import FakeVision
 from test_shot import SPEC, make_film
 
+from qa_mcp.server import create_server
 from studio_core.config import load_config
 from studio_core.ollama import Ollama
 from studio_core.qa import runner
