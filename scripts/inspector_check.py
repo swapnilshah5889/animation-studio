@@ -146,7 +146,13 @@ def main() -> int:
         print(f"{mark} {server[:6]} {tool:24} {kind:8} {summary(result)}")
         return result.get("structuredContent") or {}
 
-    for server, expected in (("synfig_mcp", 16), ("audio_mcp", 7), ("comfy_mcp", 9), ("edit_mcp", 4)):
+    for server, expected in (
+        ("synfig_mcp", 16),
+        ("audio_mcp", 7),
+        ("comfy_mcp", 9),
+        ("qa_mcp", 3),
+        ("edit_mcp", 4),
+    ):
         tools = call(None, {}, server).get("tools", [])
         results["ok" if len(tools) == expected else "bad"] += 1
         print(f"tools/list {server}: {len(tools)} tools: {', '.join(t['name'] for t in tools)}")

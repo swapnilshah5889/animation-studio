@@ -89,8 +89,10 @@ class Ollama:
         think: bool | str | None = None,
         options: dict[str, Any] | None = None,
         keep_alive: str | int | None = None,
+        format: dict[str, Any] | str | None = None,
     ) -> dict[str, Any]:
-        """One non-streaming /api/generate call. `images` are base64-encoded PNG/JPEG strings."""
+        """One non-streaming /api/generate call. `images` are base64-encoded PNG/JPEG strings;
+        `format` is "json" or a JSON schema the answer must follow."""
         payload: dict[str, Any] = {"model": model, "prompt": prompt, "stream": False}
         if images:
             payload["images"] = images
@@ -100,6 +102,8 @@ class Ollama:
             payload["options"] = options
         if keep_alive is not None:
             payload["keep_alive"] = keep_alive
+        if format is not None:
+            payload["format"] = format
         return self._request("/api/generate", payload)
 
     def loaded(self) -> list[dict[str, Any]]:

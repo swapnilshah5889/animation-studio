@@ -6,7 +6,7 @@ name = "animation-studio"
 version = "0.0.0"
 description = "Fully local, AI-native 2D animation studio (workspace root)"
 requires-python = "==3.12.*"
-dependencies = ["studio-core", "synfig-mcp", "audio-mcp", "comfy-mcp", "edit-mcp"]
+dependencies = ["studio-core", "synfig-mcp", "audio-mcp", "comfy-mcp", "qa-mcp", "edit-mcp"]
 
 [dependency-groups]
 dev = ["ruff>=0.13", "pytest>=8.4"]
@@ -15,13 +15,14 @@ dev = ["ruff>=0.13", "pytest>=8.4"]
 package = false
 
 [tool.uv.workspace]
-members = ["studio_core", "mcp/synfig_mcp", "mcp/audio_mcp", "mcp/comfy_mcp", "mcp/edit_mcp"]
+members = ["studio_core", "mcp/synfig_mcp", "mcp/audio_mcp", "mcp/comfy_mcp", "mcp/qa_mcp", "mcp/edit_mcp"]
 
 [tool.uv.sources]
 studio-core = { workspace = true }
 synfig-mcp = { workspace = true }
 audio-mcp = { workspace = true }
 comfy-mcp = { workspace = true }
+qa-mcp = { workspace = true }
 edit-mcp = { workspace = true }
 
 [tool.ruff]
