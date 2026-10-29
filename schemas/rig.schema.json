@@ -315,6 +315,12 @@
         "part": {
           "$ref": "#/$defs/id"
         },
+        "turn": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2,
+          "description": "How far this view's head is turned: the measured turn as a fraction of the turn asked (1 = turned as asked, 0 = front-on); positive faces screen-right. Optional: a view without it is drawn front-on. The vector face foreshortens by it: the far eye and brow narrower, pupils toward the facing side, a shorter mouth shifted toward the snout."
+        },
         "eyes": {
           "type": "object",
           "required": [
@@ -335,6 +341,31 @@
               "type": "number",
               "exclusiveMinimum": 0,
               "description": "Eye height."
+            },
+            "style": {
+              "enum": ["sclera", "solid"],
+              "description": "How the eye is drawn. `sclera` (the default, and what a rig without this field gets): a white oval with an iris and a pupil. `solid`: a dark oval with a small highlight and no white, as drawn on a big-eyed character; blinks and half-closed states still work."
+            },
+            "width_px": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Eye width of a `solid` eye (default 0.8 of the height)."
+            },
+            "highlight_px": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "number" },
+              "description": "Where a `solid` eye's highlight sits, as an offset from the eye centre in pixels of `part` (x right, y down)."
+            },
+            "highlight_r_px": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Radius of a `solid` eye's highlight (default 0.09 of the eye height)."
+            },
+            "color": {
+              "$ref": "#/$defs/color",
+              "description": "Colour of a `solid` eye (default: the face's `iris`)."
             }
           }
         },
@@ -356,6 +387,11 @@
             "width_px": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "weight": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Brow stroke weight in eye heights (default 0.13)."
             }
           }
         },
@@ -394,6 +430,10 @@
             },
             "tongue": {
               "$ref": "#/$defs/color"
+            },
+            "skin": {
+              "$ref": "#/$defs/color",
+              "description": "The face's skin colour: the lids of a half-closed `solid` eye."
             }
           }
         }

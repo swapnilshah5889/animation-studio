@@ -578,6 +578,96 @@ def _xy(p: Point) -> list[float]:
     return [round(p[0], 1), round(p[1], 1)]
 
 
+EYE_MAX_SHARE = 0.2  # an eye mark taller than this share of the head's width is merged with a
+# lash or a brow (Mia's measured 135 px on a 396 px head), not an eye
+EYE_FALLBACK_SHARE = 0.14  # ... and the eye is taken to be this share instead
+SOLID_MIN_SHARE = 0.15  # a solid eye is at least this share of the head wide: a big-eyed
+# character's (a small dark dot with a shine is just a small sclera eye in this rig)
+SPILL_COLOUR = 55  # RGB distance from the eye's own surroundings that counts as off the skin
+SPILL_MAX = 0.2  # a face feature with more of its footprint than this off the skin is moved
+EYE_BRIGHT = 150  # luma: inside a drawn eye, brighter than this is sclera or a highlight
+SOLID_MAX_WHITE = 0.2  # a solid eye is at most this share bright inside (a highlight, not a sclera)
+
+
+def classify_eye(mask: np.ndarray, luma: np.ndarray, rgb: np.ndarray) -> dict[str, Any]:
+    """What a drawn eye looks like, from its dark mark (a crop) and the pixels before the paint-out.
+
+    `sclera`: a ring round a white with an iris (most characters). `solid`: a dark oval with a
+    small highlight and no white round it (a big-eyed child). Returns the style, the mark's
+    size, the highlight's offset from the mark's centre (image pixels, y down, None for none)
+    and the mark's colour."""
+    ys, xs = np.nonzero(mask)
+    x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+    h, w = y1 - y0, x1 - x0
+    gy, gx = np.mgrid[y0:y1, x0:x1]
+    cx, cy = (x0 + x1 - 1) / 2, (y0 + y1 - 1) / 2
+    # a little inside the mark: its antialiased edge is not a highlight
+    ellipse_px = ((gx - cx) / (w / 2)) ** 2 + ((gy - cy) / (h / 2)) ** 2 <= 0.7
+    inside = ellipse_px & ~mask[y0:y1, x0:x1]
+    bright = inside & (luma[y0:y1, x0:x1] > EYE_BRIGHT)
+    share = float(bright.sum() / max(1, ellipse_px.sum()))
+    highlight = None
+    if bright.any():
+        highlight = [
+            round(float(gx[bright].mean() - cx), 1),
+            round(float(gy[bright].mean() - cy), 1),
+        ]
+    return {
+        "style": "solid" if share < SOLID_MAX_WHITE and highlight is not None else "sclera",
+        "white_share": round(share, 3),
+        "w": int(w),
+        "h": int(h),
+        "highlight": highlight,
+        "highlight_r": round(float(math.sqrt(bright.sum() / math.pi)), 1) if bright.any() else 0.0,
+        "color": "#{:02x}{:02x}{:02x}".format(
+            *(int(v) for v in np.median(rgb[y0:y1, x0:x1][mask[y0:y1, x0:x1]], axis=0))
+        ),
+    }
+
+
+def spill(cleaned: np.ndarray, head: np.ndarray, ref: np.ndarray, at: Point, rx: float, ry: float):
+    """The share of an ellipse's footprint on the cleaned head that is off the skin: outside the
+    head, or a different colour (hair, the outline) from `ref`."""
+    h, w = head.shape
+    x0, x1 = max(0, int(at[0] - rx)), min(w, int(at[0] + rx) + 1)
+    y0, y1 = max(0, int(at[1] - ry)), min(h, int(at[1] + ry) + 1)
+    gy, gx = np.mgrid[y0:y1, x0:x1]
+    inside = ((gx - at[0]) / rx) ** 2 + ((gy - at[1]) / ry) ** 2 <= 1
+    n = max(1, int(np.pi * rx * ry + 0.5))
+    near = np.linalg.norm(cleaned[y0:y1, x0:x1] - ref, axis=2) < SPILL_COLOUR
+    ok = inside & head[y0:y1, x0:x1] & near
+    return 1.0 - float(ok.sum()) / n
+
+
+def seat_on_skin(
+    cleaned: np.ndarray, head: np.ndarray, at: Point, rx: float, ry: float, reach: float
+) -> tuple[Point, float, float]:
+    """Where a feature of half-size (rx, ry) drawn at `at` sits on the skin: `at` itself when
+    little of it spills onto hair or the outline, else the nearest spot within `reach` where
+    it spills least (the surroundings' colour is the skin). Returns the point, and the spill
+    before and after."""
+    ix, iy = round(at[0]), round(at[1])
+    r = max(2, int(0.25 * min(rx, ry)))
+    patch = cleaned[max(0, iy - r) : iy + r + 1, max(0, ix - r) : ix + r + 1].reshape(-1, 3)
+    ref = np.median(patch, axis=0)
+    before = spill(cleaned, head, ref, at, rx, ry)
+    if before <= SPILL_MAX:
+        return at, before, before
+    step = max(2.0, reach / 10)
+    best, best_spill = at, before
+    for dy in np.arange(-reach, reach + 1, step):
+        for dx in np.arange(-reach, reach + 1, step):
+            cand = (at[0] + float(dx), at[1] + float(dy))
+            sp = spill(cleaned, head, ref, cand, rx, ry)
+            if sp < best_spill - 0.02 or (
+                abs(sp - best_spill) <= 0.02 and math.hypot(dx, dy) < math.dist(best, at)
+            ):
+                best, best_spill = cand, sp
+    if best_spill > SPILL_MAX:  # nowhere better: the reference may itself be off (leave it)
+        return at, before, before
+    return best, before, best_spill
+
+
 def clean_face(
     rgb: np.ndarray,
     head: np.ndarray,
@@ -844,9 +934,19 @@ def clean_face(
     at = {s: (eyes[s]["cx"], eyes[s]["cy"]) if s in eyes else skel[s] for s in ("left", "right")}
     eye_dist = max(abs(at["left"][0] - at["right"][0]), 0.15 * row_w)
     drawn_eyes = [b for b in eyes.values() if not b.get("seeded")]
+    merged = solid_eye = False
+    look = None
+    if drawn_eyes and max(b["area"] for b in drawn_eyes) > 0:
+        e0 = max(drawn_eyes, key=lambda b: b["area"])
+        if "mask" in e0:
+            look = classify_eye(e0["mask"], luma[y0:y1, x0:x1], rgb[y0:y1, x0:x1])
     if drawn_eyes:
         e = max(drawn_eyes, key=lambda b: b["area"])
         drawn = e["h"] * 1.1 if e["h"] > 0.6 * e["w"] else e["w"] * 0.9  # open eye or closed arc
+        if drawn > EYE_MAX_SHARE * row_w:  # merged with a lash or a brow: not the eye's size
+            drawn, merged = EYE_FALLBACK_SHARE * row_w, True
+        if look and look["style"] == "solid" and look["h"] >= SOLID_MIN_SHARE * row_w:
+            drawn, solid_eye = float(look["h"]), True
     else:
         drawn = 0.45 * eye_dist
     eye_size = float(np.clip(drawn, 0.35 * eye_dist, 0.55 * eye_dist))
@@ -867,6 +967,22 @@ def clean_face(
         else:  # no mark to check it against: the rules' own guess stays
             how = "pixel" if math.dist(seed, (mx, my)) <= 0.15 * head_h else "seed_off"
         locator["mouth"] = {"seed": _xy(seed), "status": how}
+    placement: dict[str, Any] = {}
+    if sk.view != "front":
+        # A turned head's skin is a small part of the drawing, and its far eye sits by the
+        # outline: seat each feature where the face drawn on it spills least onto hair or the
+        # outline (the pixels are the check; no model needed, D-007's face is code-drawn).
+        reach = 0.2 * row_w
+        mouth_w = float(np.clip(mw, 0.3 * eye_dist, 0.8 * eye_dist))
+        for side in ("left", "right"):
+            at[side], was, now = seat_on_skin(
+                cleaned, head, at[side], 0.32 * eye_size, 0.5 * eye_size, reach
+            )
+            placement[f"{side[0]}_eye"] = {"spill": round(was, 2), "after": round(now, 2)}
+        (mx, my), was, now = seat_on_skin(
+            cleaned, head, (mx, my), 0.4 * mouth_w, 0.15 * mouth_w, 0.5 * reach
+        )
+        placement["mouth"] = {"spill": round(was, 2), "after": round(now, 2)}
     chosen = {"l_eye": at["left"], "r_eye": at["right"], "mouth": (mx, my)}
     if nose is not None:
         chosen["nose"] = (nose["cx"], nose["cy"])
@@ -875,12 +991,23 @@ def clean_face(
             part["off_head"] = round(math.dist(chosen[key], seeds[key]) / head_h, 2)
     outline = head & ~zone & (luma < DARK_LUMA)
     line = np.median(rgb[outline], axis=0) if outline.any() else np.array([70, 52, 48])
+    # A big drawn eye (a merged mark, a solid eye) gets lighter brows, lower and no wider than
+    # the eye: 0.95 eye heights up and 0.55 eye distances wide read as high and heavy on it.
+    light = merged or solid_eye
+    rise = 0.8 if light else 0.95
     anchors = {
-        "eyes": {"left": at["left"], "right": at["right"], "size": eye_size},
+        "eyes": {
+            "left": at["left"],
+            "right": at["right"],
+            "size": eye_size,
+            "look": look if solid_eye else None,
+        },
         "brows": {
-            "left": (at["left"][0], at["left"][1] - 0.95 * eye_size),
-            "right": (at["right"][0], at["right"][1] - 0.95 * eye_size),
-            "width": 0.55 * eye_dist,
+            "left": (at["left"][0], at["left"][1] - rise * eye_size),
+            "right": (at["right"][0], at["right"][1] - rise * eye_size),
+            "width": min(0.55 * eye_dist, 1.25 * eye_size) if light else 0.55 * eye_dist,
+            "rise": rise,
+            "weight": 0.09 if light else None,
         },
         "mouth": {"at": (mx, my), "width": float(np.clip(mw, 0.3 * eye_dist, 0.8 * eye_dist))},
         "line": "#{:02x}{:02x}{:02x}".format(*(int(v) for v in line)),
@@ -894,6 +1021,9 @@ def clean_face(
         "mouth_marks": len(mouth),
         "marks_painted_over": len(marks),
         "head_width_px": round(row_w, 1),
+        "eye_look": look,
+        "brow_rise": rise,
+        "placement": placement,
     }
     if seeds:
         notes["eyes_seeded"] = sorted(k for k, b in eyes.items() if b.get("seeded"))
@@ -998,7 +1128,9 @@ def add_caps(
 ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
     """Each part's final mask and pixels, with discs over the joints.
 
-    - Elbows and knees (one limb): both parts get the sheet's own pixels in a disc.
+    - Elbows and knees (one limb): both parts get the sheet's own pixels in a disc, less the
+      torso's and head's pixels (the far elbow sits under the scarf: a disc of scarf would ride
+      along with the arm).
     - Neck, shoulders and hips: only the part drawn *behind* gets a disc, painted from its own
       colours (the torso behind the head and arms, the thighs behind the torso). It is hidden
       at rest, and fills the gap when either part turns. A disc on the front part would
@@ -1471,6 +1603,18 @@ def _cut_view(
             "colors": {"line": anchors["line"], "iris": anchors["line"]},
         },
     }
+    face = view["face"]
+    if anchors["brows"]["weight"]:
+        face["brows"]["weight"] = anchors["brows"]["weight"]
+    if (look := anchors["eyes"]["look"]) is not None:  # a solid eye: a dark oval with a shine
+        eyes = face["eyes"]
+        eyes["style"] = "solid"
+        eyes["width_px"] = float(look["w"])
+        if look["highlight"] is not None:
+            eyes["highlight_px"] = look["highlight"]
+            eyes["highlight_r_px"] = max(1.0, look["highlight_r"])
+        eyes["color"] = look["color"]
+        face["colors"]["skin"] = _skin_colour(rgb, head, anchors)
     hung = hang_arms(folder, view)
     if bendable:
         add_bendable_limbs(
@@ -1530,6 +1674,18 @@ def _locator_report(
     return {"parts": parts}
 
 
+def _skin_colour(rgb: np.ndarray, head: np.ndarray, anchors: dict[str, Any]) -> str:
+    """The skin colour round the eyes (the pixels between the eyes and the mouth, painted over)."""
+    (lx, ly), (rx, ry) = anchors["eyes"]["left"], anchors["eyes"]["right"]
+    mx, my = anchors["mouth"]["at"]
+    r = max(3, int(0.12 * abs(lx - rx)))
+    ys, xs = np.mgrid[: head.shape[0], : head.shape[1]]
+    cx, cy = (lx + rx + mx) / 3, (ly + ry + my) / 3
+    near = head & ((xs - cx) ** 2 + (ys - cy) ** 2 <= (2 * r) ** 2)
+    c = np.median(rgb[near], axis=0) if near.any() else np.array([240, 214, 190])
+    return "#{:02x}{:02x}{:02x}".format(*(int(v) for v in c))
+
+
 def _match_face(front: _Cut, other: _Cut) -> None:
     """The other view's vector face takes the front's eye size, brow width and mouth width,
     scaled by head width. The eyes are part of who the character is: a redrawn view may draw
@@ -1538,10 +1694,31 @@ def _match_face(front: _Cut, other: _Cut) -> None:
     f, o = front.view["face"], other.view["face"]
     size = round(f["eyes"]["size_px"] * scale, 1)
     o["eyes"]["size_px"] = size
+    rise = front.report["face"].get("brow_rise", 0.95)
     for side in ("left", "right"):
         x, y = o["eyes"][f"{side}_px"]
-        o["brows"][f"{side}_px"] = [x, round(y - 0.95 * size, 1)]
+        o["brows"][f"{side}_px"] = [x, round(y - rise * size, 1)]
     o["brows"]["width_px"] = round(f["brows"]["width_px"] * scale, 1)
+    o["brows"].pop("weight", None)  # the brow weight is the character's, like the eye size
+    if "weight" in f["brows"]:
+        o["brows"]["weight"] = f["brows"]["weight"]
+    for key in (
+        "style",
+        "color",
+    ):  # the eye style is the character's, whichever side it is seen from
+        o["eyes"].pop(key, None)
+    for key in ("width_px", "highlight_px", "highlight_r_px"):
+        o["eyes"].pop(key, None)
+        if key in f["eyes"]:
+            v = f["eyes"][key]
+            o["eyes"][key] = (
+                [round(a * scale, 1) for a in v] if isinstance(v, list) else round(v * scale, 1)
+            )
+    for key in ("style", "color"):
+        if key in f["eyes"]:
+            o["eyes"][key] = f["eyes"][key]
+    if "skin" in f["colors"]:
+        o["colors"]["skin"] = f["colors"]["skin"]
     o["mouth"]["width_px"] = round(f["mouth"]["width_px"] * scale, 1)
 
 
@@ -1653,6 +1830,9 @@ def build_puppet(
         for sk in skeletons
     }
     _match_face(cuts["front"], cuts["three_quarter"])
+    consistency = compare_views(img, {v: c.for_consistency for v, c in cuts.items()})
+    if (turn := consistency["turn"]["fraction"]) is not None:
+        cuts["three_quarter"].view["face"]["turn"] = turn  # the vector face foreshortens by it
     rig = {
         "schema_version": 1,
         "id": character_id,
@@ -1671,7 +1851,7 @@ def build_puppet(
         "views": {
             view: {"silhouette": silhouettes[view], **cut.report} for view, cut in cuts.items()
         },
-        "consistency": compare_views(img, {v: c.for_consistency for v, c in cuts.items()}),
+        "consistency": consistency,
     }
     (folder / "build" / "report.json").write_text(json.dumps(report, indent=1) + "\n")
     return Built(rig, rig_path, report)
