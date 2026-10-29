@@ -1485,3 +1485,24 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   665 tests passed.
 - **Not done:** no ear-and-tail test through a real `render_shot` call.
 
+### D-075: Cut defects round 2: two opt-in fixes, Kit evidence shown (2026-10-29)
+- **Two opt-in fixes (`526fc6a`; defaults unchanged, Kit's default build hashes identically; 667 tests passed,
+  each new test fails without its fix):**
+  - `reclaim_orphans=True`, wider: loose torso fragments lying inside a limb (feet, a foot sole beside the ankle,
+    far-hand cuffs of 560-1900 px, slivers of 30-150 px) go to the limb: corridor 1.4 radii (was 1.2), minimum 30 px
+    (was 100), end limbs get the 2.2-radius foot and hand spread.
+  - `underlay=True` (new): `add_caps` also gives the torso the head pixels within 3% of the figure's height of the
+    body, so hair that overhangs the shoulders leaves no thin gap when the head nods or turns (about 40% of Mia's
+    seams were at the neck).
+- **Pose-sweep defects, scratch rebuilds, before to after with both flags on:** Pim 229 to 72 (detached 139 to 3),
+  Mia 98 to 36, Kit 64 to 46 (40 seams, 6 holes), Bo 26 to 16, Bolt 402 to 399. The session's baselines for Pim
+  (229) and Bolt (402) differ from the orchestrator's fresh run (160, 59); the cause is not known (Bolt's scratch
+  copy probably used another candidate's rig), so Bolt's sweep needs a separate look.
+- **Kit with the flags on:** the front and three-quarter torso (larger), the three-quarter left shin (larger),
+  the front right shin (31 px) and the front left thigh (42 px) change. Before/after sheet
+  `renders/cast-review/kit-before-after.png` (rest, wave, sneak, both views): at that size the two rows look the
+  same, so it shows no regression but does not show the improvement; the counts do. Every other character's parts
+  change too with the flags on (Pim's by up to about 1300 px per part).
+- **Open:** the defaults are still off pending the owner's OK; Mia's remaining shoulder and hand seams and holes;
+  Bolt.
+
