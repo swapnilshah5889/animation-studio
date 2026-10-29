@@ -573,6 +573,27 @@ def test_the_underlay_reaches_under_hair_that_overhangs_the_body() -> None:
     assert np.array_equal(under["head"], plain["head"])  # the front part is unchanged
 
 
+def test_the_elbow_disc_leaves_out_the_torso_pixels_under_it() -> None:
+    """Kit's far elbow sits under the scarf: a disc of scarf on the forearm rode along with the
+    arm as a green patch."""
+    bones = rig_bones(FRONT)
+    fits = {n: {"radius_px": 20.0} for n in build.LIMBS}
+    shape = (CANVAS[1], CANVAS[0])
+    ex, ey = (int(v) for v in bones["forearm_l"]["joint_px"])
+    elbow = np.zeros(shape, bool)
+    elbow[ey - 40 : ey + 40, ex - 40 : ex + 40] = True
+    scarf = np.zeros(shape, bool)
+    scarf[ey - 40 : ey + 40, ex - 40 : ex] = True  # the torso owns the left half of the disc
+    parts = {n: np.zeros(shape, bool) for n in (*build.LIMBS, "head", "torso")}
+    parts["torso"] = scarf
+    parts["forearm_l"] = elbow & ~scarf
+    rgb = np.full((*shape, 3), 128.0, dtype="float32")
+    masks, _ = add_caps(rgb, elbow, parts, bones, fits, 1000.0)
+    assert masks["forearm_l"][ey, ex + 10]
+    assert not masks["forearm_l"][ey, ex - 10]  # scarf stays on the torso
+    assert not masks["upper_arm_l"][ey, ex - 10]
+
+
 def test_sam_may_add_a_pale_shirt_the_key_lost_but_not_miss_or_swamp_the_figure() -> None:
     key = np.zeros((100, 100), bool)
     key[10:90, 40:60] = True  # the figure the colour key found: 1600 px

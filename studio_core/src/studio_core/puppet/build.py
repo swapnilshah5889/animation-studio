@@ -1017,8 +1017,13 @@ def add_caps(
         joint = bone["joint_px"]
         if child != "head" and parent != "torso":
             r = max(fits[child]["radius_px"], fits[parent]["radius_px"])
+            disc = _disc(mask.shape, joint, r) & mask
+            if child.startswith("forearm"):  # not the scarf that lies over the far elbow
+                for body in ("torso", "head"):
+                    if body in parts:
+                        disc &= ~parts[body]
             for name in (parent, child):
-                masks[name] |= _disc(mask.shape, joint, r) & mask
+                masks[name] |= disc
             continue
         behind = min((parent, child), key=rank.__getitem__)
         r = 0.09 * height_px if child == "head" else 1.1 * fits[child]["radius_px"]
