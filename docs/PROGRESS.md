@@ -12,6 +12,20 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-29: owner feedback on Kit's reel: expressions perfect, three-quarter not good
+
+Diagnosis from Kit's contact sheet: the code-drawn face has front-view geometry on a turned head (two equal
+round eyes read like spectacles, the far eye is a copy placed from the skeleton, no foreshortening of
+brows, nose or mouth); a light green patch on Kit's tail in three-quarter (probably scarf pixels cut into the
+tail part); the three-quarter body is a klein redraw (flatter style, shifted proportions); the drawn hands
+are not tuned for three-quarter. Queued for when the review reel finishes (so the code under the running
+render does not change): (1) a three-quarter face with head-turn foreshortening (far eye and brow narrower,
+pupils toward the facing side, nose and mouth toward the snout, turn from the measured turn; the front view
+unchanged); (2) the three-quarter cut leftovers, starting with the tail patch; later redraw consistency and
+three-quarter hands.
+
+---
+
 ## 2026-10-29: cut fixes on by default (D-076); sweep 393 to 116
 
 Round 2's two fixes are the defaults; the cast keeps the pass bar (4 of 5) and the pose sweep finds 116
