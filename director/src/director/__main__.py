@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import subprocess
 import sys
 
 from director import runner
@@ -43,6 +44,9 @@ def build_deps(slug: str, hub: McpHub, args: argparse.Namespace) -> Deps:
         unload=ollama.unload,
         comfy_state=comfy_state_via_http,
         comfy_free=Comfy().free_memory,
+        comfy_stop=lambda: subprocess.run(
+            [str(REPO_ROOT / "scripts" / "comfy_server.sh"), "--stop"], check=False
+        ),
     )
     log = EventLog(FILMS / slug / "director" / "log.jsonl", echo=True)
     return Deps(OllamaChat(ollama), hub, guard, on_event=log, auto=args.auto, quality=args.quality)

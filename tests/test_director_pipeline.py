@@ -225,6 +225,7 @@ def test_memory_guard_order_and_comfyui_conflict():
         async with guard.for_stage(stage):
             log.append(f"in {stage}")
 
+    state["comfy"] = "idle"
     asyncio.run(enter("characters"))  # art stage: the chat model goes first
     asyncio.run(enter("shots"))  # LLM stage: ComfyUI is freed first
     assert log == ["unload qwen3:14b", "in characters", "free comfy", "in shots"]
@@ -259,3 +260,30 @@ def test_the_story_plan_gets_one_retry_with_the_problems_listed(tmp_path):
     assert w.run() == "awaiting_approval:story"
     assert "scene seconds add up to 38" in seen[1][-1]
     assert w.chat.calls[1]["think"] is True and w.chat.calls[1]["format"]["required"][0] == "title"
+
+
+def test_the_audio_stage_stops_an_idle_comfyui_but_never_a_busy_one():
+    state = {"comfy": "idle"}
+    stopped = []
+
+    def stop():
+        stopped.append(1)
+        state["comfy"] = "down"
+
+    guard = MemoryGuard(
+        "m", lambda: [], lambda n: None, lambda: state["comfy"], lambda: None, comfy_stop=stop
+    )
+
+    async def enter():
+        async with guard.for_stage("audio"):
+            pass
+
+    asyncio.run(enter())
+    assert stopped == [1] and state["comfy"] == "down"
+    state["comfy"] = "busy"
+    with pytest.raises(MemoryConflict, match="busy"):
+        asyncio.run(enter())
+    state["comfy"] = "idle"
+    stuck = MemoryGuard("m", lambda: [], lambda n: None, lambda: state["comfy"], lambda: None)
+    with pytest.raises(MemoryConflict, match="still running"):
+        asyncio.run(stuck.__class__.for_stage(stuck, "audio").__aenter__())

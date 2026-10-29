@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 LLM_STAGES = ("story", "shots")
+# `compose` (the music model) refuses while ComfyUI is running, so this stage needs it stopped.
+NO_COMFY_STAGES = ("audio",)
 
 
 class MemoryConflict(RuntimeError):
@@ -27,6 +29,7 @@ class MemoryGuard:
     unload: Callable[[str], None]  # unload one and wait until it is gone
     comfy_state: Callable[[], Literal["down", "idle", "busy"]]
     comfy_free: Callable[[], None]
+    comfy_stop: Callable[[], None] = lambda: None
 
     def release_llm(self) -> None:
         """Unload the chat model (and any other Ollama model) and verify it is gone."""
@@ -43,9 +46,26 @@ class MemoryGuard:
         if state == "idle":
             self.comfy_free()
 
+    def stop_comfy(self) -> None:
+        """Stop an idle ComfyUI server (never one that is working) and check it is gone."""
+        state = self.comfy_state()
+        if state == "busy":
+            raise MemoryConflict("ComfyUI is busy with an art job; the audio stage must wait")
+        if state == "idle":
+            self.comfy_stop()
+            if self.comfy_state() != "down":
+                raise MemoryConflict(
+                    "ComfyUI is still running; stop it with scripts/comfy_server.sh --stop"
+                )
+
     @asynccontextmanager
     async def for_stage(self, stage: str):
-        (self.claim_llm if stage in LLM_STAGES else self.release_llm)()
+        if stage in LLM_STAGES:
+            self.claim_llm()
+        else:
+            self.release_llm()
+            if stage in NO_COMFY_STAGES:
+                self.stop_comfy()
         yield
 
 
