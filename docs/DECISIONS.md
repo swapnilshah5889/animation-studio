@@ -1575,3 +1575,40 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   Bolt 23, Bo 16, Pim 6). The sweep compares poses against rest, so it cannot see parts that are transparent at rest
   (Bolt's panels): fidelity to the sheet needs a different check. 689 tests passed.
 
+### D-079: Step 5 fast path: edit_mcp, qa_mcp and the director design (2026-10-29)
+- **`edit_mcp` (`a725e9b`; workspace member `edit-mcp`, `.mcp.json`, `scripts/inspector_check.py`):**
+  `create_film` (through `Film.create`, refuses an existing film), `describe_edit`, `assemble` (writes
+  `edit/edit.json`, schema `schemas/edit.schema.json`, and the MLT project `edit/film.mlt`; title cards drawn with
+  Pillow on a cream backdrop and encoded by ffmpeg; joins `cut` or `crossfade`) and `render_film` (melt, progress
+  notes, then ffprobe and loudness checks; `preview` 640x360, `final` 1920x1080). melt was chosen because it worked
+  first time (benchmarks: melt 8.8 s against ffmpeg 9.4 s for a 60 s encode); an ffmpeg xfade version was not timed.
+  Real film from three existing shots plus a title card and an end card: 29.5 s with four 0.5 s crossfades,
+  rendered in 7.4 s at 1080p, 29.504 s, -14.3 LUFS, video and audio present; no frame was viewed. **Only plain MLT is
+  written; Kdenlive is not installed on this Mac, so opening the project in Kdenlive is untested and there is no
+  `.kdenlive`.** Not done: fade in and out and other transitions, setting `stages.edit` in `film.json`.
+- **`qa_mcp` (`63e2791`; workspace member `qa-mcp`):** `check_frame(film, shot_id, time_s)`: code checks first and
+  always (a black frame; per character, rendered alone on a magenta backdrop: missing, cropped, holes, seams,
+  detached pieces), then one `qwen3-vl:8b-instruct` call (temperature 0, think off, JSON schema) returning
+  `matches`, `problems` and a description; `ok` needs both layers clean; the model is unloaded afterwards and the call is
+  refused while ComfyUI is busy. `check_safety(text?, film?, shot_id?, time_s?)`: the word blocklist, then a model
+  judgement against a seven-category rubric for ages 3-8; any doubt gives `ok: false, needs_human: true`.
+  `check_film(film)`: up to 3 key frames per shot (from the action times, blink and idle_breathe ignored) plus every
+  dialogue line and the premise, sequentially with one model. Measured: `check_frame` 24-28 s in all (the model call
+  20 s cold and 9.4 s warm, more than the 5-7 s in benchmarks.md), a safety call 3.6-6.7 s, 5.2 GB, gone after.
+  Trial on a copy of `step3-demo`: 3 good frames ok; a deliberately broken frame (a character moved off-frame) was
+  caught by the code check, the model missed it (it said the character was present and skipped the other one), which
+  is why the code checks are the facts and the model only advises; 5 of 5 sentences judged right (3 fine, a mild fox
+  hit refused as violence, a ghost in a dark cellar as fear). A false alarm from the sweep rules on a thin slot between
+  Pip's legs was fixed by ignoring holes more than 6 times longer than wide and raising the seam minimum to 40 px
+  (a heuristic that could miss a real thin gap). Not done: `check_film` against the real model (fake-model test only),
+  lip-sync and temporal checks, a prompt revision for the model's confusion cases; the premise check needs a `premise`
+  key in `film.json`. `Ollama.generate` gained an optional `format` argument.
+- **Director design (`6bb4f01`, `aa97544`, `docs/steps/STEP-5-director-design.md`, 357 lines, docs only):** stage state
+  machine with `films/<slug>/director/state.json`, the Ollama tool-calling loop, planning schemas, memory between
+  stages, the `director/` skeleton marking the loop core (`loop.py`, `dispatch.py`, `runner.py`) apart from plumbing,
+  a minimal craft library, and the milestone 2 plan with a fixed test story. Open owner questions: who writes the
+  loop core; story length (15 s then 60 s, or 60 s straight); approval granularity (four stops or fewer);
+  code-driven art stages as the fast path (narrows the brief's "director drives all servers"); and the small
+  differences from the brief (a `director/` folder, `qa` as a seventh stage, `read_craft` by name first, a separate
+  shot-plan schema).
+
