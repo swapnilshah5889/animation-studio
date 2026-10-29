@@ -37,6 +37,10 @@ BG_TOLERANCE = 30.0  # RGB distance still counted as background
 FG_THRESHOLD = 45.0  # RGB distance from the background that counts as figure
 BG_HOLE = 10.0  # an enclosed region this close to the background (median) is background:
 # gaps between legs sit 5-7 away (Bo), white clothes 13-15 (Pim's shirt and sleeves)
+BG_PALE = 5.0  # between this and BG_HOLE a region is background only if it is thin: a gap
+# between touching legs is a sliver, a white panel (Bolt's head sides, 6-7 from the background)
+# survives an erosion of about 1% of the figure's height
+THICK_SHARE = 0.011
 SCALE = 4  # components are found on a 1/4-size mask (fast, plenty for figure-sized blobs)
 MIN_SHAPE = 0.0005  # share of the image; smaller pieces are specks (about 23x23 px at 1344x768)
 
@@ -112,6 +116,15 @@ def _background_coloured(pixels: np.ndarray, bg: np.ndarray) -> bool:
     return float(np.median(np.linalg.norm(pixels - bg, axis=1))) < BG_HOLE
 
 
+def _survives_erosion(region: np.ndarray, steps: int) -> bool:
+    """Whether a boolean region still has a pixel after `steps` 3x3 erosions (it is over
+    2 * steps pixels thick somewhere)."""
+    pil = Image.fromarray((region * 255).astype("uint8"))
+    for _ in range(steps):
+        pil = pil.filter(ImageFilter.MinFilter(3))
+    return bool(np.asarray(pil).any())
+
+
 def fill_holes(
     mask: np.ndarray, img: np.ndarray | None = None, bg: np.ndarray | None = None
 ) -> np.ndarray:
@@ -120,16 +133,24 @@ def fill_holes(
     a region of the background's own colour that surrounds no part of the figure stays open:
     that is background seen through the figure, e.g. between legs whose feet touch (under 10
     from the background on Bo, task 4.9). White clothes are figure: Pim's shirt and
-    sleeves sit 13-15 away. Pale parts of a figure stay filled: a cream face or
-    a white chest sits 30 or more from the background (Kit), and a face as pale as the
-    background still surrounds its eyes."""
+    sleeves sit 13-15 away. A region 5-10 from the background that is fat (it survives an
+    erosion of about 1% of the figure's height) is figure too: Bolt's white head panels, 6-7
+    away and enclosed by their outline, versus the thin gaps between touching legs. Pale parts
+    of a figure stay filled: a cream face or a white chest sits 30 or more from the background
+    (Kit), and a face as pale as the background still surrounds its eyes."""
     outside = np.zeros_like(mask)
+    rows = np.nonzero(mask.any(axis=1))[0]
+    steps = max(1, round(THICK_SHARE * (rows[-1] - rows[0] + 1))) if len(rows) else 1
     for region in components(~mask):
         if region[0].any() or region[-1].any() or region[:, 0].any() or region[:, -1].any():
             outside |= region  # touches the border
             continue
         if img is None or bg is None or not _background_coloured(img[region], bg):
             continue
+        if np.median(np.linalg.norm(img[region] - bg, axis=1)) >= BG_PALE and _survives_erosion(
+            region, steps
+        ):
+            continue  # a fat pale region: a panel, not a gap
         if not (fill_holes(region) & mask).any():  # it surrounds nothing (no eyes, no marks)
             outside |= region  # background seen through the figure
     return ~outside

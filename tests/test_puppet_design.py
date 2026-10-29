@@ -105,6 +105,22 @@ def test_white_clothes_just_off_the_background_are_figure() -> None:
     assert fill_holes(mask, img, bg)[60, 50]
 
 
+def test_a_fat_pale_panel_is_figure_and_a_thin_gap_of_the_same_colour_is_not() -> None:
+    """Bolt's head has white side panels 6-7 from the near-white background, enclosed by their
+    outline: figure. A sliver of the same colour between touching legs is still a gap."""
+    bg = np.array([250, 251, 253], dtype="float32")
+    img = np.full((400, 300, 3), bg, dtype="float32")
+    ink = (60, 40, 90)
+    img[20:380, 40:260] = ink  # the figure, drawn as an outline...
+    img[30:370, 50:250] = (120, 220, 250)  # ...filled in blue
+    img[60:200, 55:90] = bg + 3  # a white side panel: fat, 5 from the background
+    img[220:360, 148:154] = bg + 3  # a sliver between legs: 6 px wide
+    mask = silhouette(img, bg)
+    filled = fill_holes(mask, img, bg)
+    assert filled[130, 70] and not filled[300, 150]
+    assert fill_holes(mask)[300, 150]  # without the colours, everything encloses
+
+
 def test_a_busy_background_is_reported() -> None:
     img = np.asarray(sheet(FRONT, SIDE)).copy()
     noise = np.random.default_rng(1).integers(0, 255, img.shape, dtype=np.uint8)
