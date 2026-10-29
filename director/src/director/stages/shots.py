@@ -22,7 +22,13 @@ from director.context import PauseForApproval, StageCtx, StageFailed, capabiliti
 from director.dispatch import CallContext
 from director.hub import ProgressFn, ToolDispatcher, ToolResult
 from director.loop import run_conversation
-from director.plans import check_shotplan, norm, plan_json, shotplan_schema
+from director.plans import (
+    check_shotplan,
+    drop_empty_lines,
+    norm,
+    plan_json,
+    shotplan_schema,
+)
 from director.review import write_review
 from director.state import now
 from director.toolview import ToolView
@@ -58,6 +64,7 @@ async def make_plan(ctx: StageCtx) -> dict[str, Any]:
 
     def check(plan: dict[str, Any]) -> list[str]:
         if isinstance(plan.get("shots"), list):
+            drop_empty_lines(plan)
             fit_lines(plan, lines, scene_of)
         return check_shotplan(plan, story, ctx.state.target_seconds)
 

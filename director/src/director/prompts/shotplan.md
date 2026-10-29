@@ -6,7 +6,8 @@ Write the shot list as JSON for the schema you were given. Rules:
 - Shot `seconds` are 2 to 8 and, over the whole film, add up to the target length. A shot with a
   line must be long enough for the line (about 0.5 s per word, plus a second).
 - Every line of the story goes in exactly one shot, copied word for word, spoken by a character who is
-  in that shot.
+  in that shot. Each shot has a `line` field: the line it carries, or who "" and text "" when nobody
+  speaks. A shot carries at most one line, so a scene with two lines needs at least two shots.
 - For each character in a shot: where they stand (left, center, right), what they do (one motion
   from the schema), and their expression. `moves_to` only when the character walks across the frame.
 - Characters get blinking and breathing automatically: never plan those.

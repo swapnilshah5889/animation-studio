@@ -181,15 +181,17 @@ def shotplan_schema(story: dict[str, Any], caps: Capabilities) -> dict[str, Any]
             "expression": {"enum": caps.expressions or ["neutral"]},
         },
     }
+    # `line` is REQUIRED (empty who and text = nobody speaks): a 14B model leaves an optional field
+    # out, and then the story's lines never get a shot (seen live, twice).
     line = {
         "type": "object",
         "required": ["who", "text"],
         "additionalProperties": False,
-        "properties": {"who": {"enum": cast}, "text": {"type": "string"}},
+        "properties": {"who": {"enum": [*cast, ""]}, "text": {"type": "string"}},
     }
     shot = {
         "type": "object",
-        "required": ["id", "scene", "seconds", "beat", "characters", "camera"],
+        "required": ["id", "scene", "seconds", "beat", "characters", "line", "camera"],
         "additionalProperties": False,
         "properties": {
             "id": {"type": "string", "pattern": "^s[0-9]{2}_sh[0-9]{2}$"},
@@ -208,6 +210,13 @@ def shotplan_schema(story: dict[str, Any], caps: Capabilities) -> dict[str, Any]
         "additionalProperties": False,
         "properties": {"shots": {"type": "array", "items": shot, "minItems": 1, "maxItems": 16}},
     }
+
+
+def drop_empty_lines(plan: dict[str, Any]) -> None:
+    """A shot with an empty line (who and text "") is a shot where nobody speaks."""
+    for sh in plan["shots"]:
+        if "line" in sh and not (sh["line"].get("text") or "").strip():
+            del sh["line"]
 
 
 def check_shotplan(plan: dict[str, Any], story: dict[str, Any], target: int) -> list[str]:

@@ -17,6 +17,7 @@ from director.plans import (
     Capabilities,
     check_shotplan,
     check_story,
+    drop_empty_lines,
     shotplan_schema,
     story_schema,
     words,
@@ -117,6 +118,17 @@ def test_a_good_shotplan_has_no_problems_and_bad_ones_are_named():
     short["shots"] = short["shots"][:2]
     assert any("add up to" in p for p in check_shotplan(short, STORY, 15))
     assert any("scene s02 has no shots" in p for p in check_shotplan(short, STORY, 15))
+
+
+def test_the_line_is_required_and_an_empty_one_means_nobody_speaks():
+    schema = shotplan_schema(STORY, CAPS)
+    shot_schema = schema["properties"]["shots"]["items"]
+    assert "line" in shot_schema["required"]
+    assert shot_schema["properties"]["line"]["properties"]["who"]["enum"] == ["kit", "bo", ""]
+    plan = copy.deepcopy(SHOTPLAN)
+    plan["shots"][0]["line"] = {"who": "", "text": ""}
+    drop_empty_lines(plan)
+    assert "line" not in plan["shots"][0] and plan["shots"][1]["line"]["who"] == "kit"
 
 
 def test_fit_lines_extends_a_shot_to_outlast_its_recording():
