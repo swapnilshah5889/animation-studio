@@ -25,6 +25,7 @@ EXAMPLES = {
     "sfx_library": "schemas/sfx_library.json",
     "design": "schemas/design_kit.json",
     "plates": "schemas/plates_meadow.json",
+    "edit": "schemas/edit_kite_day.json",
 }
 
 

@@ -35,6 +35,7 @@ SCHEMAS = (
     "sfx_library",
     "design",
     "plates",
+    "edit",
 )
 FILE_KINDS = {
     "rig.json": "rig",
@@ -46,6 +47,7 @@ FILE_KINDS = {
     "manifest.json": "sfx_library",
     "candidates.json": "design",
     "plates.json": "plates",
+    "edit.json": "edit",
 }
 # Files named by id (l001.json) are recognized by their folder instead.
 FOLDER_KINDS = {"dialogue": "line", "lipsync": "lipsync", "music": "music"}

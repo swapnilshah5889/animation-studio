@@ -26,6 +26,15 @@
         "--quiet",
         "comfy-mcp"
       ]
+    },
+    "edit_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "edit-mcp"
+      ]
     }
   }
 }

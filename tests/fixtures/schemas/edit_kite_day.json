@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "fps": 24,
+  "width": 1920,
+  "height": 1080,
+  "clips": [
+    {"kind": "title", "text": "Kite Day", "file": "edit/titles/t01.mp4", "duration_s": 3.0},
+    {"kind": "shot", "shot": "s01_sh01", "file": "shots/s01_sh01/shot.mp4", "duration_s": 8.0,
+     "transition_in": {"type": "crossfade", "duration_s": 0.5}}
+  ]
+}

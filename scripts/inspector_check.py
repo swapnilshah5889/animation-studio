@@ -146,7 +146,7 @@ def main() -> int:
         print(f"{mark} {server[:6]} {tool:24} {kind:8} {summary(result)}")
         return result.get("structuredContent") or {}
 
-    for server, expected in (("synfig_mcp", 16), ("audio_mcp", 7), ("comfy_mcp", 9)):
+    for server, expected in (("synfig_mcp", 16), ("audio_mcp", 7), ("comfy_mcp", 9), ("edit_mcp", 4)):
         tools = call(None, {}, server).get("tools", [])
         results["ok" if len(tools) == expected else "bad"] += 1
         print(f"tools/list {server}: {len(tools)} tools: {', '.join(t['name'] for t in tools)}")
@@ -170,6 +170,11 @@ def main() -> int:
     check("set_music", {**SHOT, "cue_id": "m01", "volume": 0.4})
     check("apply_lipsync", {**PIP, "line_id": line_id, "start_s": 0.5})
     check("preview_mix", SHOT, server=audio)
+    edit = "edit_mcp"
+    check("describe_edit", {"film": "no-such-film"}, True, edit)
+    check("assemble", {"film": "no-such-film", "shots": ["s01_sh01"]}, True, edit)
+    check("create_film", {"film": "Bad Name", "title": "x"}, True, edit)
+    check("render_film", {"film": "no-such-film"}, True, edit)
     check("speak", {**PIP_FILM, "lines": [{"text": "What the hell"}]}, True, audio)
     check(
         "compose", {"film": FILM, "cue_id": "m02", "mood": "spooky", "duration_s": 4}, True, audio
