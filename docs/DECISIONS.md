@@ -1543,3 +1543,35 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   arms in `jump` with thin stretched sleeves, stringy forearms in `shrug` and `talk_gesture`, legs splayed in the
   walk with feet that look disconnected, and `sneak`, `nod`, `bow`, `look_around` nearly invisible at thumbnail size.
 
+### D-078: Face fix and cut round 3 (2026-10-29)
+- **Face (`4bda1f0`):** Mia's bug-eyed look was not a missing eye style: her eyes have a white sclera with a big brown
+  iris. The eye mark merged with her lash and brow and measured 123 px tall on a 396 px head, so the cut sized the
+  eye about 1.7 times too big; a merged-mark rule falls back to 0.14 of the head width (her front eye 90.8 to 57.8 px),
+  and the brows are lighter, lower and no wider than the eye. Optional schema fields: `face.turn`, `eyes.style`
+  (`sclera` default, `solid` built and tested, no character uses it), `eyes.width_px`, `eyes.highlight_px`,
+  `eyes.highlight_r_px`, `eyes.color`, `brows.weight`, `colors.skin`. Three-quarter face: far eye and brow 0.75 to 0.55
+  of the near ones by turn, pupils toward the facing side, mouth shorter and toward the snout (no nose layer exists);
+  placement uses a pixel spill check, not the locator (it moved Mia's far eye about 7 px). Kit, Bo and Pim front face
+  blocks are byte-identical (their three-quarter blocks gain only `turn`). 14 new tests, 6 fail with the old
+  `face.py`. Still wrong: Mia's front mouth sits left of centre (her blush marks pull it), blush dots are not painted
+  out, her far eye is close to the hair edge in three-quarter; the final before/after sheet was not looked at
+  (`renders/face/face-before-after.png`).
+- **Pale panels (`f176a3e`):** `fill_holes` treated every enclosed region within 10 of the background as a gap; Bolt's
+  white panels (6-7 away, outlined) and most of his white limbs fell under that. A region 5-10 from the background
+  that survives an erosion of about 1.1% of the figure's height now counts as figure; thin slivers and anything
+  closer than 5 stay gaps (calibrated on the five sheets: Bolt's panels and limbs are 6.2-9.8 away and 3-5 px thick at
+  quarter scale, real gaps 0-4.5 away). Bolt's front parts grew by 6% to 431%; Kit, Bo, Pim, Mia part images are
+  byte-identical. Not fixed: Bolt's white shoes (about 2 away, same as real gaps), a small magenta rectangle at the
+  chin of `head.png`, and white shapes with open outlines.
+- **Kit's green patch (`be1ca95`):** not the tail: the three-quarter `forearm_l` carried about 3,200 scarf pixels
+  because the elbow disc copies the sheet's pixels. The forearm elbow disc now excludes torso and head pixels
+  (knees unchanged: it also changed Kit's front legs); only the three-quarter `forearm_l` changed (Kit, Bo, Mia, Bolt).
+- **Correction to D-077:** the 4B options do not raise defects. The reel compared a SAM-built default with a
+  no-SAM-built options variant. On a no-SAM baseline (Kit 46, Bo 16, Pim 72, Mia 36, Bolt 337) each option moves the
+  count by about 10 or less (bendable: Kit -7, Bo +2, Pim +1, Mia +7; secondary: Kit -1; hands: Kit +1, Mia +8, Bolt
+  -10). No option became a default.
+- **After a full SAM rebuild of the cast:** pass bar still 4 of 5 (Bolt misses on three-quarter `shin_l`; turns Kit 1.08,
+  Bo 1.14, Pim 0.57, Mia 0.78, Bolt 0.79); pose sweep 116 in total, identical to before these fixes (Kit 44, Mia 27,
+  Bolt 23, Bo 16, Pim 6). The sweep compares poses against rest, so it cannot see parts that are transparent at rest
+  (Bolt's panels): fidelity to the sheet needs a different check. 689 tests passed.
+

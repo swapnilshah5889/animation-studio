@@ -12,6 +12,14 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-29: face fix, pale panels and Kit's patch done (D-078); cast bar 4 of 5, sweep 116
+
+Next: the owner chooses the fast path to a first film (Step 5: `edit_mcp`, create-film tool, director), then
+returns to refinement (remaining 4B, OpenToonz, evals, training, the generative hidden-area spike, a
+sheet-fidelity check for parts that are transparent at rest).
+
+---
+
 ## 2026-10-29: owner feedback on Kit's reel: expressions perfect, three-quarter not good
 
 Diagnosis from Kit's contact sheet: the code-drawn face has front-view geometry on a turned head (two equal
