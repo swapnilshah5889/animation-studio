@@ -24,6 +24,8 @@ from director.context import Deps
 from director.hub import McpHub
 from director.log import EventLog
 from director.memory import MemoryGuard, comfy_state_via_http
+from director.stubs import StubbedHub
+from director.stubs import handlers as stub_handlers
 from studio_core.config import REPO_ROOT
 from studio_core.ollama import Ollama
 
@@ -102,6 +104,9 @@ async def run(args: argparse.Namespace) -> int:
         if args.cmd == "retry":
             runner.retry(state, film, args.stage)
         deps = build_deps(slug, hub, args)
+        if args.dry_run:  # real model and cheap tools; slow tools replaced by stand-ins (stubs.py)
+            template = FILMS / "step4-proof" / "audio" / "music" / "m01"
+            deps.hub = StubbedHub(hub, stub_handlers(FILMS, template))
         outcome = await runner.run_film(slug, deps, FILMS)
         print(f"\n=> {outcome}")
         show_status(slug)
@@ -132,6 +137,7 @@ def main(argv: list[str] | None = None) -> int:
             "--auto", action="store_true", help="approve every checkpoint automatically"
         )
         sp.add_argument("--quality", choices=["preview", "final"], default="final")
+        sp.add_argument("--dry-run", action="store_true", help="stub the slow tools (stubs.py)")
     sub.choices["retry"].add_argument("--stage", choices=STAGES)
     for name in ("approve", "revise"):
         sp = sub.add_parser(name)

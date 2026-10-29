@@ -48,6 +48,7 @@ def test_a_good_story_has_no_problems():
     ("mutate", "expect"),
     [
         (lambda s: s["scenes"][0].update(seconds=20), "add up to 28"),
+        (lambda s: s["scenes"][0].update(id="s15"), "scene ids must be ['s01', 's02']"),
         (lambda s: s["scenes"][0].update(place="moon"), "place 'moon' is not in places"),
         (
             lambda s: s["scenes"][0].update(characters=["kit", "ghost"]),

@@ -130,6 +130,9 @@ def check_story(
             f"scene seconds add up to {total} but the film must be about {target} s "
             f"(within {round(DURATION_TOLERANCE * 100)}%). Change the scene seconds."
         )
+    want = [f"s{i:02d}" for i in range(1, len(scenes) + 1)]
+    if [s["id"] for s in scenes] != want:
+        out.append(f"scene ids must be {want} in that order, got {[s['id'] for s in scenes]}.")
     for s in scenes:
         if s["place"] not in places:
             out.append(f"scene {s['id']}: place {s['place']!r} is not in places {places}.")
