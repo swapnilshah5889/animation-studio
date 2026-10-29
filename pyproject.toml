@@ -6,7 +6,7 @@ name = "animation-studio"
 version = "0.0.0"
 description = "Fully local, AI-native 2D animation studio (workspace root)"
 requires-python = "==3.12.*"
-dependencies = ["studio-core", "synfig-mcp", "audio-mcp", "comfy-mcp", "qa-mcp", "edit-mcp"]
+dependencies = ["studio-core", "synfig-mcp", "audio-mcp", "comfy-mcp", "qa-mcp", "edit-mcp", "director"]
 
 [dependency-groups]
 dev = ["ruff>=0.13", "pytest>=8.4"]
@@ -15,7 +15,7 @@ dev = ["ruff>=0.13", "pytest>=8.4"]
 package = false
 
 [tool.uv.workspace]
-members = ["studio_core", "mcp/synfig_mcp", "mcp/audio_mcp", "mcp/comfy_mcp", "mcp/qa_mcp", "mcp/edit_mcp"]
+members = ["studio_core", "mcp/synfig_mcp", "mcp/audio_mcp", "mcp/comfy_mcp", "mcp/qa_mcp", "mcp/edit_mcp", "director"]
 
 [tool.uv.sources]
 studio-core = { workspace = true }
@@ -24,6 +24,7 @@ audio-mcp = { workspace = true }
 comfy-mcp = { workspace = true }
 qa-mcp = { workspace = true }
 edit-mcp = { workspace = true }
+director = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -34,7 +35,7 @@ extend-exclude = ["envs/*/.venv"]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["studio_core", "edit_mcp", "synfig_mcp", "audio_mcp", "comfy_mcp"]
+known-first-party = ["studio_core", "edit_mcp", "synfig_mcp", "audio_mcp", "comfy_mcp", "qa_mcp", "director"]
 known-third-party = ["mcp"]  # the SDK, not our mcp/ folder of servers
 
 [tool.pytest.ini_options]

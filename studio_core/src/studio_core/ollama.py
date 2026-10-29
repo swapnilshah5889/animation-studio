@@ -67,8 +67,10 @@ class Ollama:
         think: bool | str | None = None,
         options: dict[str, Any] | None = None,
         keep_alive: str | int | None = None,
+        format: dict[str, Any] | str | None = None,
     ) -> dict[str, Any]:
-        """One non-streaming /api/chat call. Returns the raw response dict."""
+        """One non-streaming /api/chat call. Returns the raw response dict. `format` is "json"
+        or a JSON schema the reply must follow (constrained decoding)."""
         payload: dict[str, Any] = {"model": model, "messages": messages, "stream": False}
         if tools:
             payload["tools"] = tools
@@ -78,6 +80,8 @@ class Ollama:
             payload["options"] = options
         if keep_alive is not None:
             payload["keep_alive"] = keep_alive
+        if format is not None:
+            payload["format"] = format
         return self._request("/api/chat", payload)
 
     def generate(
