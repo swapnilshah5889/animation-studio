@@ -1519,3 +1519,27 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Open:** the 4B done-when asks for none; the remaining ones are mostly seams (Kit 39, Mia 20, Bolt 14,
   Bo 10); Bolt's three-quarter limbs; the hands' colour and boxy fists.
 
+### D-077: The review reel (4B.7) and the owner's first look (2026-10-29)
+- **Reel (`1494cb0`, `scripts/review_reel.py`, tests; output `renders/review-reel/`, git-ignored):** for each of the
+  five characters a default video, a 4B-options video (bendable limbs, secondary ear/tail bones, drawn hands) and a
+  default-vs-options comparison, front and three-quarter, every expression and motion, plus a labelled contact
+  sheet per character and `index.md`. About 1,550 s of rendering per character (about 2 h 9 min in all).
+- **Pose sweep, default vs options:** Kit 44 vs 49, Bo 16 vs 19, Pim 6 vs 73, Mia 27 vs 45, Bolt 23 vs 407. **The 4B
+  options raise the defect count for every character** (most for Bolt and Pim), so they are not ready to become
+  defaults; the cause is not investigated.
+- **Owner's findings, by eye:** expressions look perfect (Kit, front); the three-quarter view does not look good;
+  Mia's face is absurdly off; Bolt's side view is great but in the front view the side of his head is transparent.
+- **Diagnoses (from the sheets and parts):** (1) the code-drawn face has front-view geometry on a turned head (two
+  equal round eyes read like spectacles; the far eye is placed from the skeleton; no foreshortening); (2) Mia's drawn
+  eyes are solid dark ovals without a sclera but the code-drawn eyes always have a white sclera, sized from her large
+  drawn eyes (bug-eyed), and in three-quarter the eyes land over her hair, not on the visible skin (only one eye found
+  by the pixel rules; the locator is off by default); (3) a light green patch on Kit's tail in three-quarter (probably
+  scarf pixels in the tail part); (4) Bolt's white side panels around the head are transparent in the front head part:
+  pale on a near-white background, enclosed by outlines but within the background-colour threshold of the gap rule
+  (D-062); pure white is 5-8 from the background, like the thin gaps between legs, so colour alone cannot separate
+  them, a shape test (fat region vs thin gap) is needed; (5) the reel's own flaws: the hand beats start with the
+  character still at the right edge after the walk; the sheets are small because the walk moves her across the frame.
+- **Mia's sheet (the reel session looked at the top half only):** huge wide-set round eyes in every expression, T-pose
+  arms in `jump` with thin stretched sleeves, stringy forearms in `shrug` and `talk_gesture`, legs splayed in the
+  walk with feet that look disconnected, and `sneak`, `nod`, `bow`, `look_around` nearly invisible at thumbnail size.
+
