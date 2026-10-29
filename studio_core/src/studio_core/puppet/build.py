@@ -1549,11 +1549,11 @@ def build_puppet(
     sam: bool = True,
     three_quarter: Literal["klein", "sheet"] = "klein",
     regenerate_turn: bool = False,
-    reclaim_orphans: bool = False,
+    reclaim_orphans: bool = True,
     locator: bool = False,
     bendable: bool = False,
     secondary: bool = False,
-    underlay: bool = False,
+    underlay: bool = True,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1564,8 +1564,8 @@ def build_puppet(
     `regenerate_turn`); "sheet" cuts SDXL's own three-quarter figure.
 
     `reclaim_orphans` gives each limb the loose pieces of its own interior the colour rule left
-    on the torso (task 4B.2). It is off by default because it changes Kit's three-quarter shin,
-    which is held byte-identical until the owner approves.
+    on the torso (task 4B.2). On by default since D-076 (the owner approved Kit's parts changing);
+    pass False for the old cut.
 
     `locator` asks a local vision model where the eyes, nose, mouth and joints are
     (puppet/locate.py, cached in build/locator.json) and uses its answers as seeds for the
@@ -1584,8 +1584,8 @@ def build_puppet(
     byte-identical.
 
     `underlay` lets the torso reach under the head's hair and hat where they overhang the body
-    (add_caps), so a nod or a turn opens no thin gap there (the sweep's neck-line seams). Off by
-    default because it changes Kit's torso image."""
+    (add_caps), so a nod or a turn opens no thin gap there (the sweep's neck-line seams). On by
+    default since D-076; pass False for the old cut."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
