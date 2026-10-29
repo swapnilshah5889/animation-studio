@@ -15,6 +15,10 @@ from director.log import EventFn, null_log
 from director.memory import MemoryGuard
 from director.plans import Capabilities
 
+# Tools that take no film argument (find_sfx searches the shared library; check_safety, given only
+# `text`, would refuse a lone `film`).
+TEXT_ONLY_TOOLS = ("find_sfx", "check_safety")
+
 
 class StageFailed(RuntimeError):
     """The stage cannot go on without the owner (message says why). State records it as failed."""
@@ -63,7 +67,7 @@ class StageCtx:
 
     async def tool(self, name: str, **args: Any) -> dict[str, Any]:
         """A code-driven tool call (film is filled in). Raises ToolRefused on a refusal."""
-        if "film" not in args and name not in ("find_sfx",):
+        if "film" not in args and name not in TEXT_ONLY_TOOLS:
             args = {"film": self.slug, **args}
         res = await call_data_timed(self, name, args)
         return res

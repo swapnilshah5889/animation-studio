@@ -272,6 +272,7 @@ class FakeHub:
         return {"characters": [], "backgrounds": []}
 
     def do_check_safety(self, a):
+        assert "film" not in a, "the real tool refuses `film` without `shot_id`"
         return {"ok": True, "needs_human": False}
 
     # --- audio
