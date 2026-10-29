@@ -106,7 +106,8 @@ def words(text: str) -> int:
 
 
 def norm(text: str) -> str:
-    return " ".join(re.findall(r"[\w']+", text.lower()))
+    """Words only, so punctuation and curly-versus-straight apostrophes do not matter."""
+    return " ".join(re.findall(r"[\w']+", text.lower().replace("\u2019", "'")))
 
 
 def check_story(
@@ -249,9 +250,11 @@ def check_shotplan(plan: dict[str, Any], story: dict[str, Any], target: int) -> 
         if not any(s["scene"] == scene["id"] for s in shots):
             out.append(f"scene {scene['id']} has no shots.")
         for x in scene["lines"]:
-            if placed.get((scene["id"], norm(x["text"]))) != 1:
+            n = placed.get((scene["id"], norm(x["text"])), 0)
+            if n != 1:
                 out.append(
-                    f"the line {x['text']!r} (scene {scene['id']}) must be in exactly one shot."
+                    f"the line {x['text']!r} (scene {scene['id']}) is in {n} shots; "
+                    "it must be in exactly one (each shot has at most one line)."
                 )
     return out
 
@@ -286,6 +289,7 @@ async def plan_json(
                 "seconds": round(reply.seconds, 1),
                 "text": reply.content[:200],
                 "tool_calls": 0,
+                "content": reply.content,
                 "prompt_tokens": reply.prompt_tokens,
                 "output_tokens": reply.output_tokens,
                 "plan_attempt": attempt,

@@ -22,7 +22,7 @@ Handler = Callable[[dict[str, Any]], dict[str, Any]]
 
 
 def _silent_mp4(path: Path, seconds: float, size: str = "64x36") -> None:
-    """A tiny black clip with a silent audio track, so the real edit and its checks accept it."""
+    """A tiny black clip with a quiet tone, so the real edit and its checks accept it."""
     ffmpeg = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
     subprocess.run(
         [
@@ -37,7 +37,7 @@ def _silent_mp4(path: Path, seconds: float, size: str = "64x36") -> None:
             "-f",
             "lavfi",
             "-i",
-            "anullsrc=r=48000:cl=stereo",
+            "sine=frequency=220:sample_rate=48000",
             "-t",
             str(seconds),
             "-c:v",

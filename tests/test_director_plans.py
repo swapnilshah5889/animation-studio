@@ -112,7 +112,7 @@ def test_a_good_shotplan_has_no_problems_and_bad_ones_are_named():
     bad["shots"][3]["id"] = "s01_sh09"
     problems = " | ".join(check_shotplan(bad, STORY, 15))
     assert "is not one of scene s01's lines" in problems and "'pim' is not in scene s02" in problems
-    assert "must start with its scene id" in problems and "must be in exactly one shot" in problems
+    assert "must start with its scene id" in problems and "is in 0 shots" in problems
     short = copy.deepcopy(SHOTPLAN)
     short["shots"] = short["shots"][:2]
     assert any("add up to" in p for p in check_shotplan(short, STORY, 15))
