@@ -274,7 +274,7 @@ retrieval at stage start, as the brief's 5.9, only if the model fails to ask for
 | 3 | `blink-and-idle` | every character gets blink + idle_breathe; when a held pose is dead | `learning/rigging.md`, synfig server text |
 | 4 | `expressions` | which expression for which emotion; pairing with lines | `learning/rigging.md` (faces), D-077/078 |
 | 5 | `lip-sync` | speak first, then apply_lipsync; mouth shapes; timing of lines | `learning/lip-sync.md` |
-| 6 | `dialogue-length` | short lines (≤ 12 words), seconds per word, pauses between speakers | `learning/voices-and-loudness.md`, D-0xx audio |
+| 6 | `dialogue-length` | short lines (≤ 12 words), seconds per word, pauses between speakers | `learning/voices-and-loudness.md` |
 | 7 | `staging` | where characters stand (feet fractions), left/right, overlap, front-to-back | `learning/parallax-and-camera.md` |
 | 8 | `camera-moves` | push-in, pan, hold; when and how far; no move during dialogue | `learning/parallax-and-camera.md` |
 | 9 | `shot-length` | 3 to 6 s typical; establishing first, close-ups for lines, one idea per shot | (new; from the film's own first runs) |
