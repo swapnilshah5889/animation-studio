@@ -1506,3 +1506,16 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
 - **Open:** the defaults are still off pending the owner's OK; Mia's remaining shoulder and hand seams and holes;
   Bolt.
 
+### D-076: The two cut fixes are on by default; Kit's parts change (owner, 2026-10-29)
+- **Decision:** `build_puppet(reclaim_orphans=True, underlay=True)` are the defaults (`9db3da6`); the
+  low-level `assign_parts` and `add_caps` keep their explicit False defaults. The owner approved Kit's built
+  parts changing (conditions: sweep defects fall, render no worse); the before/after sheet showed no
+  visible difference at tile size (D-075).
+- **Verified:** 667 tests passed; the cast rebuilt with SAM on keeps the pass bar (Kit, Bo, Pim, Mia pass; Bolt
+  misses on three-quarter limbs: 4 of 5).
+- **Pose-sweep defects after the rebuild, all views and motions (holes / seams / detached):** Pim 6 (3/3/0),
+  Bo 16 (3/10/3), Mia 27 (7/20/0), Bolt 23 (7/14/2), Kit 44 (5/39/0): **116 in total, from 393** on the
+  previous rebuild (747 on the stale rigs). Pim fell from 160, Bolt from 59.
+- **Open:** the 4B done-when asks for none; the remaining ones are mostly seams (Kit 39, Mia 20, Bolt 14,
+  Bo 10); Bolt's three-quarter limbs; the hands' colour and boxy fists.
+

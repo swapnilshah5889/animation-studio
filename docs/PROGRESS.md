@@ -12,6 +12,14 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-29: cut fixes on by default (D-076); sweep 393 to 116
+
+Round 2's two fixes are the defaults; the cast keeps the pass bar (4 of 5) and the pose sweep finds 116
+defects (Kit 44, Mia 27, Bolt 23, Bo 16, Pim 6). Next: the review reel at full size (bending on and off),
+the 4B docs, then the owner's call on the generative hidden-area spike and on milestone 2.
+
+---
+
 ## 2026-10-28: ear and tail bones and the hand-pose spike done (D-073)
 
 Ears and tails opt-in (Kit gains 5 sweep defects with them on, cause open); hands recommended as
