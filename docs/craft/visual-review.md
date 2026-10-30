@@ -5,18 +5,19 @@
 **When to use:** before any clip, film or character sheet is shown to the owner, and after any change to art, rig,
 motion or render code.
 
-**Why:** on 2026-10-30 the owner found Mia's face wrong (huge eyes at the head edges, mouth beside the eye), motion not
-smooth and the background clashing with the character. Our checks counted holes and seams and missed all of it.
-A lower defect count never proves a better picture.
+**Why:** on 2026-10-30 the owner found Mia's face wrong, motion not smooth and the background clashing. Our checks
+counted holes and seams and missed it all. A lower defect count never proves a better picture.
 
 **How:** look at 12 spread frames plus at most three zooms (a face, the worst frame, a joint). Read the per-frame change
 numbers first. Score each area, list findings with severity (blocker, major, minor), give a verdict. Any blocker = FAIL,
 two majors = NEEDS WORK. Never fix while reviewing. Say what you did not check.
 
-**Faces:** exactly two level eyes inside the face, about one eye-width apart, eye width about 15 to 22 percent of the
-face width; any extra or ghost eye (a painted face showing under a drawn one) is a blocker. Mouth small, centred under
-the nose, never beside an eye, never larger than the eye pair. The face moves with the head (turn, tilt, bob) and stays
-inside the head outline. The expression reads as intended (calm is not angry); a talking mouth changes shape.
+**Faces:** exactly two level eyes inside the face, about one eye-width apart, eye width 15 to 22 percent of the face
+width. Any other dark blob that is not an eye or mouth (ghost eye, brown dot, cheek mark; a painted face showing under a
+drawn one) is a blocker. Mouth small, below the nose, within 10 percent of the face width of its centre line, never wider
+than the eye pair. The face moves with the head and stays inside it; on a turn the features stay symmetric about the face
+centre line or shift and squash with the hair (a sliding sticker is major). Expression reads as intended; startled or
+angry when calm was meant is major; a talking mouth blends between shapes.
 
 **Anatomy and rig:** limbs attached, no pasted-looking shapes, gaps, detached strips or limbs through the body. Bends look
 like bends (no hinge snap, no smeared or stretched texture). Hair, tail and clothing leave no floating patches.

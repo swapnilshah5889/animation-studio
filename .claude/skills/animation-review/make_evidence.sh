@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Evidence for the animation-review skill: contact sheet, per-frame change, loudness. Safe to re-run.
 set -euo pipefail
-in="${1:?usage: make_evidence.sh <video-or-image> <out-dir> [start-seconds] [end-seconds]}"
-out="${2:?out-dir}"; start="${3:-0}"; end="${4:-}"
+in="${1:?usage: make_evidence.sh <video-or-image> <out-dir> [start-seconds] [end-seconds] [crop=w:h:x:y]}"
+out="${2:?out-dir}"; start="${3:-0}"; end="${4:-}"; crop="${5:-}"; cropf=""; [ -n "$crop" ] && cropf="crop=${crop#crop=},"
 mkdir -p "$out"
 case "${in##*.}" in
   png|jpg|jpeg|webp) cp "$in" "$out/sheet.png"; echo "image copied to $out/sheet.png"; exit 0;;
@@ -11,9 +11,9 @@ dur_args=(); [ -n "$end" ] && dur_args=(-t "$(python3 -c "print(max(0.1,$end-$st
 len="$(python3 -c "print(max(0.1,(${end:-0} or $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$in"))-$start))")"
 fps="$(python3 -c "print(12/$len)")"
 ffmpeg -loglevel error -y -ss "$start" "${dur_args[@]}" -i "$in" \
-  -vf "fps=$fps,scale=480:-1,tile=4x3" \
+  -vf "${cropf}fps=$fps,scale=480:-1,tile=4x3" \
   -frames:v 1 "$out/sheet.png"
-ffmpeg -loglevel error -y -ss "$start" "${dur_args[@]}" -i "$in" -vf "scale=320:-1,tblend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=$out/_raw.txt" -an -f null -
+ffmpeg -loglevel error -y -ss "$start" "${dur_args[@]}" -i "$in" -vf "${cropf}scale=320:-1,tblend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=$out/_raw.txt" -an -f null -
 python3 -c "import sys;s=float(sys.argv[1]);l=float(sys.argv[2]);print(chr(10).join('frame %d: %.2fs'%(i+1,s+(i+0.5)*l/12) for i in range(12)))" "$start" "$len" > "$out/sheet_times.txt"
 python3 - "$out" <<'PY'
 import re,sys,statistics,pathlib

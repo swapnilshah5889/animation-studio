@@ -19,4 +19,11 @@ never pass a clip you did not look at, never fix while reviewing, report plainly
 4. Write `review.md` next to the clip: `Verdict: PASS | NEEDS WORK | FAIL`, a findings table (severity, time or frame,
    area, what you see, likely cause, suggested fix), "What looks good", and what you did not check.
 
+Notes from the first review (2026-10-30):
+- A composite video (e.g. a 2x2 engine comparison) makes panels tiny and its `motion.csv` mixes panels: pass the
+  optional 5th argument `crop=w:h:x:y` to `make_evidence.sh` to review one panel at a time, and say which panels you did
+  not check. The zoom budget counts crops of different panels.
+- If every panel of an engine comparison shows the same defect, the shared art or face code is at fault, not the engine.
+- Comparing with a reference sheet is optional when none is given; say you skipped it.
+
 Calibration: the 2026-10-30 bake-off clip (`docs/spikes/owner-review-bakeoff.md`, Mia at 5 to 8 s) must come out FAIL.
