@@ -19,7 +19,7 @@ from typing import Any
 from studio_core import placement
 from studio_core.config import REPO_ROOT  # noqa: F401  (kept for callers that resolve paths)
 from studio_core.mocap import metrics
-from studio_core.motions import animate
+from studio_core.motions import animate, smooth
 from studio_core.motions.timeline import compose, sample
 from studio_core.rig import (
     _parents_first,
@@ -105,9 +105,29 @@ def bake_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = FPS) -> dict[s
             travel=travel,
         )
         offsets = metrics.frame_offsets(view, anim.clips, n)
+        smooth_cfg = shot.get("smooth")  # opt-in (D-093); None = off, {} = on with defaults
+        if smooth_cfg is not None:
+            offsets = smooth.smooth_offsets(
+                offsets,
+                fps,
+                max_dps=smooth_cfg.get("max_dps")
+                or smooth.speed_caps(anim.clips)
+                or smooth.DEFAULT_MAX_DPS,
+                pop_deg=smooth_cfg.get("pop_deg", smooth.DEFAULT_POP_DEG),
+                sigma=smooth_cfg.get("sigma", smooth.DEFAULT_SIGMA),
+            )
         channels = compose(anim.clips)
         mouth = dialogue_mouth(film_dir, [d for d in dialogue if d["character"] == cid], fps)
         frames = []
+        face_track = None
+        if smooth_cfg is not None:
+            face_track = smooth.face_series(
+                [_track_value(anim.eyes, f, "open") for f in range(n)],
+                [_track_value(mouth, f, "X") for f in range(n)],
+                ch.get("expressions", []),
+                [(k["time_s"], k["yaw"]) for k in ch.get("look", [])],
+                fps,
+            )
         for f in range(n):
             shifts = {
                 b: v
@@ -121,6 +141,7 @@ def bake_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = FPS) -> dict[s
                     "bones": _fk(view, offsets[f], shifts, root, scale),
                     "eyes": _track_value(anim.eyes, f, "open"),
                     "mouth": _track_value(mouth, f, "X"),
+                    **({"face": face_track[f]} if face_track else {}),
                 }
             )
         chars.append(
@@ -146,9 +167,24 @@ def bake_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = FPS) -> dict[s
             }
         )
     cam = shot.get("camera") or {"move": "static"}
-    if cam["move"] != "static":
-        raise ValueError("bake: only a static camera is baked (the benchmark uses one)")
+    track = None
+    if (
+        cam["move"] == "track"
+    ):  # eased zoom/pan keys (D-093): [{time_s, zoom, cx, cy}], cx/cy stage px
+        keys = cam["keys"]
+        cols = {
+            name: smooth.eased_track([(k["time_s"], k.get(name, d)) for k in keys], fps, n)
+            for name, d in (("zoom", 1.0), ("cx", W / 2), ("cy", H / 2))
+        }
+        track = [
+            [round(cols["zoom"][f], 4), round(cols["cx"][f], 2), round(cols["cy"][f], 2)]
+            for f in range(n)
+        ]
+    elif cam["move"] != "static":
+        raise ValueError("bake: only a static or keyed ('track') camera is baked")
     return {
+        **({"camera_track": track} if track else {}),
+        **({"transparent": True} if shot.get("transparent") else {}),
         "shot": shot["id"],
         "fps": fps,
         "n_frames": n,

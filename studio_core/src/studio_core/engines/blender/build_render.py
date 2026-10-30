@@ -40,7 +40,9 @@ scene.render.image_settings.compression = 3
 scene.view_settings.view_transform = "Standard"
 scene.view_settings.look = "None"
 scene.display_settings.display_device = "sRGB"
-scene.render.film_transparent = False
+scene.render.film_transparent = bool(bake.get("transparent"))
+if bake.get("transparent"):
+    scene.render.image_settings.color_mode = "RGBA"
 if ENGINE == "EEVEE":
     scene.render.engine = "BLENDER_EEVEE"
     scene.eevee.taa_render_samples = SAMPLES
@@ -285,14 +287,15 @@ def chain(ch, b):
 
 
 # background: a textured plane at the back
-bg = bake["background"]
-bgi = image(bg)
-bw, bh = bgi.size
-bg_mesh, _ = grid_mesh("bg", (SW - bw) / 2, (SH + bh) / 2, bw, bh, 1, 1)
-bg_obj = bpy.data.objects.new("bg", bg_mesh)
-bg_obj.location.z = -1
-bg_obj.data.materials.append(material("bg", bg))
-scene.collection.objects.link(bg_obj)
+if not bake.get("transparent"):
+    bg = bake["background"]
+    bgi = image(bg)
+    bw, bh = bgi.size
+    bg_mesh, _ = grid_mesh("bg", (SW - bw) / 2, (SH + bh) / 2, bw, bh, 1, 1)
+    bg_obj = bpy.data.objects.new("bg", bg_mesh)
+    bg_obj.location.z = -1
+    bg_obj.data.materials.append(material("bg", bg))
+    scene.collection.objects.link(bg_obj)
 
 built = [build_character(ch, 0.1 + i * 2) for i, ch in enumerate(bake["characters"])]
 t_built = time.perf_counter()
@@ -322,6 +325,10 @@ for f in range(first, last + 1):
     t0 = time.perf_counter()
     for bc in built:
         pose(bc, f)
+    if bake.get("camera_track"):  # per-frame zoom and centre (stage px, y up in Blender units)
+        zoom, ccx, ccy = bake["camera_track"][f]
+        cam_data.ortho_scale = SW * PX / zoom
+        cam.location = (ccx * PX, (SH - ccy) * PX, 20)
     scene.render.filepath = str(out_dir / f"{f:04d}.png")
     bpy.ops.render.render(write_still=True)
     times.append(time.perf_counter() - t0)

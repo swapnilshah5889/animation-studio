@@ -164,4 +164,12 @@ def apply_principles(clip: Clip, fps: int, amount: float = 0.5, head: str | None
             ]
         else:
             out[channel] = keys
-    return Clip(clip.motion, clip.start, clip.end, out, clip.additive, dict(clip.limits))
+    return Clip(
+        clip.motion,
+        clip.start,
+        clip.end,
+        out,
+        clip.additive,
+        dict(clip.limits),
+        dict(clip.max_speed_dps),
+    )

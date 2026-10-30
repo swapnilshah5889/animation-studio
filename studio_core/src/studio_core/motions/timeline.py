@@ -41,6 +41,10 @@ class Clip:
     # angle ranges (degrees) this clip needs beyond a bone's default `limits_deg`, per bone, e.g. a
     # real walk bends the knee the way a person does, not the way the front-view rig allows
     limits: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # the fastest a bone may turn while this clip plays (degrees per second), per bone; the
+    # smoothing layer (motions/smooth.py) enforces it. Declared like `limits`, so a violent motion
+    # (a jump) can say it needs more, and nothing else is left unbounded
+    max_speed_dps: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for channel, keys in self.channels.items():
