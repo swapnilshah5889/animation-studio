@@ -1,7 +1,8 @@
 # Step 5B / 5C data layer: projects, acts and the store
 
-Status: the **data layer is built and tested**. Adoption by the MCP servers and the director is the task
-list at the end (not started). Decisions: D-082 (projects), D-083 (acts, source vs cache), D-084 (store).
+Status: the **data layer is built and tested, and the five MCP servers have adopted it** (section
+"Adoption by the MCP servers" below). Adoption by the director is the open task list at the end.
+Decisions: D-082 (projects), D-083 (acts, source vs cache), D-084 (store).
 Learning note: `docs/learning/storage-interface-and-contract-tests.md`.
 
 ## What was built
@@ -95,13 +96,68 @@ identical files across films are stored once. Verified on the real films: 12 ver
 17 MB of disk used for about 130 MB of files. The old folders are only read; re-running adds only what is new.
 Shots, audio, edits and director state stay in the old folders until the adoption below.
 
-## Follow-up tasks (not started)
+## Adoption by the MCP servers (done)
 
-1. **Config and entry points.** Add a `projects_dir` to `config/studio.toml` (default `<repo>/projects`) and a
-   small `open_project(project_id)` helper in `studio_core`, so servers do not build paths. A film's working
-   folder (render scratch, `materialize` output) is derived data under the cache dir, not in the store.
-2. **MCP servers take `project` and `film` ids** (no engine fields, D-030), one at a time, each with its
-   own tests; keep accepting the old `film` folder name until all five are done:
+One door: `studio_core.workspace.Workspace.open_film(film, project=None)` returns the `FilmFolder` every
+tool already works on. No `project` = an old film folder under `films/`, exactly as before (every old
+tool call and test is unchanged). With a `project` the folder is **derived data** in the work directory
+(`[paths] work`, default `~/ai-studio/work/<project>/<film>/`, safe to delete) and is kept in sync with the
+store by a `ProjectLink` (`studio_core/project/link.py`):
+
+| Direction | When | What |
+|---|---|---|
+| store to folder (`pull`) | every tool call | cast and places at the **versions the film pins** (`materialize`, a clone, a `.pinned` marker skips unchanged ones), every shot document as `shots/<id>/shot.json`, the film's audio, a derived `film.json` (style) |
+| folder to store, shots | `shot_spec.save` calls `FilmFolder.link.shot_saved` before writing the file | a saved spec becomes a `shot` document of an act (a new shot needs `act` when the film has several; an existing shot stays where it is). Refused saves write nothing |
+| folder to store, audio | audio tools call `sync_audio` | lines, mouth cues, music cues and voices become assets in the film's `audio` document; every shot document gets an `audio` snapshot (content ids of its lines and music cue), so **a re-recorded line or a new cue makes its act stale** even though the spec only names the line |
+| folder to store, art | `build_rig`, `build_puppet`, `split_depth_layers` call `publish_character` / `publish_background` | a new **version** in the project library (no change = no new version), added to the film (the film and its acts move to it) |
+
+| Server | What changed |
+|---|---|
+| `edit_mcp` | `create_film(project=...)`; new `describe_project`, `list_acts` (with `stale`), `add_act`, `edit_act`, `reorder_acts`, `remove_act`, `reorder_shots`, `remove_shot`, `render_act`, `export_movie` ("export all acts"), `clear_renders`. `assemble` / `render_film` stay for old film folders |
+| `synfig_mcp` | every tool takes `project`; `create_scene` takes `act`; `build_rig` publishes the character |
+| `audio_mcp` | every tool takes `project`; recordings are kept in the project after each call |
+| `comfy_mcp` | every tool takes `project`; `build_puppet` / `split_depth_layers` publish a library version (`library_version` in the result); `describe_art` lists the project library |
+| `qa_mcp` | every tool takes `project` |
+
+**Acts** (`studio_core/acts.py`): `render_act` renders the act's shots in cut order through the engine
+(`Renderer`, today Synfig), joins them with melt into the act video, stores it as an asset and records the
+render with the cache key computed *before* rendering. `export_movie` renders only acts that are stale (or have
+no video), then joins the act videos in the acts' `order` (cut or crossfade, optional title cards), writes
+`edit/final.mp4` and checks it (size, streams, length, loudness). The engine and the quality are part of the
+key (`Target`, id `synfig:final`), so a preview never satisfies a final export. The act key leaves out
+`order`, `title` and `beats` (story, not picture), so reordering or retitling acts re-renders nothing.
+`clear_renders` deletes every render record and derived video; export then rebuilds the same film from the specs.
+
+**Verified:** `tests/test_acts.py::test_three_acts_with_the_real_engine_end_to_end` (real Synfig, preview
+quality): 3 acts, a place each, 3 camera angles each, one recorded line, renders per act; editing one shot
+renders only its act; export gives one movie that passes the checks; after `clear_renders` and deleting the
+work folder, the re-exported movie has identical frames (frame md5). The same flow runs with a stand-in
+renderer through the MCP client (`tests/test_edit_mcp_acts.py`). Key guards were mutation-checked (always-fresh
+staleness, shots/audio/engine left out of the key, acts stitched in id order, stale check skipped, work folder
+or shot listing not scoped by project/film, preview satisfying final): every mutant failed a test.
+
+**Not done / notes:**
+
+- Sound effects are named by library id in the shot spec and are not part of the shot's audio snapshot (the
+  CC0 library is treated as stable). A voice change only re-renders acts once the line is spoken again.
+- Voices live in the film's `audio` document (written to `characters/<slug>/voice.json` in the folder), not in
+  the character version: casting a voice must not publish a new character version. Migrated character versions
+  that still contain `voice.json` keep it; the film's voice wins in the folder.
+- Character slugs used in shot specs must match `^[a-z][a-z0-9_]{0,39}$` (the shot schema); library slugs allow
+  `-` too, so name library characters with `_`, not `-`, if a shot will use them.
+- Act videos and the movie are re-encoded by melt (cut joins); music restarts per shot, as before. The movie
+  is not stored in the project (derived, at `edit/final.mp4` of the work folder); old act video assets stay in
+  the store after a re-render until a clean-up task exists.
+- Shots are re-rendered per act, not per shot (an act with one changed shot renders all its shots again).
+- `render_shot` / `render_preview_frame` on a project film render in the work folder and record nothing; only
+  `render_act` / `export_movie` record renders.
+- The director (`director/`) still builds flat film folders; the servers accept both.
+
+## Follow-up tasks
+
+1. ~~**Config and entry points.**~~ Done: `[paths] projects` / `work` in `config/studio.example.toml`,
+   `Workspace` (see above).
+2. ~~**MCP servers take `project` and `film` ids**~~ Done for all five servers (see above). The original plan, for reference:
    - `comfy_mcp`: `build_puppet` and `choose_background` publish a new character/background *version* to the
      project; `describe_art` lists the project library, not one film. Biggest change: the art stages write
      into `store.put_asset` / `publish_*` instead of `films/<film>/characters/`.
@@ -119,10 +175,11 @@ Shots, audio, edits and director state stay in the old folders until the adoptio
    per-act documents, with an append-only event log document for stage runs (D-084); `retry` of one act
    touches only that act; replace `--import-cast` with "film references project cast". Run *after* the director
    session currently editing `director/` has finished.
-4. **Shot specs:** validate `shot` documents' `spec` against `schemas/shot.schema.json` (today only the
-   envelope and `act_id` are checked) and put audio line cues in the shot (so a changed line makes the act stale).
-5. **Render scheduling:** `stale_acts` -> render each -> `record_render` with the key computed before the render;
-   decide where act videos live (assets in the store; local cache path derived from the asset id).
+4. **Shot specs:** validate `shot` documents' `spec` against `schemas/shot.schema.json` (today the servers
+   validate on save through `shot_spec.check`, the store only checks the envelope and `act_id`). ~~Audio line
+   cues in the shot~~ done (the `audio` snapshot).
+5. ~~**Render scheduling**~~ Done in `studio_core/acts.py` (act videos are assets; the local copy is a clone in
+   the work folder). Still open: per-shot render cache inside an act, and parallel act rendering on two nodes.
 6. **Concurrency:** if render jobs ever run in parallel on several nodes, add per-document claim/lock documents
    (the Windows node, Step 6 containers).
 7. **Later (Step 14):** a database/object-storage store passing `tests/test_store_contract.py` unchanged; users
