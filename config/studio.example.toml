@@ -18,6 +18,8 @@ tools = "~/ai-studio/tools"           # standalone binaries
 sfx_library = "~/ai-studio/sfx-library"
 qdrant_data = "~/ai-studio/qdrant-data"
 films = "films"                       # relative to the repo root
+projects = "projects"                 # project data (the store); relative to the repo root
+work = "~/ai-studio/work"             # derived working folders of project films (safe to delete)
 
 [tools]
 # Command-line tools. Absolute paths, so code never depends on $PATH.

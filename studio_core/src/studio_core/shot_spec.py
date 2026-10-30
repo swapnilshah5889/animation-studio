@@ -16,7 +16,7 @@ import json
 import re
 import shutil
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,7 @@ from studio_core.motions import MotionError, animate
 from studio_core.rig import RigError, load_rig
 from studio_core.schema import CUE_TOLERANCE_S, validate
 from studio_core.sif.units import frames
+from studio_core.store.errors import StoreError
 
 FPS = 24  # shot lists can choose another rate later; Step 2 shots are all 24 fps
 FILM_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,59}$")
@@ -55,6 +56,9 @@ class FilmFolder:
 
     root: Path
     sfx_root: Path | None = None  # the sound library; None = config [paths] sfx_library
+    # Set when the folder is a project film's working folder (studio_core.workspace): saved shots
+    # and new recordings are then also recorded in the project store.
+    link: Any = field(default=None, compare=False)
 
     @classmethod
     def open(cls, films_root: Path, slug: str, *, sfx_root: Path | None = None) -> FilmFolder:
@@ -257,6 +261,11 @@ def save(film: FilmFolder, spec: dict[str, Any]) -> list[str]:
     errors, warnings = check(film, spec)
     if errors:
         raise SpecError("; ".join(errors))
+    if film.link is not None:
+        try:
+            film.link.shot_saved(spec)  # before the file: a refusal saves nothing
+        except (ValueError, StoreError) as e:
+            raise SpecError(str(e)) from None
     path = film.shot_file(spec["id"])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(spec, indent=2) + "\n")

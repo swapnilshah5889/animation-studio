@@ -223,6 +223,9 @@ class Project:
     def resolve_background(self, id_or_slug: str, version: int | None = None) -> ResolvedVersion:
         return self._resolve("background", id_or_slug, version)
 
+    def resolve(self, kind: str, id_or_slug: str, version: int | None = None) -> ResolvedVersion:
+        return self._resolve(kind, id_or_slug, version)
+
     def resolve_ref(self, kind: str, ref: Mapping[str, Any]) -> ResolvedVersion:
         return self._resolve(kind, ref["id"], ref["version"])
 
@@ -386,17 +389,99 @@ class Project:
             raise InvalidDocument(f"cannot edit {sorted(unknown)} here")
         return self._update("act", act_id, lambda d: d.update(fields))
 
-    def add_shot(self, film: str, act_id: str, spec: dict, *, shot_id: str | None = None) -> dict:
-        """Add a camera angle to an act: the engine-neutral shot spec as a document."""
+    def add_shot(
+        self,
+        film: str,
+        act_id: str,
+        spec: dict,
+        *,
+        shot_id: str | None = None,
+        audio: dict | None = None,
+    ) -> dict:
+        """Add a camera angle to an act: the engine-neutral shot spec as a document. `audio` is
+        the content ids of the recordings it uses (see schemas/shot_doc.schema.json)."""
         film_id = self.get_film(film)["id"]
+        self.store.get_document(self.id, "act", act_id)  # must exist
         doc = self._new("shot", film_id, shot_id)
         doc.update(act_id=act_id, spec=spec)
+        if audio:
+            doc["audio"] = audio
         stored = self._put(doc)
         self._update("act", act_id, lambda d: d["shot_ids"].append(stored["id"]))
         return stored
 
-    def update_shot(self, shot_id: str, spec: dict) -> dict:
-        return self._update("shot", shot_id, lambda d: d.update(spec=spec))
+    def update_shot(self, shot_id: str, spec: dict, *, audio: dict | None = None) -> dict:
+        def change(doc: dict) -> None:
+            doc["spec"] = spec
+            if audio:
+                doc["audio"] = audio
+            else:
+                doc.pop("audio", None)
+
+        return self._update("shot", shot_id, change)
+
+    def reorder_shots(self, act_id: str, shot_ids: Sequence[str]) -> dict:
+        """Change the order of an act's shots (the cut). Every shot id exactly once."""
+
+        def change(doc: dict) -> None:
+            if sorted(shot_ids) != sorted(doc["shot_ids"]):
+                raise InvalidDocument("reorder_shots needs every shot id of the act exactly once")
+            doc["shot_ids"] = list(shot_ids)
+
+        return self._update("act", act_id, change)
+
+    def remove_shot(self, act_id: str, shot_id: str) -> dict:
+        def change(doc: dict) -> None:
+            if shot_id not in doc["shot_ids"]:
+                raise NotFound(f"shot {shot_id} is not in act {act_id}")
+            doc["shot_ids"] = [s for s in doc["shot_ids"] if s != shot_id]
+
+        act = self._update("act", act_id, change)
+        self.store.delete_document(self.id, "shot", shot_id)
+        return act
+
+    def remove_act(self, film: str, act_id: str) -> list[dict]:
+        """Delete an act with its shots and last render record; the later acts move up."""
+        act = self.get_act(film, act_id)
+        for shot_id in act["shot_ids"]:
+            self.store.delete_document(self.id, "shot", shot_id)
+        if self.last_render(act_id):
+            self.store.delete_document(self.id, "act_render", act_id)
+        self.store.delete_document(self.id, "act", act_id)
+        rest = [a["id"] for a in self.list_acts(film)]
+        for order, other in enumerate(rest, start=1):
+            self._update("act", other, lambda d, o=order: d.update(order=o))
+        return self.list_acts(film)
+
+    def set_act_background(self, film: str, act_id: str, background: str | Mapping[str, Any]):
+        """Move an act to another of the film's places."""
+        place = self._within(self.get_film(film)["places"], "background", background)
+        return self._update("act", act_id, lambda d: d.update(background=place))
+
+    def add_film_reference(
+        self, film: str, kind: str, id_or_slug: str, version: int | None = None
+    ) -> Ref:
+        """Add a character or background to a film (latest version by default), or move the
+        film to another version of one it already has. Acts that use it follow."""
+        film_doc = self.get_film(film)
+        target = self._resolve(kind, id_or_slug, version)
+        field = "cast" if kind == "character" else "places"
+        if any(r["id"] == target.id for r in film_doc[field]):
+            self.upgrade_reference(film_doc["id"], kind, target.id, target.version)
+        else:
+            self._update("film", film_doc["id"], lambda d: d[field].append(target.ref))
+        return target.ref
+
+    def film_document(self, film: str, kind: str) -> dict:
+        """The film's one document of a free-form kind (such as its audio library); made empty
+        on first use."""
+        film_id = self.get_film(film)["id"]
+        found = self.store.list_documents(self.id, kind, parent_id=film_id)
+        return found[0] if found else self._put(self._new(kind, film_id))
+
+    def edit_document(self, kind: str, doc_id: str, change: Callable[[dict], None]) -> dict:
+        """Read, change, write a document, retrying when someone else wrote in between."""
+        return self._update(kind, doc_id, change)
 
     def list_shots(self, film: str, act_id: str) -> list[dict]:
         """The act's shots in the act's own order."""

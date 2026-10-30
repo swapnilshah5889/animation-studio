@@ -252,3 +252,58 @@ def test_pure_key_function_rules():
     assert is_stale(key, None)
     assert is_stale(key, {"cache_key": "other"})
     assert not is_stale(key, {"cache_key": key})
+
+
+# ------------------------------------------------------- editing acts and shots (Step 5C)
+
+
+def test_shots_can_be_reordered_removed_and_change_only_their_act(project, film):
+    a1, a2 = project.list_acts(film["id"])
+    key2 = project.act_key(film["id"], a2["id"], ENGINE)
+    key1 = project.act_key(film["id"], a1["id"], ENGINE)
+    ids = list(a1["shot_ids"])
+    project.reorder_shots(a1["id"], [ids[2], ids[0], ids[1]])
+    assert project.act_key(film["id"], a1["id"], ENGINE) != key1  # a different cut
+    assert project.act_key(film["id"], a2["id"], ENGINE) == key2
+    with pytest.raises(InvalidDocument):
+        project.reorder_shots(a1["id"], ids[:2])
+    project.remove_shot(a1["id"], ids[0])
+    assert len(project.get_act(film["id"], a1["id"])["shot_ids"]) == 2
+    with pytest.raises(NotFound):
+        project.store.get_document(project.id, "shot", ids[0])
+
+
+def test_removing_an_act_renumbers_the_rest_and_background_can_change(project, film):
+    a1, a2 = project.list_acts(film["id"])
+    project.record_render(film["id"], a1["id"], ENGINE)
+    left = project.remove_act(film["id"], a1["id"])
+    assert [a["id"] for a in left] == [a2["id"]] and left[0]["order"] == 1
+    assert project.last_render(a1["id"]) is None
+    key = project.act_key(film["id"], a2["id"], ENGINE)
+    project.set_act_background(film["id"], a2["id"], "orchard")
+    assert project.act_key(film["id"], a2["id"], ENGINE) != key
+    project.publish_background("cave", {"plate.png": b"CAVE"})  # in the library, not in the film
+    with pytest.raises(InvalidDocument):
+        project.set_act_background(film["id"], a2["id"], "cave")
+
+
+def test_a_shot_document_carries_its_audio_snapshot(project, film):
+    act = project.list_acts(film["id"])[0]
+    shot_id = act["shot_ids"][0]
+    spec = project.store.get_document(project.id, "shot", shot_id)["spec"]
+    key = project.act_key(film["id"], act["id"], ENGINE)
+    project.update_shot(shot_id, spec, audio={"lines": {"l001": {"dialogue/l001.wav": "a" * 64}}})
+    assert project.act_key(film["id"], act["id"], ENGINE) != key
+    with pytest.raises(InvalidDocument):
+        project.update_shot(shot_id, spec, audio={"lines": 3})
+
+
+def test_add_film_reference_adds_or_moves(project, film):
+    project.publish_character("pim", {"rig.json": b"{}"})
+    project.add_film_reference(film["id"], "character", "pim")
+    assert {r["id"] for r in project.get_film(film["id"])["cast"]} >= {
+        project.resolve_character("pim").id
+    }
+    project.publish_character("kit", {"rig.json": b"{2}"})
+    project.add_film_reference(film["id"], "character", "kit")
+    assert project.get_film(film["id"])["cast"][0]["version"] == 2

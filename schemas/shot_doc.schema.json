@@ -52,6 +52,15 @@
     },
     "spec": {
       "type": "object"
+    },
+    "audio": {
+      "type": "object",
+      "description": "The audio this shot uses, as content ids (asset ids of the line recordings, mouth cues and music cue). Part of the shot document, so a re-recorded line or a new music cue changes the act's cache key even though the spec only names the line.",
+      "additionalProperties": false,
+      "properties": {
+        "lines": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "music": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
     }
   }
 }
