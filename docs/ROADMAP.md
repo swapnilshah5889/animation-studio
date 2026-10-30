@@ -179,6 +179,8 @@ Owner requirement (2026-10-30): the five test characters (Kit, Bo, Pim, Mia, Bol
 - **Migration:** the existing test films become a "test-cast" project; old film folders keep working through a
   one-off script.
 
+**Status (2026-10-30):** data layer, servers and director are built (D-089, D-091, D-094); see `docs/steps/STEP-5B-projects.md`.
+
 **Done when:** two different films in one project reuse the same characters and at least one shared background
 without copying files; a new character built during film 2 is available to film 3; old films still render; tests
 cover the resolver, versioning and migration.

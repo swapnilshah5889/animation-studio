@@ -1,7 +1,7 @@
 # Step 5B / 5C data layer: projects, acts and the store
 
-Status: the **data layer is built and tested, and the five MCP servers have adopted it** (section
-"Adoption by the MCP servers" below). Adoption by the director is the open task list at the end.
+Status: the **data layer is built and tested, the five MCP servers have adopted it** (section
+"Adoption by the MCP servers" below) **and the director has adopted it** (section "Adoption by the director", D-094).
 Decisions: D-082 (projects), D-083 (acts, source vs cache), D-084 (store).
 Learning note: `docs/learning/storage-interface-and-contract-tests.md`.
 
@@ -153,6 +153,30 @@ or shot listing not scoped by project/film, preview satisfying final): every mut
   `render_act` / `export_movie` record renders.
 - The director (`director/`) still builds flat film folders; the servers accept both.
 
+## Adoption by the director (done, D-094)
+
+`uv run scripts/direct.py new "<story>" --project test-cast --film kite --pin-cast kit,bo --pin-places orchard --acts 2`
+(then `resume | approve | revise | retry | status <film> --project test-cast`).
+
+| Stage | In a project film |
+|---|---|
+| story | brief lists the project's library; pins are an `enum` in the schema and a check; `--acts N` fixes the scene count; a scene is an **act** (it has a `title`). A re-planned story removes the acts the director made earlier |
+| characters, backgrounds | library items the story uses are added to the film (`add_film_reference`) and the working folder is refreshed, so `built()` is true and no art tool runs; only the missing ones are designed, built and published to the library by the art tools |
+| audio | unchanged (tools get `project`) |
+| shots (`stages/acts.py`) | per act: plan (taste rules see the film so far), `add_act`, drop shots the plan no longer has (`remove_shot`), build each shot as a camera angle of the act (`create_scene act=`), `edit_act` beats, `render_act` (no-op when fresh), stop `act_<scene>` |
+| edit | `export_movie` (renders only stale acts) instead of `assemble` + `render_film`; `director/export.json` records what it did |
+| qa | `check_film` with the project |
+
+Files: the director's state, story, plans and line list live in `projects/<project>/director/<film>/` and are symlinked
+as `story/` and `director/` into the derived working folder (`director/project_mode.py`), so deleting the working folder
+loses only renders. Approvals: `story`, `characters`, `first_shot`, `act_<scene>` per act, `final`; `revise act_s02 "note"`
+plans and builds that act alone. Tests: `tests/test_director_projects.py` (fake model, real project on disk, stand-in tools
+that use the real act cache key).
+
+Not done: the director's own files are not behind `ProjectStore` and there is no append-only event document (D-084 wanted
+one; `director/log.jsonl` stays a file); `--dry-run` stubs work on old folders only; a shot is rendered twice (`render_shot`
+while the model checks it, then `render_act`); `retry` resets a failed stage, not one act.
+
 ## Follow-up tasks
 
 1. ~~**Config and entry points.**~~ Done: `[paths] projects` / `work` in `config/studio.example.toml`,
@@ -169,7 +193,7 @@ or shot listing not scoped by project/film, preview satisfying final): every mut
    - `edit_mcp`: `create_film` becomes `create_film` in the project; `assemble` / `render_film` work on act
      videos; **add `export_all_acts`** (render stale acts, then stitch the act videos in `order`).
    - `qa_mcp`: `check_frame` / `check_film` take project + film (+ act) ids and read specs from the store.
-3. **Director (`director/`):** open a project instead of a flat film folder; the cast stage first reuses
+3. ~~**Director (`director/`):**~~ done, see above. The original plan, for reference: open a project instead of a flat film folder; the cast stage first reuses
    project characters and places and only runs the art stages for missing ones (publishing them to the
    library); the shot-planning stage plans per act (several camera angles per act); approvals and state become
    per-act documents, with an append-only event log document for stage runs (D-084); `retry` of one act

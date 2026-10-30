@@ -4,9 +4,51 @@ Update this at the end of every working session. Newest entry at the top.
 
 **Current step:** choosing the animation engine and fixing the cut's quality. Done: director (D-080), engine bake-off (D-090),
 project data layer, servers on projects, acts and export (D-091), joint overlap (opt-in, plateaued, D-092). Running: a one-session
-spike on a single skinned mesh per character in Blender. Next: the engine pick by eye, the director on projects and acts, the lifelike
-pass, then the desktop app (Step 13). The owner signed off on the 2026-10-30 plan and leans towards Blender plus OpenToonz over
+spike on a single skinned mesh per character in Blender. Next: the engine pick by eye, the lifelike
+pass (the director now works on projects and acts, D-094), then the desktop app (Step 13). The owner signed off on the 2026-10-30 plan and leans towards Blender plus OpenToonz over
 Synfig. Owner preferences are in `AGENTS.md` ("Owner's standing preferences").
+---
+
+## 2026-10-30 (late): the director works on projects and acts (D-094)
+
+**Done and verified (tests):** `director new --project test-cast --film <slug> [--pin-cast kit,bo] [--pin-places orchard]
+[--acts 2]` makes a film of a project. The story stage sees the project's library and the owner's pins (an `enum` in the
+schema plus a check); a scene is an act with a title. The characters/places stages put library items into the film and run
+the art tools only for missing ones (which publish to the library). The shots stage (`stages/acts.py`) plans, builds and
+renders one act at a time (`add_act`, `create_scene act=`, `edit_act`, `render_act`), the edit stage is `export_movie`, and
+each act has an approval stop (`act_s01`, ...; `revise act_s01 "note"` redoes that act alone). The agent loop core is
+untouched. The director's state, story and plans live in `projects/<project>/director/<film>/`, symlinked into the derived
+working folder, so deleting the folder loses only renders. Docs: STEP-5B "Adoption by the director",
+`docs/learning/director-on-projects.md`. `tests/test_director_projects.py`: 14 new tests (fake model, a real project on disk,
+stand-in tools using the real act cache key): library reuse with no art tool, a missing character built and published,
+pins, per-act approvals (act 2 is not planned before act 1 is approved), resume after a crash, revising one act re-renders
+only that act, dropped shots, working-folder deletion. 93 director tests pass. A latent bug was fixed on the way:
+`StageCtx.tool(name, **args)` could not call `build_puppet` (its `name` argument clashed), nothing had exercised it.
+
+**Real run (qwen3:14b, ComfyUI not running), honest result: partial.** 2-act film `kite-smoke` on `test-cast`
+(pinned kit, bo, orchard; preview quality). Worked for real: story plan (the safety check refused the first story because
+the kids climbed a tree: correct, I revised it), library reuse (no art tool), voices and lines, act 1 planned (3 shots),
+built and rendered by the model loop (`act.mp4`, 9.5 s, 640x360, with audio), act 2 planned, and a resume saw act 1 as up
+to date (`render_act` skipped it). Failed: act 2's first shot, three tries (one after `revise act_s02`): the shot
+conversation stopped as "stuck" (the vision `check_frame` kept flagging a face and the model repeated a call three times;
+the loop's stop condition did its job). It is the 14B model's shot loop, not the project plumbing, but it means **no full
+film and no `export_movie` run for real**, and the review skill was **not run** (nothing complete to review). Found by the
+real run and fixed: a scene with 3 lines at 8 s cannot fit its lines (the story is planned before the lines are spoken), so
+an act's target is now `max(scene seconds, what its recorded lines need)`. The film is left in
+`projects/test-cast/films/` and `~/ai-studio/work/test-cast/kite-smoke/` (gitignored): `uv run scripts/direct.py retry
+kite-smoke --stage shots --project test-cast` continues it.
+
+**Full test suite:** 1047 passed, 6 failed. Four are real-model tests that refuse when `qwen3:14b` is loaded (my smoke film
+was holding it), two more heavy model tests (`test_comfy_graph_depth[da3]`, `test_puppet_segment` SAM); not re-run after the
+smoke film because they load ComfyUI models. None touch the director.
+
+**Not done / open:** director files are not behind `ProjectStore` and there is no event-log document (D-084 wanted one);
+`--dry-run` stubs work on old folders only; a shot renders twice (`render_shot` for the model's check, then `render_act`);
+`retry` resets a stage, not one act. **Next:** make the shot conversation less brittle (do not stop on a repeated
+`check_frame`; let the code accept the plan's face when the vision advice repeats), then a full 2-act film through the review
+skill. **Question for the owner:** should the director keep stopping at every act in non-auto runs (story, cast, first shot, each
+act, final is six stops for two acts), or should `first_shot` be dropped when acts exist?
+
 ---
 
 ## 2026-10-30 (late): rig-first Mia, parametric face, smooth motion (D-095)

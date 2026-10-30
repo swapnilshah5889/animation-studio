@@ -1744,6 +1744,21 @@ wave, jump and gesture motions the limb and torso texture smear and fold, which 
 are still the lesser evil. Not adopted; the code stays in `engines/blender/skin.py` as a measuring tool. Next levers:
 separate part meshes with a fill of the hidden area under front parts, and a draw-order switch for crossing legs.
 
+## D-094: The director works on a project: scenes are acts, approvals are per act, its memory lives in the project (2026-10-30)
+
+`director new --project <id> --film <slug> [--pin-cast a,b] [--pin-places x] [--acts N]` makes a film of a project. The
+story stage sees the project's library (not a flat film), is told to reuse it, and may be limited to pinned ids (an enum in
+the schema plus a check). A scene of the story is an act (it gets a title); the characters and places stage first puts the
+library items the story uses into the film (`Project.add_film_reference`) and only the missing ones go through the art
+tools, which publish them to the library. The shots stage plans one act at a time (taste rules see the film so far, D-088),
+builds its shots as camera angles of the act (same scaffold and conversation as before), writes the act's beats and calls
+`render_act`; the edit stage is `export_movie`, so a changed act is the only one that renders again. New stops:
+`act_<scene>` after each act (also `revise act_<scene> "note"`: that act alone is planned and built again). The agent loop
+core, stop conditions and approval semantics are untouched. The director's own files (state, story, plans, line list) are
+in `projects/<project>/director/<film>/`, linked into the derived working folder, so they survive its deletion; they are
+the director's private progress, not product data, and are not behind `ProjectStore` yet (the project's cast, places, acts,
+shots, recordings and renders are). Old film folders and `--import-cast` still work.
+
 
 ## D-095: Characters are built rig-first in a flat style, with a computed face and a smoothing layer (2026-10-30)
 
