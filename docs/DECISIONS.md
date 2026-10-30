@@ -1744,3 +1744,19 @@ wave, jump and gesture motions the limb and torso texture smear and fold, which 
 are still the lesser evil. Not adopted; the code stays in `engines/blender/skin.py` as a measuring tool. Next levers:
 separate part meshes with a fill of the hidden area under front parts, and a draw-order switch for crossing legs.
 
+
+## D-095: Characters are built rig-first in a flat style, with a computed face and a smoothing layer (2026-10-30)
+
+(The brief called this D-093; that number and D-094 were already taken, so it is D-095.) Spike
+`docs/spikes/rigged-character-test.md`. The owner's review blamed the characters, not the engines, so Mia was rebuilt:
+parts drawn by code as complete shapes in a flat palette (`puppet/flat.py`), the face computed from the head box with hard
+limits (`face_layout.py`; the old painted-head face had its eyes at 78% of the skin width and the mouth 49 px off centre),
+drawn per frame from continuous numbers (`engines/face_flat.py`), a head turn done as a limited slide, and a deterministic
+smoothing layer (`motions/smooth.py`, `Clip.max_speed_dps`): jerk 5.0 to 0.9, one-frame jumps 71 to 20, no switch pops in
+blinks, mouth shapes or expressions. Defect frames on the bake-off close-up fell from 44 to 3 of 72, with the caveat that this
+shot bends little and the counter does not see looks. A FLUX.2 klein edit to a flat A-pose was tried and rejected for limbs
+(arms touch the body, no guarantee of hidden parts, colours drift). Engine-neutral (D-030): the face layout and
+smoothing live in `studio_core`, only the transparent render and keyed camera touch the Blender harness. Everything is opt-in
+(`face.layout`, shot `smooth`, `camera.move: track`), so older films render as before. Not adopted yet for other characters or
+backgrounds: the owner decides whether the flat vector look is the film's look. Mia is still not production ready (front view
+only, simple art, a sideways walk); see the spike's recommendation.

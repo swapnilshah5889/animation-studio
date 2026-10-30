@@ -9,6 +9,23 @@ pass, then the desktop app (Step 13). The owner signed off on the 2026-10-30 pla
 Synfig. Owner preferences are in `AGENTS.md` ("Owner's standing preferences").
 ---
 
+## 2026-10-30 (late): rig-first Mia, parametric face, smooth motion (D-095)
+
+**Done and verified:** a one-session spike (`docs/spikes/rigged-character-test.md`). Old Mia's face measured: eyes 78% of the
+skin width apart, mouth 49 px off centre. New `face_layout.py` computes the face from the head box with hard limits (13 tests,
+incl. a 243-style x 7-yaw x 3-size sweep); `puppet/flat.py` draws Mia as complete parts in a flat palette; `motions/smooth.py` +
+`Clip.max_speed_dps` smooth pops and blend blinks, mouth shapes and expressions (jerk 5.0 to 0.9, jumps 71 to 20; 11 tests); keyed
+camera and transparent render added to the bake and Blender harness. 6 s 1080p clip with a 2.5D parallax plate, a matching cut with
+an 8-frame cross-fade and mixed dialogue: `~/ai-studio/scratch/rigged-character-test/clip.mp4`, `sheet.png`. Defect frames on the
+bake-off close-up 44 to 3 of 72 (a shot that bends little; the counter does not see looks). I looked at one contact sheet only.
+FLUX.2 klein A-pose edits tried and rejected for limbs. The brief's "D-093" was taken, so this is D-095.
+**Not done / honest:** Mia is not production ready: front view only (the walk is a sideways shuffle), simple art, big hair, no
+side or three-quarter set; the clip was not reviewed frame by frame or the audio by ear; no other character or background
+converted; no new models downloaded. **Open for the owner:** is the flat vector look the film's look? If yes, next: side and
+three-quarter part sets, flat backgrounds, then a second character from a spec.
+
+---
+
 ## 2026-10-30 (night): single skinned mesh spike, dropped (D-093)
 
 **Done and verified:** built one skinned mesh per character in Blender (`engines/blender/skin.py`, spike branch in
