@@ -405,6 +405,7 @@ def build_oneshot(
     smooth_s: float = 0.04,
     arms: tuple[str, ...] = SIDES,
     gesture_side: str | None = None,
+    legs: bool = True,
 ) -> RealClip:
     """A single action (wave, shrug, jump...) that starts and ends standing: everything is relative
     to the first frame's pose. `window` (seconds) cuts the part of the trial that is the action."""
@@ -443,6 +444,10 @@ def build_oneshot(
         knee[side] = 1.0 if np.median(cross) >= 0 else -1.0
         contacts[side] = [bool(x) for x in h < 0.12 * big_u]
     hip_drop = (hip_mid[:, 1] - hip_mid[0, 1]) / big_u
+    if not legs:  # an upper-body gesture: the legs stand (bent legs open seams in a rigid cut)
+        zero = [0.0] * n
+        feet = {s_: {"dx": list(zero), "dy": list(zero)} for s_ in feet}
+        hip_drop = np.zeros(n)
     stats = {"U": big_u, "seconds": (n - 1) / fps}
     return RealClip(
         name,

@@ -68,3 +68,21 @@ Built by `scripts/fetch_sfx_library.py`.
 Left out on purpose: BigSoundBank (its robots.txt forbids robots on its audio), Sonniss GDC
 (not CC0; its license forbids AI training), BBC Sound Effects (non-commercial), bulk Freesound
 (API terms).
+
+## Motion-capture data (not a model; data the animation is retargeted from)
+
+Fetched by `scripts/fetch_mocap.py` into `~/ai-studio/mocap/cmu/` (outside the repo, ~4 MB), turned
+into small clips by `scripts/build_real_clips.py`. The derived clips (a few KB of joint angles
+each) are committed under `studio_core/src/studio_core/motions/real_clips/`.
+
+| Source | Terms (quoted from the site, checked 2026-10-30) | Trials used |
+|---|---|---|
+| [CMU Graphics Lab Motion Capture Database](https://mocap.cs.cmu.edu) (ASF skeleton + AMC motion, plain text) | Home page: "This dataset of motions is free for all uses." FAQ: "The motion capture data may be copied, modified, or redistributed without permission." No warranty. Not CC0 or an OSI licence: it is the lab's own permissive statement, so keep this note and the credit line. | 35_01 walk, 35_17 run/jog, 141_16 wave hello, 141_21 shrug, 13_39 jump (+ 13_27 point, fetched, not used yet) |
+
+Credit line for the film's credits file: "Motion data from the CMU Graphics Lab Motion Capture
+Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217."
+
+**Considered and not used:** 100STYLE (CC-BY 4.0, but ~gigabytes and style-labelled locomotion only),
+AMASS and LAFAN1 (non-commercial / no-derivatives), Mixamo (Adobe terms, account needed), pose
+estimation from video (MediaPipe is Apache-2.0, but there is no licence-clean clip of a person
+walking, waving and jumping to run it on; see docs/spikes/real-motion.md).

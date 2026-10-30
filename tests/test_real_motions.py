@@ -172,6 +172,20 @@ def test_every_real_motion_starts_and_ends_near_rest() -> None:
             assert abs(float(keys[-1].value)) < 12, (motion, bone, keys[-1].value)
 
 
+def test_upper_body_gestures_keep_the_legs_standing() -> None:
+    """Bent legs open seams in a rigid cut (pose sweep): a wave or a shrug moves no leg bone."""
+    for motion in ("wave_real", "shrug_real"):
+        clip = run(motion, 120, energy=0.6).clips[0]
+        leg = [
+            keys
+            for (kind, bone), keys in clip.channels.items()
+            if kind == "angle" and bone.startswith(("thigh", "shin"))
+        ]
+        assert all(abs(float(k.value)) < 1e-6 for keys in leg for k in keys), motion
+        torso = clip.channels.get(("shift", "torso"), [])
+        assert all(abs(k.value.y) < 1e-6 for k in torso)  # type: ignore[union-attr]
+
+
 def test_jump_real_leaves_the_ground_and_lands() -> None:
     clip = run("jump_real", 200, energy=0.6).clips[0]
     ys = [sample(clip.channels[("shift", "torso")], f).y for f in range(0, 80)]  # type: ignore[union-attr]

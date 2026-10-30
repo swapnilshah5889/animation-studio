@@ -31,6 +31,9 @@ L = Interp.LINEAR
 SHIN_RANGE = (-65.0, 65.0)
 THIGH_RANGE = (-50.0, 50.0)
 FOREARM_RANGE = (-100.0, 100.0)  # a wave flexes the elbow toward the head: the rig's other way
+# Rigid cut-out parts open seams and holes where the head meets the shoulders when the head and
+# torso rotate against each other (pose sweep, 4B.1), so their rotation is played smaller.
+CUT_GAIN = {"head": 0.4, "torso": 0.5}
 RANGES = {"thigh": THIGH_RANGE, "shin": SHIN_RANGE, "forearm": FOREARM_RANGE}
 KNEE_SOFT = 35.0  # a knee bend beyond this eases toward SHIN_RANGE (rigid parts open when bent far)
 SETTLE = 8  # frames for a one-shot to come back to rest at its end
@@ -196,7 +199,8 @@ def _body(
             continue
         bone = ctx.bone(role, side or None)
         limits = ctx.view["bones"][bone].get("limits_deg")
-        series = [get(values, index(f)) * w * gain for f, w in zip(frames_, weights, strict=True)]
+        g = gain * CUT_GAIN.get(role, 1.0)
+        series = [get(values, index(f)) * w * g for f, w in zip(frames_, weights, strict=True)]
         if limits and role not in ("thigh", "shin"):  # (the legs are solved by IK, not fitted)
             lo, hi = limits["min"], limits["max"]
             if role in RANGES:

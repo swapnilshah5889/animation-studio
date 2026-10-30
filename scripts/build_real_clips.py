@@ -62,11 +62,13 @@ def main() -> int:
     side = waving_side(m)
     c = "l" if side == "left" else "r"
     yaw = min(MAX_YAW, best_yaw(m, [(f"{c}radius_end", f"{c}humerus")]))
-    clips.append(build_oneshot(m, "wave", "141_16", FPS, yaw, arms=(side,), gesture_side=side))
+    clips.append(
+        build_oneshot(m, "wave", "141_16", FPS, yaw, arms=(side,), gesture_side=side, legs=False)
+    )
 
     m = load("141_21")
     window = active_window(m, ["lhumerus_end", "rhumerus_end", "lradius_end", "rradius_end"])
-    clips.append(build_oneshot(m, "shrug", "141_21", FPS, 0.0, window))
+    clips.append(build_oneshot(m, "shrug", "141_21", FPS, 0.0, window, legs=False))
 
     m = load("13_39")
     clips.append(build_oneshot(m, "jump", "13_39", FPS, 0.0, active_window(m, ["root"], 0.15)))
