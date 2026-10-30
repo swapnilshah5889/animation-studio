@@ -1,0 +1,67 @@
+{
+ "_comment": "emotion -> expressions that fit it, on the current face rig (studio_core.face.EXPRESSIONS); default_emotion: the feeling an expression most plausibly meant (plans written without an emotion). Edit here if the rig changes; tests keep it in sync with the rig and docs/craft/expressions.md.",
+ "emotions": {
+  "calm": [
+   "neutral",
+   "happy"
+  ],
+  "curious": [
+   "neutral",
+   "surprised",
+   "happy"
+  ],
+  "joy": [
+   "happy",
+   "excited"
+  ],
+  "excited": [
+   "excited",
+   "happy"
+  ],
+  "wonder": [
+   "surprised",
+   "excited"
+  ],
+  "proud": [
+   "proud",
+   "happy"
+  ],
+  "shy": [
+   "shy",
+   "neutral"
+  ],
+  "worried": [
+   "worried"
+  ],
+  "sad": [
+   "sad",
+   "worried"
+  ],
+  "tired": [
+   "sleepy",
+   "neutral"
+  ],
+  "effort": [
+   "neutral",
+   "proud",
+   "determined"
+  ],
+  "grumpy": [
+   "grumpy",
+   "neutral"
+  ]
+ },
+ "default_emotion": {
+  "neutral": "calm",
+  "happy": "joy",
+  "sad": "sad",
+  "surprised": "wonder",
+  "grumpy": "grumpy",
+  "worried": "worried",
+  "excited": "excited",
+  "shy": "shy",
+  "sleepy": "tired",
+  "proud": "proud",
+  "determined": "effort"
+ }
+}

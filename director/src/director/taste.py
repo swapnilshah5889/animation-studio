@@ -13,40 +13,19 @@ Every rule has an id, so a run can count violations per rule (scripts/measure_sh
 from __future__ import annotations
 
 import itertools
+import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 # What a character feels in a shot. The model names the feeling, code decides which faces fit it.
-# Expression names are the puppet's (studio_core.face.EXPRESSIONS); a test keeps them in sync.
-EMOTIONS: dict[str, tuple[str, ...]] = {
-    "calm": ("neutral", "happy"),
-    "curious": ("neutral", "surprised", "happy"),
-    "joy": ("happy", "excited"),
-    "excited": ("excited", "happy"),
-    "wonder": ("surprised", "excited"),
-    "proud": ("proud", "happy"),
-    "shy": ("shy", "neutral"),
-    "worried": ("worried",),
-    "sad": ("sad", "worried"),
-    "tired": ("sleepy", "neutral"),
-    "effort": ("neutral", "proud", "determined"),
-    "grumpy": ("grumpy", "neutral"),
-}
+# The table is data (emotions.json), not code: the face rig may change. A test keeps it in sync with
+# studio_core.face.EXPRESSIONS and with docs/craft/expressions.md.
+_TABLE = json.loads((Path(__file__).parent / "emotions.json").read_text())
+EMOTIONS: dict[str, tuple[str, ...]] = {k: tuple(v) for k, v in _TABLE["emotions"].items()}
 # The face a plan written without an emotion (an old plan) most plausibly meant.
-DEFAULT_EMOTION = {
-    "neutral": "calm",
-    "happy": "joy",
-    "sad": "sad",
-    "surprised": "wonder",
-    "grumpy": "grumpy",
-    "worried": "worried",
-    "excited": "excited",
-    "shy": "shy",
-    "sleepy": "tired",
-    "proud": "proud",
-    "determined": "effort",
-}
+DEFAULT_EMOTION: dict[str, str] = _TABLE["default_emotion"]
 NEGATIVE = {"sad", "worried", "grumpy"}
 BRIGHT = {"joy", "excited", "wonder", "proud"}  # a peak of the film
 FEELING = BRIGHT | {"curious", "sad", "worried", "shy"}  # worth a push_in
