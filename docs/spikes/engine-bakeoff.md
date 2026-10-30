@@ -146,15 +146,20 @@ the two deformers shape the same bend differently). Mia's face in Blender and Op
    physics for hair and cloth, bone scale for squash and stretch is native but not demonstrated here),
    and the bake has already let it play the exact clips. Strictly 2D by construction. GPL does not touch our
    renders.
-2. **Do not add OpenToonz for puppets.** Its Plastic bend is no better than Blender's and it is 3x to 5x
-   slower, Intel-only (Rosetta), unsafe with more than one thread, and needs an undocumented format. The
-   BSD licence and the xsheet are real advantages for **drawn hero shots**, but nothing in the pipeline makes
-   drawn frames yet. The added hand-off (a second scene format, a second renderer, frames re-encoded) is only
-   worth it when there are hand-drawn frames; Blender can also play image sequences, so even those can start
-   there. Re-evaluate OpenToonz on the Windows node (no Rosetta) or if an arm64 build appears.
-3. **Keep Synfig as the fallback** until the Blender adapter has the face and the director tools on it; its bendable
-   limbs work and cost no extra time, but `bend` was never made the default because the rig had no limb images:
-   `engines/limbs.py` fixes that for any rig.
+2. **OpenToonz also clears Gate 1, as the second engine for drawn work, not for puppets.** It builds from our
+   data, renders headless and deterministically (single thread), and its Plastic bend looks the same as
+   Blender's on the benchmark (0.6 grey levels mean difference; both bend smoothly, neither opens a hole). On
+   puppets it gives nothing Blender does not, and costs more: 3x to 5x slower, Intel-only under Rosetta, unsafe
+   above one thread, an undocumented file format. Its unique strengths (BSD-3 licence, xsheet and frame-by-frame
+   tools, the multiplane camera, a render farm) were **not** benchmarked here, because no hand-drawn frames exist
+   yet. So the pairing "Blender for rigged puppets, OpenToonz for drawn hero shots" is worth its hand-off only
+   once there is a drawn-shot job to test; the next OpenToonz task should be a drawn-frames shot (image
+   sequence on twos, xsheet timing) plus an arm64 or Windows-node render check. Until then Blender alone covers
+   the benchmark.
+3. **Synfig is only the reference** (rigid and bendable runs, both with the same limb images; no tuning was done).
+   Both candidates beat its rigid limbs on the smoothness of the joint and Blender beats it on speed
+   (0.03 to 0.23 against 0.15 s/frame) and on automation surface; its bendable limbs render fine but are not worth
+   more investment if it is being replaced.
 4. The engine is only half the lifelike gap. The clips are still eased to the rig's limits (knee 64 degrees in
    shot A); the sweep shows a 120 degree knee and a 140 degree elbow render cleanly, so widening the limits for
    the real clips is the next gain, and it is independent of the engine.
