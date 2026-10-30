@@ -1646,3 +1646,12 @@ and backgrounds (built once, versioned, immutable once a film uses them); each f
 by `{id, version}` instead of copying them (replaces the `--import-cast` copying). Why: the owner wants many films
 per project with a stable cast and shared places; copies drift and waste disk. The GUI (D-081) shows projects as
 the top level. Layout and migration are specified in ROADMAP Step 5B.
+
+## D-083: Acts are the unit of directing and rendering; specs are the editable source, renders are cache (2026-10-30)
+
+A film is a list of acts; each act has its own background, cast and several camera angles (shots). The director
+directs and renders per act; "export all acts" stitches the act renders into the movie. All specs (`acts.json`,
+`shot.json`, cues, edit list) stay editable until export; media is derived, keyed by a content hash (specs plus
+character, background and engine versions) so an edit re-renders only its act. Why: long films need partial
+re-renders, per-act approval and later edits in the GUI; baking early would make every change a full redo. See
+ROADMAP Step 5C.

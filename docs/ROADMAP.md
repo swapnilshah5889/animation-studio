@@ -183,6 +183,33 @@ Owner requirement (2026-10-30): the five test characters (Kit, Bo, Pim, Mia, Bol
 without copying files; a new character built during film 2 is available to film 3; old films still render; tests
 cover the resolver, versioning and migration.
 
+## Step 5C: Acts, editable source and "export all acts"
+
+Owner requirement (2026-10-30): a whole film is broken into **acts** that the director directs one by one. Acts can
+share or differ in **backgrounds**, and each has **multiple camera angles** (shots). The project renders each act
+and **stitches all acts into one movie** when the user clicks "Export all acts as a movie". Until then every act
+and animation stays in an **editable, changeable format**.
+
+- **Hierarchy:** project > film > acts > shots. A film has `acts.json` (ordered acts: title, setting/background id,
+  cast ids, story beats); an act has its shots (`shots/<id>/shot.json`, as today) with camera, framing, motion,
+  expression and line cues per shot.
+- **Source vs. cache:** the specs (`film.json`, `acts.json`, `shot.json`, audio line cues, edit lists) are the
+  editable source of truth. Renders (frames, act videos, the movie) are derived and disposable. Nothing is baked
+  into media until export.
+- **Per-act render with staleness:** each act render is keyed by a content hash of its specs plus the versions of
+  the characters, backgrounds and engine it uses. Editing a shot marks only its act stale; "render" redoes stale
+  acts only; "export all acts" renders any stale act, then stitches the act videos (with audio, music continuity
+  and optional transitions) through `edit_mcp` into one movie.
+- **Director:** works act by act, with an approval stop per act (resumable, retry one act without touching the
+  others); it picks the act's background from the project's library and plans multi-angle coverage (establishing,
+  two-shot, close-up, reaction; see `docs/craft/`).
+- **Edit later:** a change to one shot (camera, expression, line, motion) is a spec edit by the user, the GUI
+  (Step 13) or the director (`revise`), followed by re-render of that act only.
+
+**Done when:** a 3-act test film with different backgrounds and at least three camera angles per act renders per
+act; editing one shot re-renders only its act; "export all acts" produces one movie; deleting all renders and
+re-exporting gives the same film from the specs alone; tests cover hashing, staleness and the stitch order.
+
 ## Step 6: OpenToonz backend + render containers
 The strategic engine (D-031) behind the engine-neutral scene model (D-030), packaged for server-side
 rendering (D-032). Starting point: the spike scripts in `scripts/spikes/` and `docs/spikes/opentoonz.md`.

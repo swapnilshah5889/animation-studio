@@ -8,7 +8,7 @@
 
 **Move with a reason:**
 - `push_in` leans toward a feeling: the discovery ("a red balloon!"), the proud grin, a worry
-  that needs comfort. Medium or close framing, on a shot whose emotion is joy, excited, wonder,
+  that needs comfort. Medium or close framing, on a shot whose emotion is curious, joy, excited, wonder,
   proud, sad, worried or shy. Never on a wide shot (it crops the sides for nothing).
 - `pull_out` lets go: the last shot, a goodbye, a calm hold. Pair with a settled emotion.
 - `slow_pan_*` follows a walk (a character `moves_to` that side) or reveals the place in an
