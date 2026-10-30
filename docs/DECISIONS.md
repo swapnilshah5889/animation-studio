@@ -1612,3 +1612,21 @@ The owner approved `docs/steps/STEP-4-comfy-mcp.md` as written. In short:
   differences from the brief (a `director/` folder, `qa` as a seventh stage, `read_craft` by name first, a separate
   shot-plan schema).
 
+
+## D-080: Director loop built; art, audio, edit and QA stages are code-driven (2026-10-30)
+
+The `director/` package and `scripts/direct.py` (new, resume, approve, revise, retry, status) run a story prompt
+through seven stages with four approval stops. The owner approved the design with: a session writes the loop core
+(kept small and commented, with a learning note in `docs/learning/agent-loop.md`), 15 s story first, four stops,
+code-driven art stages. Choices made while building:
+- The first passing candidate is chosen in code (a text-only 14B has no signal beyond the check flags). A vision
+  pick with qwen3-vl is a later option.
+- A shot is built in two phases: code scaffolds it (blink and idle for everyone), then a tool-calling conversation
+  looks and fixes. `render_shot` is refused until `check_frame` has run.
+- Planning calls are schema-forced with required fields (the 14B drops optional ones; "none" is an empty value).
+- The audio stage stops an idle ComfyUI before `compose`, and refuses if it is busy.
+- Edit and QA are code-driven; QA reports open issues at the final approval and does not auto-fix.
+- Stage timeouts include tool time (deviates from the design, which excluded it).
+- Craft retrieval is by name only for now.
+Stop conditions are decided by code (`done`, `unfinished`, `stuck`, `limit`), never by the model.
+Open: the 14B's shot and expression taste is weak (see PROGRESS).

@@ -12,6 +12,24 @@ and the hosted-vs-desktop decision (needed by Step 11).
 
 ---
 
+## 2026-10-30: the director works end to end (D-080)
+
+- **Done:** `director/` package and CLI built and pushed (`466f837`). 55 offline tests (fake LLM and fake MCP),
+  mutation-checked guards, full suite 760 passed, ruff clean.
+- **Verified:** dry run with real qwen3:14b and stubbed slow tools (four stops shown, 15.02 s, 0 refusals). Real
+  run with `--auto` from one prompt, using Kit, Bo and the orchard: `films/real-15s/edit/final.mp4`, 15.02 s,
+  1080p with audio, 21 model calls, 79 tool calls, 0 refused, about 19 min LLM and 8 min tools (`check_film` 160 s).
+- **Found and fixed live:** `check_safety` lone-argument refusal, `compose` blocked by a running ComfyUI, dropped
+  optional `line` field, curly apostrophes, scene ids s15/s16.
+- **Weak:** planning taste. One character per shot (Kit speaks to an off-screen Bo), poor expression choices (Bo
+  grumpy while jumping for joy, Kit sad at the goodbye), no establishing shot, `point` has no target. QA left 2
+  advisory issues open.
+- **Not done:** the approval stops were not exercised live (only in tests and the dry run); the characters stage and
+  the shots fix rounds were never exercised live; Kdenlive untested; 60 s film; Windows node.
+- **Open questions for the owner:** (1) improve taste with more craft notes, a better few-shot example, or leave it
+  to Step 7 evals; (2) should open QA issues trigger an automatic fix round; (3) story plan takes 85-230 s with
+  thinking on: accept, or non-thinking with a retry.
+
 ## 2026-10-29: face fix, pale panels and Kit's patch done (D-078); cast bar 4 of 5, sweep 116
 
 Next: the owner chooses the fast path to a first film (Step 5: `edit_mcp`, create-film tool, director), then
