@@ -1672,3 +1672,22 @@ Python backend (own `uv` environment); models and large engines are not inside t
 and checked by a first-run Setup screen (licence and size shown, resumable, with repair). Why: models are tens of
 GB and the engines are separate GPL and BSD apps; keeping them out keeps the installer small, the licences clean
 and the fully-local rule intact after setup. Signing and notarization are decided when sharing beyond the owner.
+
+## D-086: Real motion comes from CMU mocap retargeted in code; `*_real` motions are opt-in for now (2026-10-30)
+
+Clips come from the CMU Graphics Lab Motion Capture Database ("free for all uses"), projected to 2D and retargeted
+to each puppet's bones with foot-lock, stored as small engine-neutral JSON clips (raw data stays outside the repo).
+`Clip.limits` lets a clip declare a wider joint range than the rig default; `params.principles` (0 to 1) is an
+opt-in layer for anticipation, overshoot, settle, head lead and landing dips on any motion. Result was a modest
+gain: with rigid two-piece limbs the walk, run and jump add cut defects (Kit 26% to 44% of swept frames), so the
+`*_real` motions stay opt-in and are not offered to the director until the render engine bends limbs (see D-087).
+
+## D-087: Engine choice is decided by a bake-off; Blender and OpenToonz lead, Synfig is the reference (2026-10-30)
+
+The owner is not impressed with Synfig's results and prefers Blender plus OpenToonz. Before building more, a
+bake-off renders the same benchmark (Kit walk, wave, jump; a Mia close-up) in each, with an automation gate
+(code builds, animates and renders headless on the Mac, deterministically) before the look is judged. Source
+changes to the apps are allowed only as a last resort and recorded (AGENTS.md levels 1 to 3). Strictly 2D
+(orthographic camera) unless the owner approves 2.5D. The replacement of Synfig is recorded as a decision only
+after the bake-off, and Synfig stays available as a fallback until the new engine renders the cast at least as
+cleanly. Reverse-engineering tools are not needed: both apps are open source.

@@ -2,15 +2,38 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Step 4B (animation quality), draft brief awaiting review. Step 4 closed on
-2026-10-27 (D-068): tasks 4.1–4.10 done, cast pass bar met (4 of 5, D-067). The Step 5 brief is a draft. The owner chose to fix the puppet cut on a few varied characters before closing
-Step 4 (`scripts/cast_review.py` scaffolds this: Kit, Bo, a child, a bird, a robot). The
-roadmap now ends in production-grade films (D-059): Step 4B (animation quality) comes next,
-and the old Step 7 is split into Steps 7–12. Open items: Pim's other cut failures (the eye finder is fixed, D-060), task 3.2b's Parler download (deferred), Docker's memory
-reservation, deleting the pre-Step-4 scratch files, Kit's and Bo's real voices (placeholders),
-and the hosted-vs-desktop decision (needed by Step 11).
+**Current step:** engine bake-off (Blender, OpenToonz, Synfig) and the project data layer (Steps 5B/5C), both running as
+sessions, plus the director taste fixes (6.2). Step 5 (director, edit, QA, first 15 s film) is built (D-080). The owner signed off on
+the 2026-10-30 plan (see the entry below) and leans towards Blender plus OpenToonz over Synfig.
 
 ---
+
+## 2026-10-30: plan reset, owner sign-off, real motion (D-081 to D-086)
+
+- **Why:** the owner found the first director-made film weak and wants much more lifelike animation. Real mocap
+  motion (CMU, retargeted) gave only a modest gain because limbs are rigid two-piece cuts, so the engine is the limit.
+- **Owner sign-off (all steps of the plan):** (1) engine bake-off first, with Blender and OpenToonz as the primary
+  candidates and Synfig as a reference (installs approved; source changes only as a last resort and recorded);
+  (2) projects with their own versioned cast and shared backgrounds, many films per project (Step 5B, D-082);
+  (3) films made of acts with several camera angles, editable specs until "export all acts", per-act render with
+  staleness (Step 5C, D-083); (4) storage behind a `ProjectStore` so an online database can be added later (D-084,
+  Step 14, not now); (5) a desktop app for Apple Silicon Macs with a first-run Setup screen (Step 13, D-081, D-085);
+  (6) the five test characters become a "test-cast" project. Not decided: strict 2D vs 2.5D (default strict 2D);
+  Tauri needs the Rust toolchain (ask before installing); GUI stack is a proposal.
+- **Plan order:** bake-off and the project data layer in parallel; then engine backend and puppet meshes; lifelike
+  pass; director v2 on projects and acts (15 s then 60 s); desktop app; later evals, durable pipeline, training.
+- **Real motion done (6.1, `0dcf5a0`, `5218159`):** `walk_real`, `run_real`, `wave_real`, `jump_real`, `shrug_real`
+  from the CMU mocap database (free for all uses; ~4 MB fetched to `~/ai-studio/mocap/cmu/`), retargeted in code with
+  foot-lock, plus an opt-in `params.principles` layer. Verified: 60 new tests, fast suite 803 passed, ruff clean.
+  Measured on Kit: foot slide 0.037 vs 0.041 leg lengths, no gain in smoothness numbers; pose sweep defects Kit
+  9/34 (26%) old vs 48/108 (44%) new (wave and shrug add none; walk, run, jump add holes and seams from bending
+  rigid legs), Bo same rate. Honest result: modest gain, puppets still read as rigid cut-outs. `*_real` stay opt-in.
+  Skipped: `sit_real`, `point_real`. Open: offer `walk_real` to the director now or after bendable limbs (held
+  until the new engine); add the CMU credit line when film credits exist.
+- **Research:** `docs/spikes/engine-options.md` (Blender, OpenToonz, Inochi2D, Godot, AnimeEffects, own renderer,
+  AI video; AI video ruled out for the main pipeline).
+- **In flight:** 6.2 director taste (uncommitted edits, measurement passes), 6.3 engine bake-off (Blender 5.2.3 and
+  OpenToonz installed, spike scripts written, no render results yet), 5B.1 project data layer (just started).
 
 ## 2026-10-30: the director works end to end (D-080)
 
