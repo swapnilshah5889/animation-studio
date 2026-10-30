@@ -15,7 +15,10 @@ from typing import Any
 
 # Bookkeeping that changes without the picture changing.
 VOLATILE_FIELDS = ("rev", "created_at", "updated_at", "owner_id", "project_id")
-KEY_VERSION = 1  # bump to invalidate every cached render when the key recipe changes
+# Act fields that say where the act sits in the film or what it is about, not how it looks:
+# reordering acts or retitling one must not make its render stale.
+STORY_FIELDS = ("order", "title", "beats")
+KEY_VERSION = 2  # bump to invalidate every cached render when the key recipe changes
 
 
 def canonical_json(value: Any) -> str:
@@ -51,7 +54,7 @@ def act_cache_key(
         "key_version": KEY_VERSION,
         "engine": engine_id,
         # The act carries its background and cast as {id, version}, so their versions are in here.
-        "act": _content(act),
+        "act": {k: v for k, v in _content(act).items() if k not in STORY_FIELDS},
         "shots": [_content(s) for s in shots],
         "extra": dict(extra or {}),
     }

@@ -138,7 +138,7 @@ class ProjectLink:
         acts = self.project.list_acts(self.film_id)
         if self.act:
             for a in acts:
-                if self.act in (a["id"], a["title"]):
+                if self.act in (a["id"], a["title"], str(a["order"])):
                     return a["id"]
             raise LinkError(f"no act {self.act!r}; acts: {[a['title'] for a in acts] or 'none'}")
         if len(acts) == 1:

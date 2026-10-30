@@ -458,6 +458,12 @@ class Project:
         place = self._within(self.get_film(film)["places"], "background", background)
         return self._update("act", act_id, lambda d: d.update(background=place))
 
+    def set_act_cast(self, film: str, act_id: str, cast: Iterable[str | Mapping[str, Any]]):
+        """The characters in an act; each must be in the film (at the film's version)."""
+        film_cast = self.get_film(film)["cast"]
+        members = [self._within(film_cast, "character", c) for c in cast]
+        return self._update("act", act_id, lambda d: d.update(cast=members))
+
     def add_film_reference(
         self, film: str, kind: str, id_or_slug: str, version: int | None = None
     ) -> Ref:

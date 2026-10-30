@@ -57,7 +57,24 @@ def test_tools_are_listed() -> None:
             return (await client.list_tools()).tools
 
     tools = {t.name: t for t in asyncio.run(go())}
-    assert set(tools) == {"create_film", "describe_edit", "assemble", "render_film"}
+    assert set(tools) == {
+        "create_film",
+        "describe_edit",
+        "assemble",
+        "render_film",
+        # projects and acts (Step 5C)
+        "describe_project",
+        "list_acts",
+        "add_act",
+        "edit_act",
+        "reorder_acts",
+        "remove_act",
+        "reorder_shots",
+        "remove_shot",
+        "render_act",
+        "export_movie",
+        "clear_renders",
+    }
     assert all(len(t.description or "") > 40 for t in tools.values())
 
 

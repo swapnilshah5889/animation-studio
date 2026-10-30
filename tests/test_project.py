@@ -307,3 +307,11 @@ def test_add_film_reference_adds_or_moves(project, film):
     project.publish_character("kit", {"rig.json": b"{2}"})
     project.add_film_reference(film["id"], "character", "kit")
     assert project.get_film(film["id"])["cast"][0]["version"] == 2
+
+
+def test_reordering_or_retitling_acts_does_not_make_them_stale(project, film):
+    a1, a2 = project.list_acts(film["id"])
+    keys = [project.act_key(film["id"], a["id"], ENGINE) for a in (a1, a2)]
+    project.reorder_acts(film["id"], [a2["id"], a1["id"]])
+    project.update_act(a1["id"], title="Dawn", beats=["a new beat"])
+    assert [project.act_key(film["id"], a["id"], ENGINE) for a in (a1, a2)] == keys

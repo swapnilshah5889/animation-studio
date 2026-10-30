@@ -131,3 +131,36 @@ def test_publishing_a_built_character_adds_a_version_only_when_it_changed(world)
     new = link.publish_character("pop")
     assert new["version"] == 1 and {c["slug"] for c in project.list_characters()} == {"pip", "pop"}
     assert len(project.get_film(film["id"])["cast"]) == 2
+
+
+def test_two_projects_with_the_same_names_never_mix(tmp_path):
+    ws = make_workspace(tmp_path)
+    a, b = make_project(ws, "project-a"), make_project(ws, "project-b")
+    fa, fb = make_film(ws, a), make_film(ws, b, shots_per_act=2)  # both films: "three-acts"
+    folder_a, folder_b = (
+        ws.open_film("three-acts", "project-a"),
+        ws.open_film("three-acts", "project-b"),
+    )
+    assert folder_a.root != folder_b.root
+    assert len(folder_a.shots()) == 9 and len(folder_b.shots()) == 6
+    shot_spec.add_expression(folder_a, "s01_sh01", "pip", "happy", 0.0)
+    assert [len(x["shot_ids"]) for x in b.list_acts(fb["id"])] == [2, 2, 2]
+    assert all(
+        s["spec"].get("expressions") is None for s in b.store.list_documents("project-b", "shot")
+    )
+    assert len(a.store.list_documents("project-a", "shot")) == 9
+    assert len(ws.open_film("three-acts", "project-a").shots()) == 9  # B's open did not touch A
+    assert fa["id"] != fb["id"]
+
+
+def test_two_films_of_one_project_keep_their_own_shots(tmp_path):
+    ws = make_workspace(tmp_path)
+    project = make_project(ws)
+    make_film(ws, project, "film-one")
+    make_film(ws, project, "film-two", shots_per_act=1)
+    one, two = ws.open_film("film-one", project.id), ws.open_film("film-two", project.id)
+    assert len(one.shots()) == 9 and len(two.shots()) == 3
+    shot_spec.add_expression(two, "s01_sh01", "pip", "happy", 0.0)  # same shot id in both films
+    assert (
+        shot_spec.load(ws.open_film("film-one", project.id), "s01_sh01").get("expressions") is None
+    )
