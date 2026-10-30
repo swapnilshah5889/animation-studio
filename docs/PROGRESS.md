@@ -9,6 +9,17 @@ pass, then the desktop app (Step 13). The owner signed off on the 2026-10-30 pla
 Synfig. Owner preferences are in `AGENTS.md` ("Owner's standing preferences").
 ---
 
+## 2026-10-30 (night): single skinned mesh spike, dropped (D-093)
+
+**Done and verified:** built one skinned mesh per character in Blender (`engines/blender/skin.py`, spike branch in
+`build_render.py`, `scripts/spikes/skinned_measure.py`) and measured it on the same shots as the cut. Defect frames: Kit
+48 to 15 of 120, Mia 42 to 32 of 72; 0.023 s per frame (same as the cut). I looked at one sheet per character (plus three
+extra Kit sheets while tuning): wave, jump and gesture frames show smeared, folded texture that the hole/seam counter cannot
+see, so the lower numbers overstate it. Recommendation in `docs/spikes/skinned-mesh.md`: drop; test separate part meshes with
+a fill of hidden areas, and a draw-order switch for crossing legs. **Not done:** a calibrated stretch measure (mine ranks the
+worst frame low), the pose sweep over all motions, any production adapter. **Open for the owner:** the contact sheets are in
+the side-session notes folder (`skinned-kit-sheet.png`, `skinned-mia-sheet.png`); say if you read them differently.
+
 ## 2026-10-30 (evening): servers use projects, acts export (D-091); joint overlap plateaus (D-092)
 
 - **5B.2 servers adopt projects (`ecc8096`..`68d1a46`):** all five MCP servers take a project id; `Workspace.open_film(film, project)` is the

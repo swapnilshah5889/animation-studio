@@ -1734,3 +1734,13 @@ shot. Most remaining defects come from legs crossing, a hand beside a thigh, loo
 leg, which overlap cannot fix. It stays off by default. The next lever to test is a single continuous skinned mesh of
 the whole figure (bone weights taken from the part masks) instead of separate rigid parts, which removes seams by
 construction; generative inpainting of hidden areas is only needed where limbs cross.
+
+## D-093: One continuous skinned mesh per character is dropped (2026-10-30)
+
+Spike `docs/spikes/skinned-mesh.md`: a single triangulated mesh of the whole figure (parts composited, vertex weights from
+the part masks, smooth blend near joints) in Blender, same bake and defect counter as the cut. Defect frames fell (Kit
+48 to 15 of 120, Mia 42 to 32 of 72, same 0.023 s per frame), but only because stretched triangles fill the gaps: on the
+wave, jump and gesture motions the limb and torso texture smear and fold, which the counter cannot see. The cut's seams
+are still the lesser evil. Not adopted; the code stays in `engines/blender/skin.py` as a measuring tool. Next levers:
+separate part meshes with a fill of the hidden area under front parts, and a draw-order switch for crossing legs.
+

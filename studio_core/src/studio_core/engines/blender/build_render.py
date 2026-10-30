@@ -163,6 +163,9 @@ def build_character(ch, z0):
             eb.parent = arm_data.edit_bones[ch["bones"][b]["parent"]]
     bpy.ops.object.mode_set(mode="OBJECT")
 
+    if ch.get("skin") and not RIGID:
+        return build_skinned(ch, arm, z0)
+
     limb_owner = {}
     limbs = [] if RIGID else ch["limbs"]
     for limb in limbs:
@@ -222,6 +225,55 @@ def build_character(ch, z0):
                 g_lo.add([vi], wl, "REPLACE")
         if kind == "part" and ch.get("face") and item["name"] == ch["face"]["part"]:
             head_obj = (obj, mat)
+    return {"arm": arm, "head": head_obj, "data": ch}
+
+
+def build_skinned(ch, arm, z0):
+    """Spike D-093: one continuous skinned mesh for the whole body (skin.py), plus the rigid head
+    sprite on top (it carries the per-frame face)."""
+    sk = json.loads(Path(ch["skin"]["mesh"]).read_text())
+    verts = [(x * PX, y * PX, 0.0) for x, y in sk["verts"]]
+    mesh = bpy.data.meshes.new("skin")
+    mesh.from_pydata(verts, [], [tuple(t) for t in sk["tris"]])
+    uv = mesh.uv_layers.new(name="uv")
+    for poly in mesh.polygons:
+        for li in poly.loop_indices:
+            uv.data[li].uv = sk["uvs"][mesh.loops[li].vertex_index]
+    mesh.update()
+    obj = bpy.data.objects.new("skin", mesh)
+    obj.location.z = z0
+    scene.collection.objects.link(obj)
+    obj.data.materials.append(material("skin", ch["skin"]["png"]))
+    mod = obj.modifiers.new("arm", "ARMATURE")
+    mod.object = arm
+    for bone, ws in sk["weights"].items():
+        vg = obj.vertex_groups.new(name=bone)
+        for vi, wt in ws:
+            vg.add([vi], wt, "REPLACE")
+    head_obj = None
+    if ch.get("face"):
+        p = next(p for p in ch["parts"] if p["name"] == ch["face"]["part"])
+        jx, jy, _ = ch["rest"][p["bone"]]
+        w, h = p["size_px"]
+        hm, hv = grid_mesh(
+            "head",
+            (jx - p["pivot_px"][0]) * ch["scale"],
+            (jy + p["pivot_px"][1]) * ch["scale"],
+            w * ch["scale"],
+            h * ch["scale"],
+            1,
+            1,
+        )
+        ho = bpy.data.objects.new("head", hm)
+        ho.location.z = z0 + 0.01
+        scene.collection.objects.link(ho)
+        hmat = material("head", str(Path(ch["rig_dir"]) / p["file"]))
+        ho.data.materials.append(hmat)
+        hmod = ho.modifiers.new("arm", "ARMATURE")
+        hmod.object = arm
+        hg = ho.vertex_groups.new(name=p["bone"])
+        hg.add(list(range(len(hv))), 1.0, "REPLACE")
+        head_obj = (ho, hmat)
     return {"arm": arm, "head": head_obj, "data": ch}
 
 
