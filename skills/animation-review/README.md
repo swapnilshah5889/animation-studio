@@ -4,6 +4,11 @@ Agent-agnostic. Any coding agent or local model that can run a shell command and
 (Claude Code, Codex, Cursor, the director's local reviewer). Tool-specific adapters (for example
 `.claude/skills/animation-review/SKILL.md`) only point here; keep the real content in this folder.
 
+**Independence rule:** the author of a change must not be its only reviewer. On 2026-10-31 an author's self-review passed
+Mia's round 2 clip while a fresh reviewer, working from the same rubric, found three majors (head and boots clipped by
+the push-in, stick-leg walk, helmet hair). Run the review in a separate agent or model, written before it reads the
+author's notes.
+
 **When to use:** before showing any render to the owner, after any change to art, rig, motion or render code, and
 whenever asked to review, check how it looks or QA the animation.
 
