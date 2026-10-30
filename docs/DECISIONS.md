@@ -1691,3 +1691,28 @@ changes to the apps are allowed only as a last resort and recorded (AGENTS.md le
 (orthographic camera) unless the owner approves 2.5D. The replacement of Synfig is recorded as a decision only
 after the bake-off, and Synfig stays available as a fallback until the new engine renders the cast at least as
 cleanly. Reverse-engineering tools are not needed: both apps are open source.
+
+## D-088: The shot plan carries emotion, framing, addressee and target; taste is checked in code (2026-10-30)
+
+Shot plans have required `emotion`, `framing`, `line.to` and `target` fields. The emotion-to-expression table is data
+(`director/src/director/emotions.json`, kept in sync with the face rig by a test); 16 taste rules in code (staging,
+emotion arc, faces, camera intent, pointing) give the model one feedback round and are advice, never fatal. The opening
+wide shot may carry the scene's first line when the recorded lines leave no time, and the brief states the time the
+lines need. Measured: violations 52 to 8 on five fixed stories. The shot-plan format will be adapted to acts (D-083).
+
+## D-089: Project data layer: ULID ids with a slug, append-only versions, act cache key (2026-10-30)
+
+Ids are ULID-style with a `slug` handle; a project id may be caller-chosen because it is the folder name. A character
+or background version is an append-only manifest of relative file name to asset record (content-addressed); old
+versions cannot be edited. The act cache key hashes the act (its background and cast versions), its shots in order, an
+engine id and the film style, with a `KEY_VERSION`. Migration into the store clones, then hard-links, then copies, and
+never touches the old film folders. Adoption by the MCP servers and director follows (STEP-5B brief).
+
+## D-090: Engine bake-off result: engines tie on defects; Blender leads on speed and automation (2026-10-30)
+
+Both Blender and OpenToonz clear the automation gate with no plugins or source changes; Blender is native arm64, 4 to
+40 times faster per frame and scriptable in its own Python; OpenToonz runs under Rosetta, single thread. Cut defects on
+Kit's benchmark shot are about the same across Synfig, Blender and OpenToonz (43 to 63 of 120 frames), so the engine
+is not what removes holes at bent joints: the cut is. The owner decides the look by eye; until then the recommendation
+(Blender for puppets, OpenToonz later for hand-drawn hero shots) is not a decision. Next lever: complete the hidden
+overlap at joints in the cut (a joint-completion spike), which is engine-independent.

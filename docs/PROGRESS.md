@@ -8,6 +8,31 @@ the 2026-10-30 plan (see the entry below) and leans towards Blender plus OpenToo
 
 ---
 
+## 2026-10-30 (later): bake-off results, project data layer, director taste (D-088 to D-091)
+
+- **Engine bake-off (6.3, `b6b7e5c`..`0499baf`, report `docs/spikes/engine-bakeoff.md`):** Blender 5.2.3 and OpenToonz both clear
+  Gate 1 (code builds the scene from our data, applies the clips, renders headless on the Mac, same frames on re-run) with no
+  plugins and no source changes (level 1). Blender: native arm64, every render engine works headless, Workbench 0.03 s/frame
+  (EEVEE 0.14, Cycles CPU 0.23), about 360 lines of glue. OpenToonz: Intel build under Rosetta, single thread only, rigid 0.16
+  s/frame, Plastic bends 0.5 to 0.8 s/frame, about 400 lines. Synfig reference: 0.15 s/frame. **Defects on Kit's 120-frame
+  shot are about the same everywhere** (Synfig rigid 56, bendable 50; Blender rigid 53, bend 48; OpenToonz rigid 63, Plastic
+  43), so the engine alone does not remove the holes and seams: they come from the cut (parts do not overlap at joints).
+  Recommendation (session): Blender for puppets; OpenToonz later for hand-drawn hero shots (needs a frame-by-frame test and
+  an arm64 build or the Windows node). **Not decided:** the owner picks by eye from `~/ai-studio/scratch/engine-bakeoff/compare.mp4`
+  and `bend_sheet.png` (no look advantage was shown by numbers). Replacement of Synfig is only recorded after that.
+- **Project data layer (5B.1, `1c8c46c`, `5bfc394`, `9fee84a`):** `ProjectStore` (filesystem and memory), nine new schemas,
+  `Project` API (versioned cast and places by reference, acts, act staleness), migration into `projects/test-cast/` (6
+  characters, 3 backgrounds, 4 films, about 17 MB for 130 MB of sources). 59 contract tests plus project and migration
+  tests; 14 guards mutation-checked; full offline suite 929 passed, ruff clean. Not done: servers and director do not
+  use it yet (task list in `docs/steps/STEP-5B-projects.md`); audio cues are not in shot documents yet; 6 smoke films
+  without `film.json` skipped.
+- **Director taste (6.2, `3fd74d0`, `1ef0a2f`):** 16 taste rules, required `emotion`, `framing`, `line.to`, `target` fields, one
+  feedback round, a few-shot example, `emotions.json` as data. On 5 fixed stories with the real qwen3:14b rule violations
+  fell from 52 to 8, all plans valid; plan time about doubled (feedback round, busy Mac). Not done: no film rendered, framing
+  scales not checked on a frame, 8 violations remain (camera intent, motion mood, addressee, listener motion, expression,
+  arc). One suite failure seen once (`test_compose_within_the_memory_budget`, caused by ComfyUI running in another session).
+  Ideas: a gaze `look_at` motion, a calm face that does not read as angry, cap story lines to about target seconds / 4.
+
 ## 2026-10-30: plan reset, owner sign-off, real motion (D-081 to D-086)
 
 - **Why:** the owner found the first director-made film weak and wants much more lifelike animation. Real mocap
