@@ -8,6 +8,27 @@ the 2026-10-30 plan (see the entry below) and leans towards Blender plus OpenToo
 
 ---
 
+## 2026-10-30 (evening): servers use projects, acts export (D-091); joint overlap plateaus (D-092)
+
+- **5B.2 servers adopt projects (`ecc8096`..`68d1a46`):** all five MCP servers take a project id; `Workspace.open_film(film, project)` is the
+  one door (no project = the old `films/<slug>` folder); a project film is a derived working folder under `~/ai-studio/work/`
+  rebuilt from the store. edit_mcp gained acts: `list_acts` (with `stale`), `add_act`, `edit_act`, `reorder_acts`, `remove_act`,
+  `reorder_shots`, `remove_shot`, `render_act`, `export_movie`, `clear_renders`. Verified with the real Synfig engine
+  (`tests/test_acts.py`): 3 acts, different places, 3 camera angles each, a recorded line; editing one shot re-renders only its
+  act; export gives one movie passing size/streams/length/loudness checks; after deleting every render the re-export has
+  identical frames. Full offline suite 995 passed (`-m "not models"`). Stale detection, stitch order and scoping mutation-checked.
+  Not done: sound effects not in the audio snapshot; render is per act not per shot; old act videos are not cleaned up;
+  `render_shot` on a project film records nothing; the director still builds flat film folders.
+- **6.4 joint overlap (`5dc7d2b`, opt-in `build_puppet(overlap=True)`, session stopped at its usage limit):** growing a part under its
+  front neighbour near joints cut Kit's full-sweep defects 124 to 78 and Kit's Blender shot 48 to 29 of 120 in a first version, but
+  Mia got worse (68 to 74) and the safer final code gave only 44. Target (under 10 of 120) **not met**. Finding: most remaining
+  defects are not hidden-pixel gaps (legs crossing in the jump, a hand beside a thigh, loose torso strips, tail over a leg), so
+  more overlap will not reach the target. Left off by default. Not done: spike note, contact sheet, full suite run, decisions.
+  Handover with numbers is in the shared notes folder (`joint-overlap-handover.md`).
+- **Environment note:** `test_compose_within_the_memory_budget` fails whenever ComfyUI is running (seen again today); it should be
+  marked `models` or skipped when ComfyUI is up.
+- **Owner usage:** the owner hit their usage limit after three sessions ran in parallel. Run fewer sessions at once.
+
 ## 2026-10-30 (later): bake-off results, project data layer, director taste (D-088 to D-091)
 
 - **Engine bake-off (6.3, `b6b7e5c`..`0499baf`, report `docs/spikes/engine-bakeoff.md`):** Blender 5.2.3 and OpenToonz both clear

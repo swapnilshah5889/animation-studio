@@ -1716,3 +1716,21 @@ Kit's benchmark shot are about the same across Synfig, Blender and OpenToonz (43
 is not what removes holes at bent joints: the cut is. The owner decides the look by eye; until then the recommendation
 (Blender for puppets, OpenToonz later for hand-drawn hero shots) is not a decision. Next lever: complete the hidden
 overlap at joints in the cut (a joint-completion spike), which is engine-independent.
+
+## D-091: Project films are a derived working folder; acts render and export per act (2026-10-30)
+
+Servers open a film through `Workspace.open_film(film, project)`; with a project, the folder is derived data under
+`[paths] work` (safe to delete), rebuilt from the store at pinned versions, so existing shot, audio and art code runs
+unchanged. Voices live in the film's audio document (casting a voice does not publish a new character version). The act
+cache key excludes `order`, `title` and `beats` (reordering or retitling re-renders nothing; key version 2) and includes
+the render target `engine:quality` (e.g. `synfig:final`). The edit schema has a clip kind `act`, so a whole act is one
+clip of the movie. A changed recording makes only its act stale. Old film folders and old tool arguments keep working.
+
+## D-092: Joint overlap in the cut is opt-in; hidden-pixel gaps are not the main remaining defect (2026-10-30)
+
+`build_puppet(overlap=True)` grows a part under its front neighbour near joints. It reduced Kit's full-sweep defects
+(124 to 78 in a first version) but made Mia worse and did not reach the target of under 10 of 120 on the benchmark
+shot. Most remaining defects come from legs crossing, a hand beside a thigh, loose torso strips and the tail over a
+leg, which overlap cannot fix. It stays off by default. The next lever to test is a single continuous skinned mesh of
+the whole figure (bone weights taken from the part masks) instead of separate rigid parts, which removes seams by
+construction; generative inpainting of hidden areas is only needed where limbs cross.
