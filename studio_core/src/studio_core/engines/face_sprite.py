@@ -130,6 +130,11 @@ def write_sprites(bake: dict[str, Any], out_dir: Path) -> None:
         view = rig.view(ch["view"])
         folder = out_dir / ch["id"]
         folder.mkdir(parents=True, exist_ok=True)
+        if view["face"].get("layout") and ch["frames"] and "face" in ch["frames"][0]:
+            from studio_core.engines.face_flat import write_flat_sprites
+
+            write_flat_sprites(rig.folder, view, ch["frames"], folder)  # parametric face (D-093)
+            continue
         for fr in ch["frames"]:
             path = folder / f"head_{fr['eyes']}_{fr['mouth']}.png"
             if not path.exists():

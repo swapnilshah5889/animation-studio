@@ -315,6 +315,31 @@
         "part": {
           "$ref": "#/$defs/id"
         },
+        "layout": {
+          "type": "object",
+          "description": "A parametric face (D-093, studio_core/face_layout.py): the eyes, brows, nose and mouth are computed from the face box and proportions with hard limits, per frame, and a head turn slides them. Optional: a rig without it uses the anchors below as before.",
+          "required": ["box"],
+          "additionalProperties": false,
+          "properties": {
+            "box": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 4,
+              "maxItems": 4,
+              "description": "The visible skin in the head image: [centre x, top y, width, height] in pixels."
+            },
+            "style": {
+              "type": "object",
+              "description": "FaceStyle proportions (eye_gap, eye_w, eye_aspect, eye_y, brow_gap, nose_y, mouth_y, mouth_w); each is clamped to face_layout.LIMITS.",
+              "additionalProperties": { "type": "number" }
+            },
+            "layers": {
+              "type": "object",
+              "description": "Head image layers drawn under and over the face: `skin` (face-less skin) and `over` (the fringe).",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
         "turn": {
           "type": "number",
           "minimum": -2,
