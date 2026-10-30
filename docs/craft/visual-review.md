@@ -10,7 +10,7 @@ counted holes and seams and missed it all. A lower defect count never proves a b
 
 **How:** look at 12 spread frames plus at most three zooms (a face, the worst frame, a joint). Read the per-frame change
 numbers first. Score each area, list findings with severity (blocker, major, minor), give a verdict. Any blocker = FAIL,
-two majors = NEEDS WORK. Never fix while reviewing. Say what you did not check.
+two majors = NEEDS WORK. Never fix while reviewing; say what you did not check.
 
 **Faces:** exactly two level eyes inside the face, about one eye-width apart, eye width 15 to 22 percent of the face
 width. Any other dark blob that is not an eye or mouth (ghost eye, brown dot, cheek mark; a painted face showing under a
@@ -24,10 +24,10 @@ like bends (no hinge snap, no smeared or stretched texture). Hair, tail and clot
 
 **Consistency:** the character matches its sheet in every shot (colours, proportions, line weight, face style).
 Character and background share one style (line weight, shading, palette, detail); a painted plate behind a flat
-character, or the reverse, is a major finding. Plausible scale, ground contact and one consistent shadow.
+character, or the reverse, is a major finding. Plausible scale and ground contact.
 
 **Motion and transitions:** ease in and out, no pops or teleports, overlap and follow-through on hair, arms and tail, no
-foot sliding or jitter, blinks and mouth shapes blend. Cuts and fades are intentional. In the per-frame change numbers, one
+foot sliding or jitter, blinks and mouth shapes blend. In the per-frame change numbers, one
 frame many times the median is a pop: find it and look. Camera moves are smooth.
 
 **Safety and sound:** suits young children; speech audible and matches the mouth.
