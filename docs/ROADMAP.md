@@ -257,3 +257,22 @@ ARCHITECTURE, "Future tiers"):
   character LoRA), with the in-betweens done by our own tools, not by a video-generation model.
 
 **Done when:** to be set in the step's brief, against the same production-grade bar.
+
+## Step 13: Desktop app (studio GUI)
+
+Owner requirement (2026-10-30): in the end the studio is a desktop app with a GUI to keep **projects and
+stories**, **talk to the director** (give a prompt, see its plan, approve or revise at the four stops, retry a
+stage) and **browse the saved files** (character sheets, backgrounds, shot previews, the final film, logs).
+
+- **Design rule:** the GUI is a thin client over the same state the CLI uses (`director/` state folder, the film
+  folder, the approval review files). Nothing may live only in the GUI, and the CLI keeps working.
+- **Shape (proposal, see D-081):** a small local Python backend (FastAPI) exposing the director commands
+  (`new | resume | approve | revise | retry | status`), the project list and file listing, with a Svelte UI,
+  packaged as a desktop app with Tauri (Electron as the fallback). Local only, no accounts, no cloud.
+- **Screens:** project library; story and director chat with a stage timeline and approval buttons; file browser
+  with media preview (images, video with audio); run log and cost/time per stage.
+- **Independent of the engine choice**, so a first version (project list, director console, file browser) can be
+  built in parallel with Step 6 and the engine bake-off.
+
+**Done when:** from the app alone, a new story prompt becomes a finished film, with every approval stop answered
+in the UI, and a closed and reopened app resumes the project where it was.

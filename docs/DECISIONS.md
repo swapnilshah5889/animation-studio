@@ -1630,3 +1630,11 @@ code-driven art stages. Choices made while building:
 - Craft retrieval is by name only for now.
 Stop conditions are decided by code (`done`, `unfinished`, `stuck`, `limit`), never by the model.
 Open: the 14B's shot and expression taste is weak (see PROGRESS).
+
+## D-081: A desktop GUI is a planned step; it is a thin client over the director's state (2026-10-30)
+
+The owner wants a desktop app to keep projects and stories, interact with the director and see saved files
+(ROADMAP Step 13). Decision: the GUI sits on top of the existing state folders and director commands, so the CLI
+and GUI stay equivalent; proposed stack is a local FastAPI backend, a Svelte UI and Tauri packaging (the owner
+knows Svelte/React/TypeScript). Why not a GUI-only state: it would break resume, scripting and tests. The stack
+is a proposal and may change at the step's brief.
