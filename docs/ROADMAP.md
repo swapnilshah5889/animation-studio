@@ -183,6 +183,31 @@ Owner requirement (2026-10-30): the five test characters (Kit, Bo, Pim, Mia, Bol
 without copying files; a new character built during film 2 is available to film 3; old films still render; tests
 cover the resolver, versioning and migration.
 
+### Storage rule for Steps 5B, 5C and 13 (D-084): ready for an online database later
+
+Owner requirement (2026-10-30): later we may attach an online database for user logins and saved data. **Not now**;
+the app stays local and offline by default. But the data must be structured so a database layer is easy to add:
+
+- **One storage interface.** All reads and writes of project data go through a `ProjectStore` in `studio_core`
+  (documents: get, put, list, delete; assets: put, open, exists). Today it is a filesystem implementation; an
+  in-memory implementation exists for tests; a database plus object-storage implementation can follow without
+  touching the director, MCP servers or GUI. Nothing outside the store builds file paths by hand.
+- **Documents.** Specs are JSON documents with `schema_version`, a stable `id` (ULID or UUID, never a name or a
+  path), `project_id`, `owner_id` (the string `"local"` until accounts exist), `created_at`, `updated_at` and an
+  integer `rev` for optimistic concurrency.
+- **References by id and version, never by path.** Specs contain no absolute or machine-specific paths.
+- **Assets are content-addressed.** Media (sheets, plates, renders, audio) are asset records `{id, sha256, mime,
+  bytes}` stored in a blob store keyed by hash, so they can move to S3-style storage; derived renders also carry
+  their cache key (D-083) so they can be rebuilt or fetched.
+- **The project is the tenancy boundary.** Every document belongs to one project and every query is scoped by
+  project, so per-user permissions can be added without reshaping the data.
+- **Runtime state as documents plus an append-only event log** (director state, approvals, stage runs), so it maps
+  to tables directly.
+- **No secrets or credentials in project data.**
+- **Contract tests** run the same suite against every store implementation; the filesystem and in-memory stores
+  must pass it now, and a future database store must pass it unchanged.
+- Online accounts and sync are a later step (Step 14) and are opt-in; the fully-local rule still holds by default.
+
 ## Step 5C: Acts, editable source and "export all acts"
 
 Owner requirement (2026-10-30): a whole film is broken into **acts** that the director directs one by one. Acts can
@@ -326,3 +351,9 @@ stage) and **browse the saved files** (character sheets, backgrounds, shot previ
 
 **Done when:** from the app alone, a new story prompt becomes a finished film, with every approval stop answered
 in the UI, and a closed and reopened app resumes the project where it was.
+
+## Step 14: Online backend (later, opt-in)
+
+Not scheduled. Accounts and logins, a database store and object storage behind the `ProjectStore` interface
+(Storage rule, D-084), sync between devices and sharing. Done when a project created locally can be pushed to the
+online store, opened by its owner on another machine and rendered there, with the same contract tests passing.

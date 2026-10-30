@@ -1655,3 +1655,12 @@ directs and renders per act; "export all acts" stitches the act renders into the
 character, background and engine versions) so an edit re-renders only its act. Why: long films need partial
 re-renders, per-act approval and later edits in the GUI; baking early would make every change a full redo. See
 ROADMAP Step 5C.
+
+## D-084: Store project data behind an interface so an online database can be added later (2026-10-30)
+
+No online database now; the product stays local and offline by default. All project data goes through a
+`ProjectStore` (filesystem now, in-memory for tests, database plus object storage later), as id-and-version
+referenced JSON documents with `schema_version`, `owner_id`, `project_id`, `rev` and timestamps, and
+content-addressed assets; specs hold no paths. The project is the tenancy boundary. Why: the owner wants user
+logins and saved data online later; retrofitting that into path-based folders would mean rewriting every tool.
+Contract tests keep every store equivalent. See ROADMAP "Storage rule" and Step 14.
