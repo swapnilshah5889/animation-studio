@@ -162,6 +162,10 @@ class Project:
     def list_films(self) -> list[dict]:
         return self.store.list_documents(self.id, "film")
 
+    def entry(self, kind: str, id_or_slug: str) -> dict:
+        """A character or background entry document (all its versions), by id or slug."""
+        return self._find(kind, id_or_slug)
+
     def publish_character(self, slug: str, files: Mapping[str, FileInput], **kw: Any) -> Ref:
         return self._publish("character", slug, files, **kw)
 
