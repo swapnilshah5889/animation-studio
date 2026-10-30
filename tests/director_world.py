@@ -114,12 +114,83 @@ def shot(sid: str, scene: str, secs: float, line: dict | None = None) -> dict[st
     return plan
 
 
+def member(cid: str, where: str, does: str, emotion: str, expression: str, **more: Any) -> dict:
+    return {
+        "id": cid,
+        "where": where,
+        "does": does,
+        "target": "",
+        "emotion": emotion,
+        "expression": expression,
+        **more,
+    }
+
+
+def planned(sid, scene, secs, framing, camera, members, line=None, beat="a beat") -> dict:
+    out = {
+        "id": sid,
+        "scene": scene,
+        "seconds": secs,
+        "beat": beat,
+        "framing": framing,
+        "camera": camera,
+        "characters": members,
+    }
+    if line:
+        out["line"] = line
+    return out
+
+
+# A plan that obeys the craft rules (taste.py): it opens wide, both friends are on screen when
+# one speaks to the other, faces follow the feelings, the camera moves with a reason.
 SHOTPLAN = {
     "shots": [
-        shot("s01_sh01", "s01", 3),
-        shot("s01_sh02", "s01", 4, {"who": "kit", "text": "Look at the red balloon!"}),
-        shot("s02_sh01", "s02", 4),
-        shot("s02_sh02", "s02", 4, {"who": "bo", "text": "Bye bye, balloon."}),
+        planned(
+            "s01_sh01",
+            "s01",
+            3,
+            "wide",
+            "static",
+            [
+                member("kit", "left", "look_around", "calm", "neutral"),
+                member("bo", "right", "nod", "calm", "happy"),
+            ],
+        ),
+        planned(
+            "s01_sh02",
+            "s01",
+            4,
+            "medium",
+            "push_in",
+            [
+                member("kit", "left", "point", "wonder", "surprised", target="up"),
+                member("bo", "right", "head_tilt", "curious", "surprised"),
+            ],
+            {"who": "kit", "to": "bo", "text": "Look at the red balloon!"},
+        ),
+        planned(
+            "s02_sh01",
+            "s02",
+            4,
+            "medium",
+            "static",
+            [
+                member("kit", "left", "clap", "excited", "excited"),
+                member("bo", "right", "jump", "joy", "happy"),
+            ],
+        ),
+        planned(
+            "s02_sh02",
+            "s02",
+            4,
+            "medium",
+            "pull_out",
+            [
+                member("kit", "left", "nod", "proud", "proud"),
+                member("bo", "right", "talk_gesture", "calm", "happy"),
+            ],
+            {"who": "bo", "to": "kit", "text": "Bye bye, balloon."},
+        ),
     ]
 }
 

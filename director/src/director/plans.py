@@ -19,6 +19,7 @@ from director.chat import ChatFn
 from director.config import DURATION_TOLERANCE, SHOT_SECONDS
 from director.log import EventFn
 from director.state import Counters
+from director.taste import EMOTIONS, FRAMINGS, POINT_TARGETS, check_taste
 
 ID = {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,19}$"}
 WHERE = ["left", "center", "right"]
@@ -171,13 +172,19 @@ def shotplan_schema(story: dict[str, Any], caps: Capabilities) -> dict[str, Any]
     cast = [c["id"] for c in story["characters"]]
     member = {
         "type": "object",
-        "required": ["id", "where", "does", "expression"],
+        "required": ["id", "where", "does", "target", "emotion", "expression"],
         "additionalProperties": False,
         "properties": {
             "id": {"enum": cast},
             "where": {"enum": WHERE},
             "moves_to": {"enum": WHERE},
             "does": {"enum": caps.planning_motions() or ["nod"]},
+            # Who or where `point` points (empty for every other motion): a required field, since
+            # a 14B model leaves optional ones out, and an arm pointing at nothing looks broken.
+            "target": {"enum": ["", *cast, *POINT_TARGETS]},
+            # The feeling comes first and picks the face (taste.EMOTIONS): the order of the
+            # fields is the order the model writes them.
+            "emotion": {"enum": list(EMOTIONS)},
             "expression": {"enum": caps.expressions or ["neutral"]},
         },
     }
@@ -185,19 +192,34 @@ def shotplan_schema(story: dict[str, Any], caps: Capabilities) -> dict[str, Any]
     # out, and then the story's lines never get a shot (seen live, twice).
     line = {
         "type": "object",
-        "required": ["who", "text"],
+        "required": ["who", "to", "text"],
         "additionalProperties": False,
-        "properties": {"who": {"enum": [*cast, ""]}, "text": {"type": "string"}},
+        # `to` is who hears the line ("" = the world); the listener must be in the shot.
+        "properties": {
+            "who": {"enum": [*cast, ""]},
+            "to": {"enum": [*cast, ""]},
+            "text": {"type": "string"},
+        },
     }
     shot = {
         "type": "object",
-        "required": ["id", "scene", "seconds", "beat", "characters", "line", "camera"],
+        "required": [
+            "id",
+            "scene",
+            "seconds",
+            "beat",
+            "framing",
+            "characters",
+            "line",
+            "camera",
+        ],
         "additionalProperties": False,
         "properties": {
             "id": {"type": "string", "pattern": "^s[0-9]{2}_sh[0-9]{2}$"},
             "scene": {"enum": [s["id"] for s in story["scenes"]]},
             "seconds": {"type": "number", "minimum": SHOT_SECONDS[0], "maximum": SHOT_SECONDS[1]},
             "beat": {"type": "string", "maxLength": 160},
+            "framing": {"enum": list(FRAMINGS)},
             "characters": {"type": "array", "items": member, "minItems": 1, "maxItems": 3},
             "line": line,
             "camera": {"enum": caps.camera_moves or ["static"]},
@@ -268,6 +290,14 @@ def check_shotplan(plan: dict[str, Any], story: dict[str, Any], target: int) -> 
     return out
 
 
+MAX_ADVICE = 10  # taste messages sent back at once: more than that and the 14B model drops some
+
+
+def advise_shotplan(plan: dict[str, Any], story: dict[str, Any]) -> list[str]:
+    """Taste problems of a shot plan (taste.py): fed back once, never fatal."""
+    return [v.message for v in check_taste(plan, story)][:MAX_ADVICE]
+
+
 async def plan_json(
     chat: ChatFn,
     system: str,
@@ -278,9 +308,14 @@ async def plan_json(
     on_event: EventFn,
     counters: Counters,
     retries: int = 1,
+    advice: Callable[[dict[str, Any]], list[str]] | None = None,
 ) -> dict[str, Any]:
     """One schema-forced planning call, with `retries` rounds of "these problems: fix them".
-    Thinking is on: planning is where a 14B model needs it (design §2)."""
+    Thinking is on: planning is where a 14B model needs it (design §2).
+
+    `check` finds what is wrong (a plan with such problems is never returned). `advice` finds what
+    is merely poor taste: it goes back to the model in the same feedback round, but if the last
+    answer still has some, the plan is kept and the remainder is logged as a "taste" event."""
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
@@ -310,8 +345,13 @@ async def plan_json(
             problems = [f"the reply was not valid JSON ({err.msg})."]
         else:
             problems = check(plan)
-            if not problems:
+            tips = [] if problems or advice is None else advice(plan)
+            if not problems and not tips:
                 return plan
+            if not problems and attempt == retries:
+                on_event({"kind": "taste", "remaining": tips})
+                return plan
+            problems += tips
         messages += [
             {"role": "assistant", "content": reply.content},
             {

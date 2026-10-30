@@ -16,13 +16,17 @@ from pathlib import Path
 from typing import Any
 
 from director import craft
+from director.chat import ChatFn
 from director.checks import lines_of, read_json, shot_missing, shotplan_of, story_of
 from director.config import LINE_LEAD_S, LINE_TAIL_S, SHOT_SECONDS
 from director.context import PauseForApproval, StageCtx, StageFailed, capabilities
 from director.dispatch import CallContext
 from director.hub import ProgressFn, ToolDispatcher, ToolResult
+from director.log import EventFn
 from director.loop import run_conversation
 from director.plans import (
+    Capabilities,
+    advise_shotplan,
     check_shotplan,
     drop_empty_lines,
     norm,
@@ -30,12 +34,32 @@ from director.plans import (
     shotplan_schema,
 )
 from director.review import write_review
-from director.state import now
+from director.state import Counters, now
 from director.toolview import ToolView
 
 PROMPTS = Path(__file__).resolve().parents[1] / "prompts"
 GROUND_Y = 0.92
 X_BY_WHERE = {"left": 0.3, "center": 0.5, "right": 0.7}
+# Framing is the figures' size in the frame: wide shows the place, close shows the face.
+SCALE_BY_FRAMING = {"wide": 0.7, "medium": 1.0, "close": 1.25}
+POINT_AT = {  # a point target that is not a character, as frame fractions
+    "up": (None, 0.08),
+    "down": (None, 0.97),
+    "left_edge": (0.02, 0.5),
+    "right_edge": (0.98, 0.5),
+}
+HEAD_HEIGHT = 0.5  # where a pointed-at character's head is, as a frame fraction from the top
+
+
+def point_target(m: dict[str, Any], xs: dict[str, float]) -> list[float] | None:
+    """Frame fractions for a planned `point`: toward the target character, or a direction."""
+    tgt = m.get("target") or ""
+    if tgt in xs and tgt != m["id"]:
+        return [xs[tgt], HEAD_HEIGHT]
+    if tgt in POINT_AT:
+        x, y = POINT_AT[tgt]
+        return [xs[m["id"]] if x is None else x, y]
+    return None
 
 
 # ---- planning ---------------------------------------------------------------------------------
@@ -55,33 +79,92 @@ def fit_lines(plan: dict[str, Any], lines: list[dict[str, Any]], scene_of: dict[
                 )
 
 
-async def make_plan(ctx: StageCtx) -> dict[str, Any]:
-    story = story_of(ctx.film)
-    assert story is not None
-    caps, _ = await capabilities(ctx)
-    lines = lines_of(ctx.film)
+def line_seconds(lines: list[dict[str, Any]], story: dict[str, Any], target: int) -> str:
+    """What the recorded lines cost in shot time, for the planner's brief: a shot with a line lasts
+    at least lead + line + tail. The model cannot know this and plans a film that runs long."""
+    by_text = {(x["scene"], norm(x["text"])): x["duration_s"] for x in lines}
+    rows, total = [], 0.0
+    for sc in story["scenes"]:
+        for ln in sc["lines"]:
+            dur = by_text.get((sc["id"], norm(ln["text"])))
+            if dur:
+                secs = max(
+                    SHOT_SECONDS[0], round((LINE_LEAD_S + dur + LINE_TAIL_S) * 2 + 0.499) / 2
+                )
+                rows.append(f"{sc['id']} {ln['who']} {ln['text']!r} needs a shot of {secs} s")
+                total += secs
+    if not rows:
+        return ""
+    rest = max(0.0, target - total)
+    silent = int(rest // 2.5)
+    return (
+        "; ".join(rows)
+        + f". Together {total} s, which leaves {rest:g} s for shots without a line: "
+        + (
+            f"at most {silent} silent shot(s) of 2 to 3 s."
+            if silent
+            else "no silent shot at all, so the first line's shot is the establishing shot (wide)."
+        )
+    )
+
+
+async def plan_shots(
+    chat: ChatFn,
+    story: dict[str, Any],
+    caps: Capabilities,
+    target: int,
+    lines: list[dict[str, Any]],
+    *,
+    notes: list[str],
+    on_event: EventFn,
+    counters: Counters,
+) -> dict[str, Any]:
+    """The shot plan for a story: one schema-forced call, checked, one feedback round."""
     scene_of = {s["id"]: s["place"] for s in story["scenes"]}
+
+    need = line_seconds(lines, story, target)
 
     def check(plan: dict[str, Any]) -> list[str]:
         if isinstance(plan.get("shots"), list):
             drop_empty_lines(plan)
             fit_lines(plan, lines, scene_of)
-        return check_shotplan(plan, story, ctx.state.target_seconds)
+        problems = check_shotplan(plan, story, target)
+        if need and any("add up to" in p for p in problems):
+            problems.append(f"Remember: {need}")
+        return problems
 
     brief = [
-        f"Target length: {ctx.state.target_seconds} seconds.",
+        f"Target length: {target} seconds.",
+        *([f"Time the spoken lines need: {need}"] if need else []),
         "Story:",
         json.dumps({k: story[k] for k in ("title", "scenes")}),
         "Characters: "
         + "; ".join(f"{c['id']} ({c['name']}): {c['description']}" for c in story["characters"]),
     ]
-    brief += [f"Owner's note: {n}" for n in ctx.me.revision_notes]
-    plan = await plan_json(
-        ctx.deps.chat,
+    brief += [f"Owner's note: {n}" for n in notes]
+    return await plan_json(
+        chat,
         (PROMPTS / "shotplan.md").read_text(),
         "\n".join(brief),
         shotplan_schema(story, caps),
         check,
+        on_event=on_event,
+        counters=counters,
+        advice=lambda plan: advise_shotplan(plan, story),
+    )
+
+
+async def make_plan(ctx: StageCtx) -> dict[str, Any]:
+    story = story_of(ctx.film)
+    assert story is not None
+    caps, _ = await capabilities(ctx)
+    plan = await plan_shots(
+        ctx.deps.chat,
+        story,
+        caps,
+        ctx.state.target_seconds,
+        lines_of(ctx.film),
+        notes=ctx.me.revision_notes,
         on_event=ctx.deps.on_event,
         counters=ctx.state.counters,
     )
@@ -127,7 +210,16 @@ def scaffold_steps(
         steps.append(
             (
                 "add_character",
-                {"character_id": me, "position": [xs[me], GROUND_Y], "facing": facing},
+                {
+                    "character_id": me,
+                    "position": [xs[me], GROUND_Y],
+                    "facing": facing,
+                    **(
+                        {"scale": scale}
+                        if (scale := SCALE_BY_FRAMING[planned.get("framing", "medium")]) != 1.0
+                        else {}
+                    ),
+                },
             )
         )
         steps.append(
@@ -166,9 +258,10 @@ def scaffold_steps(
                 )
             )
         elif m["does"] not in ("blink", "idle_breathe"):
-            steps.append(
-                ("apply_motion", {"character_id": me, "motion": m["does"], "start_s": start})
-            )
+            args = {"character_id": me, "motion": m["does"], "start_s": start}
+            if m["does"] == "point" and (target := point_target(m, xs)):
+                args["target"] = target
+            steps.append(("apply_motion", args))
     if line and (lid := line_ids.get(norm(line["text"]))):
         steps.append(
             ("apply_lipsync", {"character_id": line["who"], "line_id": lid, "start_s": LINE_LEAD_S})
