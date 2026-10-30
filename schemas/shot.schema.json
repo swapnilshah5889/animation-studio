@@ -99,7 +99,7 @@
       "additionalProperties": false,
       "properties": {
         "motion": {
-          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "jump", "point", "talk_gesture", "shrug", "bow", "look_around", "sneak", "clap", "laugh", "think", "walk_real", "run_real", "wave_real", "jump_real", "shrug_real"]
+          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "walk_step", "jump", "point", "talk_gesture", "shrug", "bow", "look_around", "sneak", "clap", "laugh", "think", "walk_real", "run_real", "wave_real", "jump_real", "shrug_real"]
         },
         "start_s": { "$ref": "#/$defs/time_s" },
         "duration_s": { "type": "number", "exclusiveMinimum": 0, "description": "Defaults to the motion's natural length." },

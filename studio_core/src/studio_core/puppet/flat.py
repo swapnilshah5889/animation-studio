@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageChops, ImageDraw
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 from studio_core.face_layout import FaceBox, FaceStyle, layout_face
 
@@ -76,8 +76,10 @@ class FlatSpec:
     arm_dir: float = 80.0  # degrees below horizontal: 90 = straight down, less = held out (A-pose)
     upper_arm: float = 82.0
     forearm: float = 100.0  # to the fingertip (hand included)
-    thigh: float = 88.0
-    shin: float = 127.0
+    thigh: float = 100.0
+    shin: float = 115.0
+    hem_y: float = 506.0  # where the coat ends; the legs show from here to the ground
+    boot_h: float = 64.0
     limb_r: float = 21.0
     palette: Palette = field(default_factory=Palette)
     face_style: FaceStyle = field(default_factory=FaceStyle)
@@ -195,8 +197,9 @@ def _limb(
     return _Part(name, bone, art, a)
 
 
-def _hand_art(spec: FlatSpec, wrist: Pt, tip: Pt, side: int):
-    """A mitten (round palm + a thumb on the body side) at the end of the forearm."""
+def _hand_cuff(spec: FlatSpec, wrist: Pt, tip: Pt, side: int):
+    """A mitten (round palm + a thumb on the body side) that starts UNDER the cuff, then the cuff
+    over it: the two always overlap, so no rotation can open a gap between sleeve and hand."""
     p = spec.palette
 
     def draw(art: Art) -> None:
@@ -205,24 +208,15 @@ def _hand_art(spec: FlatSpec, wrist: Pt, tip: Pt, side: int):
         palm = (wrist[0] + ux * 16, wrist[1] + uy * 16)
         m, d = art.mask()
         art.circle(d, palm, spec.limb_r * 0.98)
-        art.capsule(d, wrist, palm, spec.limb_r * 0.85)
+        art.capsule(d, (wrist[0] - ux * 12, wrist[1] - uy * 12), palm, spec.limb_r * 0.85)
         tx, ty = palm[0] + (-uy) * side * 12 + ux * 2, palm[1] + ux * side * 12 + uy * 2
         art.capsule(d, (tx - ux * 6, ty - uy * 6), (tx + ux * 8, ty + uy * 8), 7.5)
         art.fill(m, p.skin)
         art.shade(m, p.skin_shade, -6)
-
-    return draw
-
-
-def _cuff(spec: FlatSpec, wrist: Pt, ang: float):
-    p = spec.palette
-
-    def draw(art: Art) -> None:
-        ux, uy = math.cos(ang), math.sin(ang)
-        a, b = (wrist[0] - ux * 14, wrist[1] - uy * 14), (wrist[0] + ux * 4, wrist[1] + uy * 4)
-        m, d = art.mask()
-        art.capsule(d, a, b, spec.limb_r + 2.5)
-        art.fill(m, p.coat_trim)
+        cm, cd = art.mask()
+        a0 = (wrist[0] - ux * 16, wrist[1] - uy * 16)
+        art.capsule(cd, a0, (wrist[0] + ux * 5, wrist[1] + uy * 5), spec.limb_r + 2.5)
+        art.fill(cm, p.coat_trim)
 
     return draw
 
@@ -230,7 +224,7 @@ def _cuff(spec: FlatSpec, wrist: Pt, ang: float):
 def _torso(spec: FlatSpec) -> _Part:
     p = spec.palette
     art = Art((-118, 292, 118, 542))
-    sh, hem = spec.shoulder_y, 524.0
+    sh, hem = spec.shoulder_y, spec.hem_y
     m, d = art.mask()
     # an A-line raincoat: shoulders, a straight chest, a flared hem with a round bottom
     art.poly(
@@ -256,14 +250,34 @@ def _torso(spec: FlatSpec) -> _Part:
     qm, qd = art.mask()
     art.rrect(qd, 34, 424, 76, 462, 8)
     art.fill(ImageChops.multiply(qm, m), p.coat_shade)
-    # the hood: a collar ring round the neck, drawn over the neck base
+    # the hood behind the neck, then a narrow neck that tapers into the collar, an under-chin
+    # shade at its top, and the collar's front band over its base (the neck is tucked under it)
     cm, cd = art.mask()
-    art.ellipse(cd, (0, sh - 18), 58, 26)
+    art.ellipse(cd, (0, sh - 8), 62, 22)
     art.fill(cm, p.coat_trim)
-    nm, nd = art.mask()
-    art.ellipse(nd, (0, sh - 24), 36, 16)
-    art.fill(nm, p.coat_shade)
+    nk, nd = art.mask()
+    art.poly(nd, [(-17, sh - 44), (17, sh - 44), (21, sh + 6), (-21, sh + 6)])
+    art.fill(nk, p.skin)
+    chin, cd2 = art.mask()
+    art.ellipse(cd2, (0, sh - 24), 70, 24)
+    art.fill(ImageChops.multiply(nk, chin), p.skin_shade)
+    fm, fd = art.mask()
+    art.ellipse(fd, (0, sh + 8), 50, 14)
+    art.fill(fm, p.coat_trim)
+    em, ed = art.mask()
+    art.ellipse(ed, (0, sh + 12), 44, 8)
+    art.fill(em, p.coat_shade)
     return _Part("torso", "torso", art, (0, spec.hip_y))
+
+
+def _smooth(m: Image.Image, radius: float) -> Image.Image:
+    """Round off a mask made of clipped circles and rectangles: blur, then cut at half. Concave
+    notches fill, stair-steps and flat clipped edges become one smooth outline (a union of the
+    shapes that reads as one drawn path)."""
+    return m.filter(ImageFilter.GaussianBlur(radius * SS)).point(lambda v: 255 if v >= 128 else 0)
+
+
+HAIR_PAD = 46.0  # room above and beside the head for curls, so no shape is clipped by its image
 
 
 def _head_parts(spec: FlatSpec) -> tuple[list[_Part], FaceBox, dict[str, Art]]:
@@ -272,83 +286,69 @@ def _head_parts(spec: FlatSpec) -> tuple[list[_Part], FaceBox, dict[str, Art]]:
     W, top, H = spec.head_w, spec.head_top, spec.head_h
     box = FaceBox.from_head_bbox(-W / 2, top, W / 2, top + H)
     cx = 0.0
-    hb_box = (-W / 2 - 14, top - 10, W / 2 + 14, spec.neck_y + 30)
-    # hair behind the head: a big curly bob that ends behind the collar
-    back = Art(hb_box)
+    full = (-W / 2 - HAIR_PAD, top - HAIR_PAD, W / 2 + HAIR_PAD, spec.neck_y + 30)
+    # hair behind the head: a curly bob that ends behind the collar, one smooth shape
+    back = Art(full)
     m, d = back.mask()
     back.ellipse(d, (cx, top + H * 0.5), W / 2 + 4, H * 0.5 + 6)
     for c in _scallops(cx, top + H * 0.5, W / 2 - 6, H * 0.5 - 4, 24, 14):
         back.circle(d, (c[0], c[1]), c[2])
     for x in range(-150, 151, 36):  # the curls that fall behind the neck
         back.circle(d, (x, top + H - 4), 30)
+    m = _smooth(m, 7)
     back.fill(m, p.hair_lo)
-    for c in _scallops(cx, top + H * 0.5, W / 2 - 40, H * 0.5 - 40, 16, 30, 20, 160):
-        mm, dd = back.mask()
-        back.circle(dd, (c[0], c[1]), c[2])
-        back.fill(ImageChops.multiply(mm, m), p.hair)
-    # skin layer: the face (an egg), the neck
-    skin = Art((-W / 2, top, W / 2, spec.neck_y + 22))
+    inner, idr = back.mask()
+    back.ellipse(idr, (cx, top + H * 0.46), W / 2 - 24, H * 0.5 - 26)
+    back.fill(ImageChops.multiply(_smooth(inner, 6), m), p.hair)
+    # skin layer: the face (an egg); the neck belongs to the torso (tucked under the collar)
+    skin = Art(full)
     sm, sd = skin.mask()
     skin.ellipse(sd, (cx, box.top + box.h * 0.46), box.w / 2, box.h * 0.56)
-    skin.rrect(sd, -26, box.bottom - 40, 26, spec.neck_y + 20, 8)
     skin.fill(sm, p.skin)
-    nm, nd = skin.mask()  # the neck's shade under the chin
-    skin.ellipse(nd, (cx, box.bottom + 6), 40, 22)
-    skin.fill(ImageChops.multiply(nm, sm), p.skin_shade)
-    # cheeks
-    for sx in (-1, 1):
+    for sx in (-1, 1):  # cheeks
         cm, cdraw = skin.mask()
         skin.ellipse(
             cdraw, (cx + sx * box.w * 0.30, box.top + box.h * 0.70), box.w * 0.075, box.h * 0.05
         )
         skin.fill(ImageChops.multiply(cm, sm), p.blush)
-    # fringe and side hair: everything of the hair cap that is not the face window
-    over = Art((-W / 2, top, W / 2, spec.neck_y + 22))
+    # fringe and side hair: ONE path. A cap, cut by a scalloped fringe line, plus the side
+    # locks, unioned and smoothed (no clipped circles, no skin notch, no shade slab)
+    over = Art(full)
     cap, cd2 = over.mask()
     over.ellipse(cd2, (cx, top + H * 0.46), W / 2, H * 0.46)
     for c in _scallops(cx, top + H * 0.46, W / 2 - 14, H * 0.46 - 12, 26, 16, 160, 380):
         over.circle(cd2, (c[0], c[1]), c[2])
+    fy = box.top + 4
+    xs = [-W / 2 - HAIR_PAD + i * 2 for i in range(int((W + 2 * HAIR_PAD) / 2) + 1)]
+    edge = [(x, fy + 15 * abs(math.sin(math.pi * x / 62.0))) for x in xs]
+    above, ad = over.mask()
+    over.poly(ad, [(xs[0], top - HAIR_PAD), *edge, (xs[-1], top - HAIR_PAD)])
+    hair, hd = over.mask()
+    hair.paste(ImageChops.multiply(cap, above))
     for sx in (-1, 1):
         over.capsule(
-            cd2, (sx * (W / 2 - 24), top + H * 0.42), (sx * (W / 2 - 26), top + H * 0.80), 26
+            hd, (sx * (W / 2 - 26), top + H * 0.40), (sx * (W / 2 - 28), top + H * 0.78), 28
         )
         for k in range(4):
-            over.circle(cd2, (sx * (W / 2 - 24), top + H * (0.42 + 0.12 * k)), 30)
-    window, wd = over.mask()
-    fy = box.top + 2
-    over.rrect(wd, -box.w / 2 + 2, fy, box.w / 2 - 2, spec.neck_y + 40, 4)
-    over.ellipse(wd, (cx, box.top + box.h * 0.46), box.w / 2 - 2, box.h * 0.56 - 2)
-    face_win = ImageChops.multiply(
-        window, _ellipse_mask(over, (cx, box.top + box.h * 0.46), box.w / 2 - 2, box.h * 0.56 - 2)
-    )
-    hair = ImageChops.subtract(cap, face_win)
-    bumps, bd = over.mask()
-    x = -box.w / 2 + 28
-    while x < box.w / 2 - 20:
-        over.circle(bd, (x, fy + 4 + 6 * math.sin(x / 19.0)), 25)
-        x += 30
-    bumps = ImageChops.multiply(
-        bumps, _ellipse_mask(over, (cx, box.top + box.h * 0.46), box.w / 2 - 6, box.h * 0.56)
-    )
-    hair = ImageChops.lighter(hair, bumps)
+            over.circle(hd, (sx * (W / 2 - 24), top + H * (0.42 + 0.12 * k)), 30)
+    hair = _smooth(hair, 6)
     over.fill(hair, p.hair)
-    # light curls inside the fringe: a few arcs of the highlight colour
-    hi, hd2 = over.mask()
-    for _i, (ax, ay) in enumerate([(-96, 64), (-40, 44), (30, 48), (92, 66)]):
+    hi, hd2 = over.mask()  # light curls inside the fringe: a few arcs of the highlight colour
+    for ax, ay in [(-96, 64), (-40, 44), (30, 48), (92, 66)]:
         x0, y0 = over._p((ax - 22, top + ay - 14))
         x1, y1 = over._p((ax + 22, top + ay + 14))
         hd2.arc([x0, y0, x1, y1], 200, 340, fill=255, width=7 * SS)
     over.fill(ImageChops.multiply(hi, hair), p.hair_hi)
-    over.shade(hair, p.hair_lo, -8)
 
     # locks: curly puffs at the temples that swing (bones of role ear)
     locks = []
     for side, nm_ in ((1, "hair_l"), (-1, "hair_r")):
         jx, jy = side * (W / 2 - 34), top + H * 0.52
-        a = Art((jx - 44, jy - 30, jx + 44, jy + 150))
+        a = Art((jx - 54, jy - 40, jx + 54, jy + 160))
         mm, dd = a.mask()
         for k in range(3):
             a.circle(dd, (jx + side * 3 * k, jy + 18 + 36 * k), 30 - 2 * k)
+        mm = _smooth(mm, 5)
         a.fill(mm, p.hair)
         a.shade(mm, p.hair_lo, -9)
         locks.append(_Part(nm_, nm_, a, (jx, jy)))
@@ -372,19 +372,28 @@ def _boot(spec: FlatSpec, knee: Pt, ankle_y: float, side: int) -> _Part:
     art.fill(m, p.tights)
     art.shade(m, p.tights_shade, -9)
     bm, bd = art.mask()
-    top = ankle_y - 38
-    art.rrect(bd, x - 27, top, x + 27, spec.height - 4, 12)
-    art.ellipse(bd, (x + side * 4, spec.height - 18), 33, 17)  # toe cap, wider in front
+    top = spec.height - spec.boot_h
+    art.rrect(bd, x - 25, top, x + 25, spec.height - 4, 11)
+    art.ellipse(bd, (x + side * 4, spec.height - 15), 30, 14)  # toe cap, wider in front
     art.fill(bm, p.boot)
-    art.shade(bm, p.boot_shade, -11)
+    art.shade(bm, p.boot_shade, -10)
     sm, sd = art.mask()
-    art.ellipse(sd, (x + side * 4, spec.height - 6), 33, 7)
-    art.rrect(sd, x - 27, spec.height - 10, x + 27, spec.height - 4, 3)
+    art.ellipse(sd, (x + side * 4, spec.height - 6), 30, 6)
+    art.rrect(sd, x - 25, spec.height - 9, x + 25, spec.height - 4, 3)
     art.fill(ImageChops.multiply(sm, bm), p.sole)
     cm, cd = art.mask()  # the boot's top band
-    art.rrect(cd, x - 29, top - 3, x + 29, top + 12, 5)
+    art.rrect(cd, x - 27, top - 3, x + 27, top + 10, 5)
     art.fill(cm, p.boot_shade)
     return _Part("shin", "shin", art, knee)
+
+
+def leg_ratios(spec: FlatSpec) -> dict[str, float]:
+    """Shares of the figure's height: the visible leg (coat hem to sole) and the boot. A rule the
+    tests hold: legs at least 27%, boots at most 10% (the first Mia had 11% legs, 14% boots)."""
+    return {
+        "visible_leg": (spec.height - spec.hem_y) / spec.height,
+        "boot": spec.boot_h / spec.height,
+    }
 
 
 def build_parts(spec: FlatSpec) -> tuple[list[_Part], dict[str, Any]]:
@@ -393,7 +402,7 @@ def build_parts(spec: FlatSpec) -> tuple[list[_Part], dict[str, Any]]:
     out: dict[str, Any] = {}
     rad = math.radians
     knee_y = spec.hip_y + spec.thigh
-    ank = knee_y + spec.shin - 62  # the boot starts above the ankle line
+    ank = spec.height - spec.boot_h + 8  # the tights end inside the boot top
     for _side, sx, tag in ((1, 1, "l"), (-1, -1, "r")):
         # legs: thigh (tights) then shin + boot
         hip = (sx * spec.hip_x, spec.hip_y)
@@ -443,11 +452,8 @@ def build_parts(spec: FlatSpec) -> tuple[list[_Part], dict[str, Any]]:
             spec.limb_r - 1,
             p.coat,
             p.coat_shade,
-            extra=lambda art, w=wrist, t=tip, s=sx, a=ang: (
-                _cuff(spec, w, -a)(art),
-                _hand_art(spec, w, t, s)(art),
-            ),
-            pad=22,
+            extra=_hand_cuff(spec, wrist, tip, sx),
+            pad=48,  # room for the mitten and thumb beyond the wrist (22 clipped the hand)
         )
         parts += [th, sh, ua, fa]
         out[tag] = {

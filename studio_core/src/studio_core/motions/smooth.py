@@ -278,3 +278,20 @@ def crossfade_alpha(frame: int, start: int, length: int) -> float:
     if length <= 0:
         return 1.0 if frame >= start else 0.0
     return smootherstep((frame - start) / length)
+
+
+MAX_DISSOLVE_SCALE_RATIO = (
+    1.25  # a dissolve may not blend two framings whose character scales differ more
+)
+
+
+def transition_for(zoom_a: float, zoom_b: float, character_in_both: bool) -> str:
+    """ "crossfade" or "cut" for a shot change. Rule (D-096): never dissolve two scenes that both
+    contain the character at different scales: the blend shows two figures, doubled backgrounds
+    and a ghost (the review of the first clip, 3.0-3.2 s). Such a change is a hard cut, or better
+    a real camera push-in (one continuous framing). A dissolve stays fine when the character is
+    in only one scene, or the scales are close."""
+    if not character_in_both:
+        return "crossfade"
+    ratio = max(zoom_a, zoom_b) / max(1e-6, min(zoom_a, zoom_b))
+    return "cut" if ratio > MAX_DISSOLVE_SCALE_RATIO else "crossfade"

@@ -81,6 +81,7 @@ def _eye(
     state: FaceState,
     pal: Any,
     yaw: float,
+    mid_x: float,
 ) -> None:
     d = ImageDraw.Draw(layer)
     line = pal.line
@@ -100,7 +101,10 @@ def _eye(
     pd = ImageDraw.Draw(paint)
     pd.ellipse([*_p(c[0] - rx, c[1] - ry), *_p(c[0] + rx, c[1] + ry)], fill="#ffffff")
     ir = min(rx * 0.84, h * 0.46)
-    ix = c[0] + state.look[0] * rx * 0.30 + yaw * rx * 0.18
+    # the pupils converge a little toward the nose, so a gaze at the camera is not wall-eyed
+    ix = (
+        c[0] + state.look[0] * rx * 0.22 + yaw * rx * 0.10 + (1 if mid_x > c[0] else -1) * rx * 0.09
+    )
     iy = c[1] + state.look[1] * ry * 0.3 + h * 0.02
     pd.ellipse([*_p(ix - ir, iy - ir), *_p(ix + ir, iy + ir)], fill=pal.iris)
     pr = ir * 0.52
@@ -220,8 +224,9 @@ def draw_face(
         width=max(3, round(lay.box.w * 0.014)) * SS,
     )
     eh = lay.eye_h
-    _eye(layer, lay.eye_l, lay.eye_w_l, eh, state, pal, yaw)
-    _eye(layer, lay.eye_r, lay.eye_w_r, eh, state, pal, yaw)
+    mid = (lay.eye_l[0] + lay.eye_r[0]) / 2
+    _eye(layer, lay.eye_l, lay.eye_w_l, eh, state, pal, yaw, mid)
+    _eye(layer, lay.eye_r, lay.eye_w_r, eh, state, pal, yaw, mid)
     _brow(d, lay.brow_l, lay.brow_w, lay.box.h, state, -1, pal)
     _brow(d, lay.brow_r, lay.brow_w, lay.box.h, state, +1, pal)
     _mouth(layer, lay, state, pal)

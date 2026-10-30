@@ -423,6 +423,63 @@ def walk_cycle(ctx: MotionContext) -> Clip:
     return _clip(ctx, "walk_cycle", ch)
 
 
+def walk_step(ctx: MotionContext) -> Clip:
+    """A front-view walk across the frame with a visible gait (D-096): `walk_cycle`'s planted
+    feet, plus a higher eased foot lift, a knee bend on the lifted leg (the foot tucks toward the
+    direction of travel, `params.dir` = 1 right, -1 left), a body bob at every step (up at
+    mid-swing, two per cycle) and a small torso sway toward the planted leg. The motion data
+    stays in code: everything derives from the lift the stride already computes."""
+    base = walk_cycle(ctx)
+    sides = [s for s in SIGN if ctx.has("thigh", s) and ctx.has("shin", s)]
+    if not sides or ("shift", ctx.bone("thigh", sides[0])) not in base.channels:
+        return base
+    direction = 1.0 if float(ctx.params.get("dir", 1.0)) >= 0 else -1.0
+    gain = ctx.lerp(1.2, 1.7)  # the foot rises this many times walk_cycle's lift
+    knee, bob, sway = ctx.lerp(22, 42), ctx.lerp(5, 12), ctx.lerp(1.5, 3.0)
+    lifts: dict[str, dict[int, float]] = {}
+    for side in sides:
+        thigh = ctx.bone("thigh", side)
+        keys = [
+            Key(k.frame, Vec(k.value.x, k.value.y * gain), k.interp)
+            for k in base.channels[("shift", thigh)]
+        ]
+        base.channels[("shift", thigh)] = keys
+        lifts[side] = {k.frame: k.value.y for k in keys}
+    peak = max((v for d in lifts.values() for v in d.values()), default=0.0) or 1.0
+    frames = sorted({f for d in lifts.values() for f in d})
+    limits: dict[str, tuple[float, float]] = {}
+    for side in sides:
+        shin = ctx.bone("shin", side)
+        base.channels[("angle", shin)] = [
+            Key(f, direction * knee * min(1.0, lifts[side].get(f, 0.0) / peak), L) for f in frames
+        ]
+        lim = ctx.view["bones"][shin]["limits_deg"]
+        limits[shin] = (min(lim["min"], -knee), max(lim["max"], knee))
+    root = ctx.bone("torso")
+    drop = {k.frame: k.value for k in base.channels.get(("shift", root), [])}
+    base.channels[("shift", root)] = [
+        Key(
+            f,
+            Vec(
+                drop[f].x if f in drop else 0.0,
+                (drop[f].y if f in drop else 0.0)
+                + bob * sum(lifts[s].get(f, 0.0) for s in sides) / peak,
+            ),
+            L,
+        )
+        for f in frames
+    ]
+    if len(sides) == 2:
+        a, b = sides
+        base.channels[("angle", root)] = [
+            Key(f, sway * (lifts[b].get(f, 0.0) - lifts[a].get(f, 0.0)) / peak * direction, L)
+            for f in frames
+        ]
+    base.limits.update(limits)
+    base.motion = "walk_step"
+    return base
+
+
 def jump(ctx: MotionContext) -> Clip:
     """Crouch, spring up with the arms raised, land with a little squash."""
     height, squash = ctx.lerp(60, 160), ctx.lerp(8, 20)
@@ -789,6 +846,7 @@ MOTIONS: dict[str, Callable[[MotionContext], Clip]] = {
     "nod": nod,
     "head_tilt": head_tilt,
     "walk_cycle": walk_cycle,
+    "walk_step": walk_step,
     "jump": jump,
     "point": point,
     "talk_gesture": talk_gesture,

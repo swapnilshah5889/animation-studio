@@ -101,6 +101,7 @@ def plan_beats(*, hands: bool) -> list[Beat]:
     for motion in NATURAL:
         items.append((motion, "motion", motion, NATURAL[motion] + PAD))
     items.append(("walk_cycle across the frame", "walk", "walk_cycle", WALK_S))
+    items.append(("walk_step across the frame", "walk", "walk_step", WALK_S))
     if hands:
         items += [(f"hand: {p}", "hand", p, HAND_S) for p in HAND_POSES]
     beats, t = [], 0.0
@@ -187,7 +188,7 @@ def build_spec(film: FilmFolder, shot_id: str, cid: str, view: str, beats: list[
         if b.kind == "motion":
             add_action(film, shot_id, cid, b.name, b.start_s + 0.2)
         elif b.kind == "walk":
-            add_action(film, shot_id, cid, "walk_cycle", b.start_s, duration_s=b.duration_s)
+            add_action(film, shot_id, cid, b.name, b.start_s, duration_s=b.duration_s)
             move_character(film, shot_id, cid, [0.2, 0.92], b.start_s, 0.01)
             move_character(film, shot_id, cid, [0.8, 0.92], b.start_s + 0.01, b.duration_s - 0.5)
         elif b.kind == "hand":
