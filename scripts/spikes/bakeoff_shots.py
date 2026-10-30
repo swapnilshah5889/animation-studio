@@ -2,7 +2,7 @@
 
     uv run --project studio_core python scripts/spikes/bakeoff_shots.py [FILM_DIR]
 
-FILM_DIR (default ~/ai-studio/scratch/engine-bakeoff/film) must hold characters/kit and
+FILM_DIR (default ~/ai-studio/scratch/engine-bakeoff/film) is created by this script: it holds
 characters/mia (with `bendable_limbs`, see `studio_core.engines.limbs`), the `orchard`
 background and `audio` (linked from films/real-15s). Shot A: Kit walks in, waves, jumps (5 s,
 real mocap clips). Shot B: Mia says one line in a close-up, blinks and turns her head (3 s).
@@ -94,6 +94,33 @@ def shot_b() -> dict:
     }
 
 
+def setup_film(film: Path) -> None:
+    """Idempotent: Kit (films/real-15s) and Mia (the `child` puppet of films/step4-cast) copied
+    into the scratch film with limb images added, the orchard plate and the audio linked."""
+    import shutil
+
+    from studio_core.config import REPO_ROOT
+    from studio_core.engines.limbs import add_bendable_limbs
+
+    for name, src in (
+        ("kit", REPO_ROOT / "films/real-15s/characters/kit"),
+        ("mia", REPO_ROOT / "films/step4-cast/characters/child"),
+    ):
+        dst = film / "characters" / name
+        if not dst.exists():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("build", "design"))
+            add_bendable_limbs(dst)
+    for link, target in (
+        (film / "backgrounds" / "orchard", REPO_ROOT / "films/real-15s/backgrounds/orchard"),
+        (film / "audio", REPO_ROOT / "films/real-15s/audio"),
+    ):
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if not link.exists():
+            link.symlink_to(target, target_is_directory=True)
+    if not (film / "film.json").exists():
+        shutil.copy(REPO_ROOT / "films/real-15s/film.json", film / "film.json")
+
+
 def probe_background(film: Path) -> None:
     """A flat magenta background (the pose sweep's probe) so defects can be counted per engine."""
     from PIL import Image
@@ -123,6 +150,7 @@ if __name__ == "__main__":
         if len(sys.argv) > 1
         else Path.home() / "ai-studio/scratch/engine-bakeoff/film"
     )
+    setup_film(film)
     probe_background(film)
     specs = [shot_a(), shot_b()]
     for spec, new_id in ((shot_a(), "s03_sh01"), (shot_b(), "s04_sh01")):  # same shots, magenta
