@@ -236,6 +236,9 @@ act; editing one shot re-renders only its act; "export all acts" produces one mo
 re-exporting gives the same film from the specs alone; tests cover hashing, staleness and the stitch order.
 
 ## Step 6: OpenToonz backend + render containers
+
+> **Pending rewrite (D-087, D-090):** the engine pick (Blender and/or OpenToonz, replacing Synfig) is made by the owner after the
+> skinned-mesh spike and the look review. Rewrite this step then. Until then treat the text below as the old plan.
 The strategic engine (D-031) behind the engine-neutral scene model (D-030), packaged for server-side
 rendering (D-032). Starting point: the spike scripts in `scripts/spikes/` and `docs/spikes/opentoonz.md`.
 

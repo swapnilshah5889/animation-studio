@@ -2,10 +2,11 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** engine bake-off (Blender, OpenToonz, Synfig) and the project data layer (Steps 5B/5C), both running as
-sessions, plus the director taste fixes (6.2). Step 5 (director, edit, QA, first 15 s film) is built (D-080). The owner signed off on
-the 2026-10-30 plan (see the entry below) and leans towards Blender plus OpenToonz over Synfig.
-
+**Current step:** choosing the animation engine and fixing the cut's quality. Done: director (D-080), engine bake-off (D-090),
+project data layer, servers on projects, acts and export (D-091), joint overlap (opt-in, plateaued, D-092). Running: a one-session
+spike on a single skinned mesh per character in Blender. Next: the engine pick by eye, the director on projects and acts, the lifelike
+pass, then the desktop app (Step 13). The owner signed off on the 2026-10-30 plan and leans towards Blender plus OpenToonz over
+Synfig. Owner preferences are in `AGENTS.md` ("Owner's standing preferences").
 ---
 
 ## 2026-10-30 (evening): servers use projects, acts export (D-091); joint overlap plateaus (D-092)

@@ -97,3 +97,25 @@ Read these before doing anything, in this order:
   `studio_core/engines/<engine>/`. Synfig ships the first film, and OpenToonz is the strategic engine
   (D-031). Final rendering is designed for stateless server-side containers (D-032).
 - Scripts go in `scripts/` and must be safe to re-run (idempotent).
+
+## Owner's standing preferences (learned; keep these across sessions)
+
+- **The end product decides, not the method.** The owner judges the film by eye. A weak-looking film is a
+  failure even if the pipeline is clean. Look at the picture, not only at numbers.
+- **Test the foundation before building on it.** The first film was built on Synfig before any engine had been
+  compared, and the owner called it very weak. Before a big build, run a small bake-off or spike on the risky
+  piece (engine, model, format) and write the result down.
+- **Engines: Blender and OpenToonz are preferred** (open-source, industry standard, source may be changed as a
+  last resort, recorded in DECISIONS.md). The owner is not impressed with Synfig. The final pick is made by eye
+  (D-087, D-090). Strict 2D unless the owner approves 2.5D.
+- **Data model:** a project owns its cast, its shared backgrounds and many films. A film is acts, each act has
+  shots (camera angles). Specs are the editable source, renders are a cache (D-082 to D-084, D-089). Storage sits
+  behind the `ProjectStore` interface so an online database can be added later. Do not build the database now.
+- **Desktop app wanted at the end** (Step 13): Apple Silicon Mac, GUI for projects, stories, the director and
+  saved files (D-081, D-085).
+- **Usage is limited.** Keep token use low (read narrowly, few images, keep verification). Run at most two
+  sessions at once, give each a time box, and stop a session that keeps re-measuring or polishing. Finish one
+  lever before starting the next. (The owner hit their usage limit on 2026-10-30 after three or more parallel
+  sessions.)
+- **Always show progress** of background work, and write results down in the repo (PROGRESS, DECISIONS, spike
+  notes, `docs/learning/`). Chat is not storage: anything learned must be committed.
