@@ -40,10 +40,24 @@ from studio_core.audio.voices import available, existing_lines, save_voice
 from studio_core.audio.voices import speak as run_speak
 from studio_core.config import load_config
 from studio_core.sif.render import RenderError
+from studio_core.workspace import Workspace
 
 Mood = Literal[tuple(MOODS)]  # type: ignore[valid-type]
 Instrument = Literal[tuple(INSTRUMENTS)]  # type: ignore[valid-type]
-FilmArg = Annotated[str, Field(description="Film folder name under films/, e.g. 'step2-demo'.")]
+FilmArg = Annotated[
+    str,
+    Field(
+        description="Film name: a folder under films/ (e.g. 'step2-demo'), or with `project` "
+        "the film's name in that project."
+    ),
+]
+ProjectArg = Annotated[
+    str | None,
+    Field(
+        description="Project id, for a film of a project (edit_mcp describe_project lists them). "
+        "Omit for an old film folder under films/."
+    ),
+]
 CharArg = Annotated[
     str, Field(pattern=r"^[a-z][a-z0-9_]{0,39}$", description="Character id, e.g. 'pip'.")
 ]
@@ -62,6 +76,9 @@ shots by id.
   "birds in the morning"). Use a sound_id with add_sound_effect.
 - preview_mix mixes a shot's dialogue, effects and music (music dips under speech) to check
   levels without rendering the picture.
+
+Films of a project: pass `project` with the film's name. Recordings are kept in the project, and a
+shot that uses a line or music cue is re-rendered when that recording changes.
 
 Everything must suit young children. Text that isn't is refused with the reason.
 """
@@ -187,10 +204,15 @@ def fixable() -> Iterator[None]:
         raise ToolError(str(e)) from None
 
 
-def create_server(films_root: Path | None = None, sfx_root: Path | None = None) -> MCPServer:
+def create_server(
+    films_root: Path | None = None,
+    sfx_root: Path | None = None,
+    *,
+    workspace: Workspace | None = None,
+) -> MCPServer:
     """The server, with every tool registered."""
     cfg = load_config()
-    root = films_root or cfg.path("paths", "films")
+    ws = workspace or Workspace.from_config(cfg, films_root=films_root)
     server = MCPServer(
         "audio_mcp",
         title="Animation studio: sound (voices, music, sound effects)",
@@ -205,19 +227,27 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
 
         return register
 
-    def open_film(film: str) -> shot_spec.FilmFolder:
-        return shot_spec.FilmFolder.open(root, film, sfx_root=sfx_root)
+    def open_film(
+        film: str, project: str | None = None, act: str | None = None
+    ) -> shot_spec.FilmFolder:
+        return ws.open_film(film, project, act=act, sfx_root=sfx_root)
 
     async def in_thread(fn: Any, *args: Any, **kwargs: Any) -> Any:
         return await anyio.to_thread.run_sync(partial(fn, *args, **kwargs))
 
+    async def record(f: shot_spec.FilmFolder) -> None:
+        """A project film: keep the new recordings in the project, and refresh the audio of the
+        shots that use them (a changed line makes its act stale)."""
+        if f.link is not None:
+            await in_thread(f.link.sync_audio)
+
     @tool()
-    def describe_audio(film: FilmArg) -> AudioDescription:
+    def describe_audio(film: FilmArg, project: ProjectArg = None) -> AudioDescription:
         """The film's sound: each character's voice (or that it isn't cast yet), recorded lines,
         music cues, the voices you can cast, the moods and instruments compose knows, and the
         size of the sound-effect library. Call this first."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             chars = []
             for cid in f.characters():
                 voice_file = f.root / "characters" / cid / "voice.json"
@@ -266,7 +296,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             )
 
     @tool()
-    def set_voice(
+    async def set_voice(
         film: FilmArg,
         character_id: CharArg,
         voices: Annotated[
@@ -279,12 +309,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             Field(ge=-3, le=4, description="Raise for younger-sounding voices (+1 to +2)."),
         ] = 0.0,
         notes: Annotated[str | None, Field(max_length=500)] = None,
+        project: ProjectArg = None,
     ) -> VoiceResult:
         """Cast a character's voice (Kokoro voices; see installed_voices in describe_audio).
         Every line the character speaks from now on uses it. Lines spoken before keep their
         old voice until spoken again with speak."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             settings: dict[str, Any] = {
                 "engine": "kokoro",
                 "voices": [v.model_dump() for v in voices],
@@ -294,6 +325,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             if notes:
                 settings["notes"] = notes
             path = save_voice(f.root, character_id, settings)
+            await record(f)
             return VoiceResult(
                 character_id=character_id,
                 voice_path=str(path),
@@ -309,12 +341,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         regenerate: Annotated[
             bool, Field(description="Make a new take even if this exact line exists.")
         ] = False,
+        project: ProjectArg = None,
     ) -> SpeakResult:
         """Record lines in the character's voice, with mouth cues (about 1-2 s per line). Returns
         line ids to place in shots with apply_lipsync. The same text in the same voice returns
         the existing take instantly."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             spoken = await in_thread(
                 run_speak,
                 f.root,
@@ -322,6 +355,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 [line.model_dump(exclude_none=True) for line in lines],
                 regenerate=regenerate,
             )
+            await record(f)
             return SpeakResult(
                 character_id=character_id,
                 lines=[
@@ -343,12 +377,14 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         film: FilmArg,
         line_ids: Annotated[list[LineId], Field(min_length=1, max_length=20)],
         force: Annotated[bool, Field(description="Redo even if the cues are current.")] = False,
+        project: ProjectArg = None,
     ) -> list[CuesOut]:
         """Make (or check) the mouth cues of recorded lines. speak already does this; use it for
         lines recorded elsewhere."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             results = await in_thread(run_lipsync, f.root, line_ids, force=force)
+            await record(f)
             return [
                 CuesOut(
                     line_id=r.line_id,
@@ -373,12 +409,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         ] = None,
         seed: Annotated[int | None, Field(ge=0, description="Another seed = another take.")] = None,
         regenerate: bool = False,
+        project: ProjectArg = None,
     ) -> ComposeResult:
         """Compose an instrumental music cue for a children's cartoon (about 20-40 s of work).
         Pick a mood and an energy; code writes the music model's prompt. Then place it with
         set_music. The same request returns the existing cue."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             cue = await in_thread(
                 run_compose,
                 f.root,
@@ -390,6 +427,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 seed=seed,
                 regenerate=regenerate,
             )
+            await record(f)
             return ComposeResult(
                 cue_id=cue.cue_id,
                 audio_path=str(cue.wav),
@@ -449,12 +487,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
     async def preview_mix(
         film: FilmArg,
         shot_id: Annotated[str, Field(pattern=r"^s[0-9]{2}_sh[0-9]{2}$")],
+        project: ProjectArg = None,
     ) -> MixResult:
         """Mix a shot's audio (dialogue, sound effects, music dipping under speech) to a WAV
         without rendering the picture, and report its loudness. A quick check before
         render_shot."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             spec = shot_spec.load(f, shot_id)
             errors, warnings = shot_spec.check(f, spec)
             if errors:

@@ -29,7 +29,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, Field
 
 from studio_core import placement, shot_spec
-from studio_core.config import load_config
 from studio_core.face import EXPRESSIONS
 from studio_core.hands import HAND_POSES
 from studio_core.motions import MOTIONS
@@ -39,6 +38,7 @@ from studio_core.schema import SCHEMA_DIR
 from studio_core.shot import render_preview, render_shot
 from studio_core.sif.render import RenderError
 from studio_core.sif.units import frames
+from studio_core.workspace import Workspace
 
 _SHOT = json.loads((SCHEMA_DIR / "shot.schema.json").read_text())["$defs"]
 # Enums come from the shot schema and the code that implements them, so the tool schemas the
@@ -53,7 +53,20 @@ Side = Literal["left", "right"]
 Removable = Literal[tuple(shot_spec.REMOVABLE)]  # type: ignore[valid-type]
 assert set(_SHOT["action"]["properties"]["motion"]["enum"]) == set(MOTIONS)
 
-FilmArg = Annotated[str, Field(description="Film folder name under films/, e.g. 'step2-demo'.")]
+FilmArg = Annotated[
+    str,
+    Field(
+        description="Film name: a folder under films/ (e.g. 'step2-demo'), or with `project` "
+        "the film's name in that project."
+    ),
+]
+ProjectArg = Annotated[
+    str | None,
+    Field(
+        description="Project id, for a film of a project (edit_mcp describe_project lists them). "
+        "Omit for an old film folder under films/."
+    ),
+]
 ShotArg = Annotated[
     str, Field(pattern=r"^s[0-9]{2}_sh[0-9]{2}$", description="Shot id, e.g. 's01_sh01'.")
 ]
@@ -77,6 +90,11 @@ Typical order: describe_film (what exists: characters, bones, backgrounds, recor
 music cues, motions) → create_scene → add_character → apply_motion / set_expression /
 apply_lipsync / pose_at / camera_move → add_sound_effect / set_music → describe_shot (spec +
 warnings) → render_preview_frame at a few key times → render_shot.
+
+Films of a project: pass `project` (edit_mcp describe_project) with the film's name. The shots are
+saved as camera angles of the film's acts (create_scene takes `act`), characters and places come
+from the project at the versions the film pinned, and edit_mcp renders and exports by act. Without
+`project` the tools work on an old film folder under films/, as before.
 
 Lines, music and sounds are made on the audio server (audio_mcp: speak, compose, find_sfx);
 these tools place them in a shot by id.
@@ -184,10 +202,15 @@ def _motion_help() -> dict[str, str]:
     }
 
 
-def create_server(films_root: Path | None = None, sfx_root: Path | None = None) -> MCPServer:
+def create_server(
+    films_root: Path | None = None,
+    sfx_root: Path | None = None,
+    *,
+    workspace: Workspace | None = None,
+) -> MCPServer:
     """The server, with every tool registered. `films_root` defaults to config [paths] films,
     `sfx_root` (the sound library) to config [paths] sfx_library."""
-    root = films_root or load_config().path("paths", "films")
+    ws = workspace or Workspace.from_config(films_root=films_root)
     server = MCPServer(
         "synfig_mcp",
         title="Animation studio (cut-out animation)",
@@ -204,11 +227,17 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
 
         return register
 
-    def open_film(film: str) -> shot_spec.FilmFolder:
-        return shot_spec.FilmFolder.open(root, film, sfx_root=sfx_root)
+    def open_film(
+        film: str, project: str | None = None, act: str | None = None
+    ) -> shot_spec.FilmFolder:
+        return ws.open_film(film, project, act=act, sfx_root=sfx_root)
 
     def update(
-        film: shot_spec.FilmFolder, shot_id: str, change: str, warnings: list[str]
+        film: shot_spec.FilmFolder,
+        shot_id: str,
+        change: str,
+        warnings: list[str],
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         return ShotUpdate(
             shot_id=shot_id,
@@ -220,12 +249,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
     # ----------------------------------------------------------------- reading state
 
     @tool()
-    def describe_film(film: FilmArg) -> FilmDescription:
+    def describe_film(film: FilmArg, project: ProjectArg = None) -> FilmDescription:
         """What a film has to work with: characters (with their views and bone names), parallax
         backgrounds, recorded dialogue lines (with text and length), existing shots, and the
         available motions, expressions and camera moves. Call this first."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             chars = []
             for cid in f.characters():
                 rig = load_rig(f.rig_file(cid), check_files=False)
@@ -282,11 +311,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             )
 
     @tool()
-    def describe_shot(film: FilmArg, shot_id: ShotArg) -> ShotDescription:
+    def describe_shot(
+        film: FilmArg, shot_id: ShotArg, project: ProjectArg = None
+    ) -> ShotDescription:
         """The shot's current spec, with errors (block rendering) and warnings, and the paths of
         anything already rendered. Cheap: call it after a few edits to check your work."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             spec = shot_spec.load(f, shot_id)
             errors, warnings = shot_spec.check(f, spec)
             folder = f.shot_file(shot_id).parent
@@ -319,11 +350,20 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         replace: Annotated[
             bool, Field(description="Start an existing shot over from scratch.")
         ] = False,
+        project: ProjectArg = None,
+        act: Annotated[
+            str | None,
+            Field(
+                description="With a project: the act (id, title or number) this camera angle "
+                "belongs to. Optional when the film has one act; a new shot needs it otherwise."
+            ),
+        ] = None,
     ) -> ShotUpdate:
         """Create a new, empty shot with a background and a camera move over the whole shot.
-        Add characters next with add_character."""
+        Add characters next with add_character. In a project film the shot is saved as a camera
+        angle of an act (add acts with edit_mcp add_act); an existing shot stays in its act."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project, act)
             camera = (
                 {"move": camera_move, "zoom": zoom}
                 if camera_move != "static" or zoom != 1
@@ -349,12 +389,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         view: View | None = None,
         scale: Annotated[float | None, Field(ge=0.2, le=3, description="1 = natural size.")] = None,
         facing: Side | None = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Put a character in the shot, or move it if it is already there (its motions,
         expressions and poses are kept). Characters are drawn back to front in the order
         added."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.place_character(
                 f, shot_id, character_id, list(position), view=view, scale=scale, facing=facing
             )
@@ -383,12 +424,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         target: Annotated[
             FramePos | None, Field(description="For 'point': where to point, in the frame.")
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Add a named motion from the motion library, starting at start_s. Later motions take
         over a limb from earlier ones; idle_breathe adds on top of everything. For a living
         character, add 'blink' and 'idle_breathe' with start_s 0 and duration_s = the shot."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             params: dict[str, Any] = {}
             for key, value in (
                 ("energy", energy),
@@ -420,6 +462,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 "speed), ease_in (starts slow), ease_out (ends slow)."
             ),
         ] = "ease_in_out",
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Move a character across the frame: it stays where it is until start_s, then travels
         to `to` in duration_s. Moves must come in time order (a new move cannot start before the
@@ -429,7 +472,7 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         just glides. Walking across the frame swings the legs sideways, which suits side-on art;
         in the front view it reads as a simple toy-like waddle."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.move_character(
                 f, shot_id, character_id, list(to), start_s, duration_s, ease
             )
@@ -451,22 +494,28 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 "counter-clockwise on screen). Bone names: describe_film.",
             ),
         ],
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """A manual key pose: these bones reach these angles at time_s and hold until the next
         key. Angles are clamped to each joint's limits. Prefer apply_motion when a motion fits."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.add_pose(f, shot_id, character_id, time_s, bone_angles)
             return update(f, shot_id, f"{character_id}: pose at {time_s}s", warnings)
 
     @tool()
     def set_expression(
-        film: FilmArg, shot_id: ShotArg, character_id: CharArg, expr: Expression, start_s: Seconds
+        film: FilmArg,
+        shot_id: ShotArg,
+        character_id: CharArg,
+        expr: Expression,
+        start_s: Seconds,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Change the character's expression (brows and resting mouth) from start_s on. The
         character is 'neutral' until its first expression."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.add_expression(f, shot_id, character_id, expr, start_s)
             return update(f, shot_id, f"{character_id}: {expr} from {start_s}s", warnings)
 
@@ -481,13 +530,14 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             Literal["left", "right"],
             Field(description="The character's own left or right hand."),
         ] = "right",
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Change which pose the character's hand shows from start_s on: rest (the hand as
         drawn), fist, point, open or wave. Only for characters whose rig has hands (describe_film
         lists them); the point, wave, talk_gesture, clap and think motions already pick their own
         hand pose. The hand holds the pose until the next set_hand."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.add_hand(f, shot_id, character_id, pose, start_s, side)
             return update(
                 f, shot_id, f"{character_id}: {side} hand {pose} from {start_s}s", warnings
@@ -506,12 +556,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         text: Annotated[
             str | None, Field(description="The words; defaults to the line's transcript.")
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """The character speaks a recorded dialogue line starting at start_s: the line's audio
         plays in the shot and its mouth cues drive the character's mouth. Calling it again with
         the same line_id moves the line."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.add_dialogue(f, shot_id, character_id, line_id, start_s, text)
             return update(f, shot_id, f"{character_id} says {line_id} at {start_s}s", warnings)
 
@@ -520,11 +571,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         film: FilmArg,
         shot_id: ShotArg,
         background_id: Annotated[str, Field(description="Background id (see describe_film).")],
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Set the shot's background: a set of depth layers that slide at different speeds when
         the camera pans (parallax). Its layers are listed by describe_film."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.set_background(f, shot_id, background_id)
             return update(f, shot_id, f"background is now '{background_id}'", warnings)
 
@@ -540,11 +592,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         zoom: Annotated[
             float | None, Field(ge=0.5, le=3, description="Starting zoom; 1 = full frame.")
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Set the shot's camera move (one per shot). Pans travel a fixed, gentle distance;
         push_in / pull_out zoom by 1.25x; all ease in and out."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.set_camera(
                 f, shot_id, move, start_s=start_s, duration_s=duration_s, zoom=zoom
             )
@@ -573,11 +626,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 description="What the sound is for, in words (defaults to its description).",
             ),
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Play a sound effect from the library at start_s. Find sounds by describing them with
         audio_mcp's find_sfx, then pass the chosen sound_id here."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.add_sound_effect(
                 f, shot_id, sound_id, start_s, volume=volume, query=query
             )
@@ -598,11 +652,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             float | None,
             Field(ge=0, le=1, description="Music level before ducking; default 0.5."),
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Set the shot's background music. It plays from the start of the shot and dips
         automatically while anyone speaks."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             warnings = shot_spec.set_music(f, shot_id, cue_id, volume=volume)
             return update(f, shot_id, f"music: {cue_id or 'none'}", warnings)
 
@@ -616,12 +671,13 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             int | None,
             Field(ge=0, description="0-based position in the list shown by describe_shot."),
         ] = None,
+        project: ProjectArg = None,
     ) -> ShotUpdate:
         """Undo part of a shot: remove a character (with its dialogue), or one of a character's
         actions, poses, expressions or hand poses, a character's whole movement path (kind
         'movement'), or one dialogue line or sound effect, by its index in describe_shot."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             removed, warnings = shot_spec.remove_item(
                 f, shot_id, kind, character_id=character_id, index=index
             )
@@ -640,13 +696,16 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
                 "are already in characters/<id>/. Omit it to use the placeholder puppet."
             ),
         ] = None,
+        project: ProjectArg = None,
     ) -> RigResult:
         """Validate and register a character's rig (bones, parts, pivots, face), making the
         character available to shots. Without a rig, a placeholder puppet is created under
         this id."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             path, placeholder = shot_spec.register_rig(f, character_id, rig)
+            if f.link is not None:  # a project film: the character joins the project library
+                f.link.publish_character(character_id)
             data = load_rig(path).data
             views = {name: sorted(v["bones"]) for name, v in data["views"].items()}
             return RigResult(
@@ -663,11 +722,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
         scale: Annotated[
             float, Field(ge=0.1, le=1, description="Fraction of 1920x1080; 0.5 = 960x540.")
         ] = 0.5,
+        project: ProjectArg = None,
     ) -> PreviewResult:
         """Render one frame of the shot to a PNG (a few seconds), to check poses, placement
         and framing before rendering the whole shot."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             png, frame, size = await anyio.to_thread.run_sync(
                 partial(render_preview, f.root, shot_id, time_s, scale=scale)
             )
@@ -682,11 +742,12 @@ def create_server(films_root: Path | None = None, sfx_root: Path | None = None) 
             Field(description="preview = 640x360 (fast), final = 1920x1080."),
         ] = "final",
         audio: Annotated[bool, Field(description="Mix the dialogue in.")] = True,
+        project: ProjectArg = None,
     ) -> RenderResult:
         """Render the whole shot to an MP4 with its dialogue (about 0.25 s per final frame:
         a 10 s shot takes about a minute). The spec is checked first."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             size = (640, 360) if quality == "preview" else (1920, 1080)
             spec = shot_spec.load(f, shot_id)
             errors, _ = shot_spec.check(f, spec)

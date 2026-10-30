@@ -344,7 +344,9 @@ def create_server(
                 made = proj.create_film(
                     title,
                     slug=film,
-                    style=style,
+                    style=style
+                    or proj.doc.get("style")
+                    or cfg.get("comfyui", "default_style", "storybook"),
                     cast=cast if cast is not None else [c["slug"] for c in proj.list_characters()],
                     places=(
                         places

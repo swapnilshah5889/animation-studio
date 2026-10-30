@@ -32,7 +32,10 @@ def make_workspace(tmp_path: Path) -> Workspace:
 
 def make_project(ws: Workspace, project_id: str = "pip-world") -> Project:
     project = Project.create(
-        FileSystemStore(ws.projects_root), name="Pip world", project_id=project_id
+        FileSystemStore(ws.projects_root),
+        name="Pip world",
+        style="storybook",
+        project_id=project_id,
     )
     project.publish_character("pip", folder_files(FIXTURES / "characters" / "pip") | {})
     for place in PLACES:  # same art, three places: what matters is the ids

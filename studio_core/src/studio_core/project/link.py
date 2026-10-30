@@ -91,6 +91,7 @@ class ProjectLink:
                 self._pull_version(kind, self.project.resolve_ref(kind, ref), folder)
         self._pull_shots()
         self._pull_audio()
+        self._write_film_json(film)
 
     def _pull_version(self, kind: str, resolved: ResolvedVersion, folder: str) -> None:
         target = self.root / folder / resolved.slug
@@ -102,6 +103,18 @@ class ProjectLink:
             shutil.rmtree(target)
         self.project.materialize(resolved, target, mode="clone")
         marker.write_text(want)
+
+    def _write_film_json(self, film: dict) -> None:
+        """film.json in the folder, derived from the film document (code reads the style there)."""
+        data: dict[str, Any] = {
+            "schema_version": 1,
+            "slug": film["slug"],
+            "title": film["title"],
+            "characters": [self.project.resolve_ref("character", r).slug for r in film["cast"]],
+        }
+        if film.get("style"):
+            data["style"] = film["style"]
+        _write_if_changed(self.root / "film.json", json.dumps(data, indent=2) + "\n")
 
     def _pull_shots(self) -> None:
         docs = {d["spec"]["id"]: d["spec"] for d in self.shot_docs()}

@@ -60,13 +60,27 @@ from studio_core.puppet.design import choose_design as run_choose_design
 from studio_core.puppet.design import design_character as run_design
 from studio_core.puppet.design import design_dir, load_candidates
 from studio_core.scene import CAMERA_MOVES
+from studio_core.workspace import Workspace
 
 T = TypeVar("T")
 HEARTBEAT_S = 15.0  # a long job reports progress at least this often
 SIZES = {"preview": (640, 360), "final": (1920, 1080)}
 ID = r"^[a-z][a-z0-9_]{0,39}$"
 
-FilmArg = Annotated[str, Field(description="Film folder name under films/, e.g. 'step4-demo'.")]
+FilmArg = Annotated[
+    str,
+    Field(
+        description="Film name: a folder under films/ (e.g. 'step4-demo'), or with `project` "
+        "the film's name in that project."
+    ),
+]
+ProjectArg = Annotated[
+    str | None,
+    Field(
+        description="Project id, for a film of a project (edit_mcp describe_project lists them). "
+        "Omit for an old film folder under films/."
+    ),
+]
 CharArg = Annotated[str, Field(pattern=ID, description="Character id, e.g. 'kit'.")]
 PlaceArg = Annotated[str, Field(pattern=ID, description="Background (place) id, e.g. 'meadow'.")]
 CandidateArg = Annotated[
@@ -98,6 +112,12 @@ Art jobs take minutes (each tool says how long) and run one at a time.
   its next step. Call it first.
 
 Candidate ids are c1, c2, ... per character or place; another round adds to the list.
+
+Films of a project: pass `project` with the film's name. The project keeps a library of characters
+and places that all its films share (describe_art lists it: reuse before drawing anew). A puppet
+built by build_puppet and a background layered by split_depth_layers are published to the library
+as a new version and the film uses it; earlier versions never change, so finished films keep
+rendering the same.
 Everything must suit young children: descriptions that don't are refused with the reason.
 Describe looks in plain words, never by a studio's or an artist's name.
 """
@@ -160,6 +180,11 @@ class ArtDescription(BaseModel):
     styles: list[StyleInfo]
     characters: list[CharacterArt]
     backgrounds: list[BackgroundArt]
+    library: dict[str, list[str]] | None = Field(
+        default=None,
+        description="With a project: its whole library (characters, places, films), including "
+        "what this film does not use yet. Reuse a character or place before drawing a new one.",
+    )
 
 
 class DesignResult(BaseModel):
@@ -202,6 +227,10 @@ class PuppetResult(BaseModel):
     report_path: str
     seconds: float
     note: str
+    library_version: int | None = Field(
+        default=None,
+        description="With a project: the library version published (and now used by the film).",
+    )
 
 
 class KeyFrame(BaseModel):
@@ -253,6 +282,10 @@ class LayersResult(BaseModel):
     depth_image: str
     seconds: float
     note: str
+    library_version: int | None = Field(
+        default=None,
+        description="With a project: the library version published (and now used by the film).",
+    )
 
 
 class HoleOut(BaseModel):
@@ -434,10 +467,12 @@ def fixable() -> Iterator[None]:
         raise ToolError(str(e)) from None
 
 
-def create_server(films_root: Path | None = None) -> MCPServer:
+def create_server(
+    films_root: Path | None = None, *, workspace: Workspace | None = None
+) -> MCPServer:
     """The server, with every tool registered."""
     cfg = load_config()
-    root = films_root or cfg.path("paths", "films")
+    ws = workspace or Workspace.from_config(cfg, films_root=films_root)
     server = MCPServer(
         "comfy_mcp",
         title="Animation studio: art (character puppets and parallax backgrounds)",
@@ -454,8 +489,28 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
         return register
 
-    def open_film(film: str) -> shot_spec.FilmFolder:
-        return shot_spec.FilmFolder.open(root, film)
+    def open_film(
+        film: str, project: str | None = None, act: str | None = None
+    ) -> shot_spec.FilmFolder:
+        return ws.open_film(film, project, act=act)
+
+    def library_of(project: str | None) -> dict[str, list[str]] | None:
+        if project is None:
+            return None
+        proj = ws.open_project(project)
+        return {
+            "characters": [c["slug"] for c in proj.list_characters()],
+            "places": [b["slug"] for b in proj.list_backgrounds()],
+            "films": [x["slug"] for x in proj.list_films()],
+        }
+
+    async def to_library(f: shot_spec.FilmFolder, kind: str, slug: str) -> int | None:
+        """A project film: publish what was just built as a new version in the project library
+        (nothing changed = no new version) and let the film use it. None for an old film."""
+        if f.link is None:
+            return None
+        publish = f.link.publish_character if kind == "character" else f.link.publish_background
+        return (await anyio.to_thread.run_sync(partial(publish, slug)))["version"]
 
     async def job(
         ctx: Context, lock: str, label: str, work: Callable[[Callable[[str], None]], T]
@@ -498,13 +553,13 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         return result  # type: ignore[return-value]
 
     @tool()
-    def describe_art(film: FilmArg) -> ArtDescription:
+    def describe_art(film: FilmArg, project: ProjectArg = None) -> ArtDescription:
         """The film's art: its style (and the styles there are), every character (design
         candidates with their checks, the chosen one, the built rig's views) and every place
         (drafts, the chosen one, the plate, the parallax layers), each with its next step.
         Call this first."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             manifest = load_manifest()
             film_json = f.root / "film.json"
             locked = film_json.is_file() and bool(json.loads(film_json.read_text()).get("style"))
@@ -522,6 +577,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 ],
                 characters=[character_art(f, cid) for cid in chars],
                 backgrounds=[background_art(f, bid) for bid in places],
+                library=library_of(project),
             )
 
     @tool()
@@ -540,6 +596,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         ],
         n: Count = 4,
         seed: Seed = None,
+        project: ProjectArg = None,
     ) -> DesignResult:
         """Draw `n` candidate sheets of a described character in the film's style, each with the
         figure standing front-on and turned three-quarters in the rig's pose (about 4 min per
@@ -547,7 +604,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         clutter, a figure off its skeleton). Look at the sheets, then choose_design one.
         Another round adds candidates to the list, with the same or a new description."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             if problems := check_design_request(character_id, description, n):
                 raise ToolError("; ".join(problems))
             if f.rig_file(character_id).is_file() and load_candidates(f.root, character_id) is None:
@@ -577,12 +634,12 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     @tool()
     def choose_design(
-        film: FilmArg, character_id: CharArg, candidate_id: CandidateArg
+        film: FilmArg, character_id: CharArg, candidate_id: CandidateArg, project: ProjectArg = None
     ) -> ChosenDesign:
         """Choose the candidate sheet the puppet is built from. A candidate whose checks failed
         can still be chosen if it looks right. Then build_puppet."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             sheet = run_choose_design(f.root, character_id, candidate_id)
             data = load_candidates(f.root, character_id) or {}
             c = next(c for c in data["candidates"] if c["id"] == candidate_id)
@@ -607,6 +664,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 description="The name shown for it, e.g. 'Kit'; defaults to the id, capitalised.",
             ),
         ] = None,
+        project: ProjectArg = None,
     ) -> PuppetResult:
         """Cut the chosen design into a rigged puppet: a front view and a three-quarter view
         (redrawn from the front so the two match), each with bones, parts and a faceless head
@@ -614,7 +672,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         redraw), under a minute when rebuilt. Rebuilding replaces the parts and the rig. Look
         at each view's poses_image; then preview_puppet."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             t0 = time.monotonic()
             built = await job(
                 ctx,
@@ -622,6 +680,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 f"building {character_id}",
                 lambda say: run_build(f.root, character_id, name=name),
             )
+            version = await to_library(f, "character", character_id)
             report = built.report
             consistency = report.get("consistency", {})
             source = report.get("three_quarter_source", {})
@@ -640,6 +699,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 report_path=str(f.root / "characters" / character_id / "build" / "report.json"),
                 seconds=round(time.monotonic() - t0, 1),
                 note="Look at each view's poses_image, then preview_puppet.",
+                library_version=version,
             )
 
     @tool()
@@ -656,6 +716,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         ] = LINE,
         background_id: PlaceArg = "meadow",
         quality: Quality = "preview",
+        project: ProjectArg = None,
     ) -> PuppetPreviewResult:
         """Render a short test shot of a built puppet beside Pip (the reference puppet, at the
         same standing height): it rests, waves toward Pip, blinks, and says `line` lip-synced
@@ -663,7 +724,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         set_voice). The test shot (s00_sh01) is replaced by every preview; the film gains Pip and
         the placeholder meadow if it lacks them. Look at the contact sheet."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             preview = await job(
                 ctx,
                 "puppet preview",
@@ -712,6 +773,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         ],
         n: Count = 4,
         seed: Seed = None,
+        project: ProjectArg = None,
     ) -> DraftsResult:
         """Paint `n` candidate drafts of a described place in the film's style (about 2 min
         each), wide enough to pan across, with things in the middle and far distance and an
@@ -719,7 +781,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         problems (a busy or uneven floor). Look at the drafts, then choose_background one.
         Another round adds drafts to the list."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             if problems := check_place_request(background_id, description, n):
                 raise ToolError("; ".join(problems))
 
@@ -747,13 +809,17 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     @tool()
     async def choose_background(
-        ctx: Context, film: FilmArg, background_id: PlaceArg, candidate_id: CandidateArg
+        ctx: Context,
+        film: FilmArg,
+        background_id: PlaceArg,
+        candidate_id: CandidateArg,
+        project: ProjectArg = None,
     ) -> PlateResult:
         """Choose a draft and finish it into the background's plate: upscaled to 2880x1080 (the
         frame plus room to pan) and redrawn lightly for crisp detail (about 5-6 min). Choosing
         again replaces the plate. Then split_depth_layers."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             t0 = time.monotonic()
             plate = await job(
                 ctx,
@@ -775,14 +841,14 @@ def create_server(films_root: Path | None = None) -> MCPServer:
 
     @tool()
     async def split_depth_layers(
-        ctx: Context, film: FilmArg, background_id: PlaceArg
+        ctx: Context, film: FilmArg, background_id: PlaceArg, project: ProjectArg = None
     ) -> LayersResult:
         """Cut the background's plate into parallax layers by depth (sky, far, middle, ground,
         and a foreground in front of the characters when there is one), repaint what a pan
         reveals behind each nearer layer, and write layers.json (about 8-14 min). Look at
         bands_image; then preview_background, and use it with add_parallax_background."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             t0 = time.monotonic()
             path = await job(
                 ctx,
@@ -790,6 +856,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 f"layering {background_id}",
                 lambda say: run_split(f.root, background_id, cfg=cfg),
             )
+            version = await to_library(f, "background", background_id)
             build = path.parent / "build"
             report_file = build / "layers_report.json"
             report = json.loads(report_file.read_text()) if report_file.is_file() else {}
@@ -802,6 +869,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
                 depth_image=str(build / "depth" / "depth.png"),
                 seconds=round(time.monotonic() - t0, 1),
                 note="preview_background next.",
+                library_version=version,
             )
 
     @tool()
@@ -821,6 +889,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
             Field(pattern=ID, description="A built character to stand on the ground, for scale."),
         ] = None,
         quality: Quality = "preview",
+        project: ProjectArg = None,
     ) -> BackgroundPreviewResult:
         """Render a test shot of a layered background during a camera move (about 1 min at
         preview quality) and check, frame by frame, that the move never shows a hole or a
@@ -828,7 +897,7 @@ def create_server(films_root: Path | None = None) -> MCPServer:
         ground to show the place's scale. The test shot (s00_sh02) is replaced by every
         preview. Look at the contact sheet."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             preview = await job(
                 ctx,
                 "place preview",

@@ -36,14 +36,30 @@ from studio_core.qa import runner
 from studio_core.qa.rubric import SAFETY_CATEGORIES
 from studio_core.shot import ShotError, load_shot
 from studio_core.sif.render import RenderError
+from studio_core.workspace import Workspace
 
 T = TypeVar("T")
 HEARTBEAT_S = 15.0
-FilmArg = Annotated[str, Field(description="Film folder name under films/, e.g. 'step3-demo'.")]
+FilmArg = Annotated[
+    str,
+    Field(
+        description="Film name: a folder under films/ (e.g. 'step3-demo'), or with `project` "
+        "the film's name in that project."
+    ),
+]
+ProjectArg = Annotated[
+    str | None,
+    Field(
+        description="Project id, for a film of a project (edit_mcp describe_project lists them). "
+        "Omit for an old film folder under films/."
+    ),
+]
 ShotArg = Annotated[str, Field(pattern=r"^s[0-9]{2}_sh[0-9]{2}$", description="Shot id.")]
 
 INSTRUCTIONS = """\
 Eyes for the director. They check; they never change the film.
+
+Films of a project: pass `project` with the film's name; shots are read from the project's acts.
 
 - check_frame looks at one rendered frame of a shot against the shot spec (who is in it, the
   expressions, the background, the camera). Code checks are facts (holes, seams, detached pieces,
@@ -141,11 +157,14 @@ def _check(r: runner.SafetyReport) -> SafetyCheck:
 
 
 def create_server(
-    films_root: Path | None = None, client: runner.VisionClient | None = None
+    films_root: Path | None = None,
+    client: runner.VisionClient | None = None,
+    *,
+    workspace: Workspace | None = None,
 ) -> MCPServer:
     """The server, with every tool registered. `client` replaces the real model (tests)."""
     cfg = load_config()
-    root = films_root or cfg.path("paths", "films")
+    ws = workspace or Workspace.from_config(cfg, films_root=films_root)
     server = MCPServer(
         "qa_mcp",
         title="Animation studio: frame and safety checks",
@@ -161,8 +180,10 @@ def create_server(
 
         return register
 
-    def open_film(film: str) -> shot_spec.FilmFolder:
-        return shot_spec.FilmFolder.open(root, film)
+    def open_film(
+        film: str, project: str | None = None, act: str | None = None
+    ) -> shot_spec.FilmFolder:
+        return ws.open_film(film, project, act=act)
 
     def vision() -> runner.VisionClient:
         return client or runner.OllamaVision(cfg)
@@ -199,8 +220,10 @@ def create_server(
             raise error
         return result  # type: ignore[return-value]
 
-    def shot_of(film: str, shot_id: str, time_s: float | None = None) -> tuple[Path, dict]:
-        f = open_film(film)
+    def shot_of(
+        film: str, shot_id: str, time_s: float | None = None, project: str | None = None
+    ) -> tuple[Path, dict]:
+        f = open_film(film, project)
         spec = shot_spec.load(f, shot_id)
         if time_s is not None and not 0 <= time_s < spec["duration_s"]:
             raise ValueError(
@@ -215,6 +238,7 @@ def create_server(
         film: FilmArg,
         shot_id: ShotArg,
         time_s: Annotated[float, Field(ge=0, description="Seconds from the start of the shot.")],
+        project: ProjectArg = None,
     ) -> FrameCheck:
         """Render the shot at time_s and check the frame against the shot spec (about 15-30 s).
         Code checks first, always: black frame, each character visible and inside the frame, no
@@ -225,7 +249,7 @@ def create_server(
         be wrong (it sometimes calls a pose unreadable or misses a small hole). The model is
         unloaded afterwards. Refused while ComfyUI is busy."""
         with fixable():
-            film_dir, _ = shot_of(film, shot_id, time_s)
+            film_dir, _ = shot_of(film, shot_id, time_s, project)
 
             def work(say: Callable[[str], None]) -> runner.FrameReport:
                 return runner.check_frame(film_dir, shot_id, time_s, vision(), cfg=cfg, say=say)
@@ -244,6 +268,7 @@ def create_server(
         time_s: Annotated[
             float | None, Field(ge=0, description="Frame time; default the middle of the shot.")
         ] = None,
+        project: ProjectArg = None,
     ) -> SafetyResult:
         """Check material for children aged 3-8: text, a shot's picture (give film and shot_id),
         or both. The word blocklist runs first (a fact), then the model judges against a fixed
@@ -257,7 +282,7 @@ def create_server(
                 raise ValueError("give `text`, or `film` and `shot_id` for a picture, or both")
             film_dir = spec = None
             if film and shot_id:
-                film_dir, spec = shot_of(film, shot_id, time_s)
+                film_dir, spec = shot_of(film, shot_id, time_s, project)
                 if time_s is None:
                     time_s = round(spec["duration_s"] / 2, 2)
 
@@ -290,14 +315,14 @@ def create_server(
             return await job(ctx, "checking safety", work)
 
     @tool()
-    async def check_film(ctx: Context, film: FilmArg) -> FilmCheck:
+    async def check_film(ctx: Context, film: FilmArg, project: ProjectArg = None) -> FilmCheck:
         """Check a whole film, one model call after another: up to 3 key frames per shot (start,
         middle and end of its real action) with check_frame, and every dialogue line and the film
         premise (film.json) with check_safety's text check. Returns a table per shot, whether
         each is ok, and the total model seconds. A film of 5 shots with 4 lines takes about 5
         minutes. Run it before render_shot of the last shot, not after every edit."""
         with fixable():
-            f = open_film(film)
+            f = open_film(film, project)
             shot_ids = f.shots()
             if not shot_ids:
                 raise ValueError(f"film {film!r} has no shots yet; create_scene first")
