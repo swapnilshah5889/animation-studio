@@ -235,6 +235,23 @@ and animation stays in an **editable, changeable format**.
 act; editing one shot re-renders only its act; "export all acts" produces one movie; deleting all renders and
 re-exporting gives the same film from the specs alone; tests cover hashing, staleness and the stitch order.
 
+## Step 5D: Visual reviewer (a gate that looks at the picture)
+
+Why (2026-10-30): the owner had to point out that Mia's face was wrong (huge eyes at the head edges, a mouth beside the
+eye) and that the motion was not smooth. Our QA checked facts (holes, seams, size, loudness) and our reports quoted
+defect counts; nobody looked at the frames. See `docs/spikes/owner-review-bakeoff.md`.
+
+Build a reviewer that runs before any film or clip is shown to the owner, and fails it with reasons:
+1. **Deterministic checks (code):** face proportion limits (eye spacing and size, mouth below the nose, face inside the
+   head and following it), motion smoothness (velocity and jerk limits, no pops between expressions or shots), style
+   consistency between character and background (palette, line weight, level of detail).
+2. **Vision-model review (local):** sampled frames plus a short rubric ("normal face? same character as the sheet?
+   limbs attached? matches the background style?"), results written next to the film. Calibrate it against the owner's own
+   verdicts (the bake-off clip and the Mia clip are the first two labelled examples).
+3. **Review reel for the owner:** key frames and a short clip, shown only after the gates pass.
+Done when: the reviewer rejects the 2026-10-30 Mia clip for the reasons the owner gave and passes a hand-checked good one.
+Ask the owner before building the vision-model rubric (it overlaps with the eval harness, which the owner may want to write).
+
 ## Step 6: OpenToonz backend + render containers
 
 > **Pending rewrite (D-087, D-090):** the engine pick (Blender and/or OpenToonz, replacing Synfig) is made by the owner after the
