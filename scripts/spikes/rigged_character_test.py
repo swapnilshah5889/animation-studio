@@ -29,14 +29,12 @@ from studio_core.config import REPO_ROOT
 from studio_core.engines.bake import FPS, bake_shot
 from studio_core.engines.blender.launch import render
 from studio_core.engines.face_sprite import write_sprites
-from studio_core.motions.smooth import crossfade_alpha
 from studio_core.puppet.flat import FlatSpec, build_flat_puppet
 
 W, H = 1920, 1080
 SECONDS = 6.0
 N = round(SECONDS * FPS)
-CUT, FADE = 70, 8  # the matching cut: frame the cross-fade starts, and its length in frames
-SCALE = 0.95
+SCALE = 1.05
 LINES = [("l001", 1.9), ("l003", 4.1)]
 
 
@@ -68,7 +66,7 @@ def shot_spec(camera: dict, background: str = "plate", transparent: bool = True)
                     {"motion": "blink", "start_s": 0.0, "duration_s": SECONDS},
                     {"motion": "idle_breathe", "start_s": 0.0},
                     {
-                        "motion": "walk_real",
+                        "motion": "walk_step",
                         "start_s": 0.0,
                         "duration_s": 1.7,
                         "params": {"energy": 0.55},
@@ -107,20 +105,18 @@ def shot_spec(camera: dict, background: str = "plate", transparent: bool = True)
     }
 
 
-CAM_WIDE = {
+# One continuous camera (D-096): a real push-in from the walking framing to the close-up. The
+# first clip dissolved between two framings and showed two Mias for five frames.
+CAM = {
     "move": "track",
     "keys": [
-        {"time_s": 0.0, "zoom": 1.0, "cx": 880, "cy": 540},
-        {"time_s": 3.4, "zoom": 1.1, "cx": 960, "cy": 560},
+        {"time_s": 0.0, "zoom": 1.0, "cx": 880, "cy": 560},
+        {"time_s": 2.4, "zoom": 1.12, "cx": 900, "cy": 570},
+        {"time_s": 3.8, "zoom": 1.5, "cx": 800, "cy": 610},
+        {"time_s": 6.0, "zoom": 1.58, "cx": 800, "cy": 600},
     ],
 }
-CAM_CLOSE = {
-    "move": "track",
-    "keys": [
-        {"time_s": 2.0, "zoom": 1.5, "cx": 790, "cy": 640},
-        {"time_s": 6.0, "zoom": 1.68, "cx": 800, "cy": 625},
-    ],
-}
+CAM_WIDE = CAM_CLOSE = CAM
 
 
 # --------------------------------------------------------------------------- the 2.5D plate
@@ -304,6 +300,7 @@ def main() -> None:
     )
     ap.add_argument("--probe", action="store_true")
     ap.add_argument("--skip-render", action="store_true")
+    ap.add_argument("--tag", default="v2", help="output names: clip_<tag>.mp4, sheet_<tag>.png")
     a = ap.parse_args()
     work = a.work.expanduser()
     work.mkdir(parents=True, exist_ok=True)
@@ -313,64 +310,31 @@ def main() -> None:
         probe(work, film)
         return
 
-    bakes = {}
-    for name, cam, frames in (
-        ("wide", CAM_WIDE, (0, CUT + FADE)),
-        ("close", CAM_CLOSE, (CUT, N - 1)),
-    ):
-        bake = bake_shot(film, shot_spec(cam))
-        write_sprites(bake, work / f"sprites_{name}")
-        (work / f"bake_{name}.json").write_text(json.dumps(bake))
-        bakes[name] = bake
-        if not a.skip_render:
-            stats = render(
-                work / f"bake_{name}.json",
-                work / f"frames_{name}",
-                engine="EEVEE",
-                size=f"{W}x{H}",
-                frames=f"{frames[0]}-{frames[1]}",
-                samples=8,
-            )
-            print(name, stats)
+    bake = bake_shot(film, shot_spec(CAM))
+    write_sprites(bake, work / "sprites")
+    (work / "bake.json").write_text(json.dumps(bake))
+    if not a.skip_render:
+        stats = render(
+            work / "bake.json",
+            work / "frames",
+            engine="EEVEE",
+            size=f"{W}x{H}",
+            samples=8,
+        )
+        print(stats)
     layers = make_layers()
     out = work / "final_frames"
     out.mkdir(exist_ok=True)
     for f in range(N):
-        a_w = 1.0 - crossfade_alpha(f, CUT, FADE)
-        parts = []
-        if a_w > 0:
-            cam = tuple(bakes["wide"]["camera_track"][f])
-            parts.append(
-                (
-                    a_w,
-                    composite(
-                        layers,
-                        work / "frames_wide" / f"{f:04d}.png",
-                        cam,
-                        foot_px(bakes["wide"], f),
-                    ),
-                )
-            )
-        if a_w < 1:
-            cam = tuple(bakes["close"]["camera_track"][f])
-            parts.append(
-                (
-                    1 - a_w,
-                    composite(
-                        layers,
-                        work / "frames_close" / f"{f:04d}.png",
-                        cam,
-                        foot_px(bakes["close"], f),
-                    ),
-                )
-            )
-        img = parts[0][1] if len(parts) == 1 else Image.blend(parts[0][1], parts[1][1], parts[1][0])
-        img.save(out / f"{f:04d}.png")
-    mux(work, out)
-    sheet(work, out, bakes["close"])
+        cam = tuple(bake["camera_track"][f])
+        composite(layers, work / "frames" / f"{f:04d}.png", cam, foot_px(bake, f)).save(
+            out / f"{f:04d}.png"
+        )
+    mux(work, out, a.tag)
+    sheet(work, out, bake, a.tag)
 
 
-def mux(work: Path, frames: Path) -> None:
+def mux(work: Path, frames: Path, tag: str) -> None:
     audio = REPO_ROOT / "films/real-15s/audio/dialogue"
     cmd = [
         "ffmpeg",
@@ -411,12 +375,12 @@ def mux(work: Path, frames: Path) -> None:
         "aac",
         "-b:a",
         "160k",
-        str(work / "clip.mp4"),
+        str(work / f"clip_{tag}.mp4"),
     ]
     subprocess.run(cmd, check=True)
 
 
-def sheet(work: Path, frames: Path, bake: dict) -> None:
+def sheet(work: Path, frames: Path, bake: dict, tag: str) -> None:
     """6 x 2 frames across the clip, and a row of face close-ups (rest, blink, mouth shapes, the turn)."""
     tw, th = 560, 315
     picks = [round(i * (N - 1) / 11) for i in range(12)]
@@ -455,7 +419,7 @@ def sheet(work: Path, frames: Path, bake: dict) -> None:
             .resize((tw - 20, th), Image.LANCZOS),
             (i * tw + 10, th * 2),
         )
-    img.save(work / "sheet.png")
+    img.save(work / f"sheet_{tag}.png")
 
 
 def probe(work: Path, film: Path) -> None:

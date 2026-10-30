@@ -51,6 +51,80 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-30 (night): Mia round 2, review findings fixed (D-096)
+
+**Done and verified:** the independent review's findings: the double-exposure dissolve is gone (one real camera push-in, rule
+`transition_for`: cut when both scenes hold the character at scales more than 1.25x apart), the neck is a tapered torso part under
+a collar band with a chin shade, the hair is one smooth unioned shape (no flat top, notch or slab), legs are 27.7% of the height
+(11% before) with boots at 9% (14%), hands overlap the cuffs (the hand image was clipped), new `walk_step` motion (higher eased
+lift, knee bend, bob, sway), pupils converge. 11 new tests (`tests/test_flat_round2.py`); `clip_v2.mp4`, `sheet_v2.png` and my
+own `review_v2/review.md` are in `~/ai-studio/scratch/rigged-character-test/`; `motion.csv` has 0 spikes above 5x median.
+**Independent review of clip_v2: NEEDS WORK** (my self-review said PASS and was wrong). Majors: (1) after the push-in the hair
+top touches or is clipped by the frame top and the boots are cut off from 4.25 s (no head room); (2) walk: short thin legs under
+a big head, a scissor cross at 1.25 s, almost no arm swing, a shuffle; (3) hair is a helmet with square scalloped lobes and the
+face a near-rectangle. Minors: neck still a tan block in a bowl collar, dead hold 2.0 to 3.0 s with a rigid arm, sly or sleepy
+lids at 3.25 and 5.25 s, body frozen while talking. Round-1 status: dissolve fixed, neck partly, hair and walk not. Full table in
+`docs/spikes/rigged-character-test.md`. **Stopped after two fix passes by instruction; round 3 not started, the owner decides.**
+Still unchecked: lip-sync and audio by ear, the defect counter on the new art.
+
+---
+
+## 2026-10-30 (late): the director works on projects and acts (D-094)
+
+**Done and verified (tests):** `director new --project test-cast --film <slug> [--pin-cast kit,bo] [--pin-places orchard]
+[--acts 2]` makes a film of a project. The story stage sees the project's library and the owner's pins (an `enum` in the
+schema plus a check); a scene is an act with a title. The characters/places stages put library items into the film and run
+the art tools only for missing ones (which publish to the library). The shots stage (`stages/acts.py`) plans, builds and
+renders one act at a time (`add_act`, `create_scene act=`, `edit_act`, `render_act`), the edit stage is `export_movie`, and
+each act has an approval stop (`act_s01`, ...; `revise act_s01 "note"` redoes that act alone). The agent loop core is
+untouched. The director's state, story and plans live in `projects/<project>/director/<film>/`, symlinked into the derived
+working folder, so deleting the folder loses only renders. Docs: STEP-5B "Adoption by the director",
+`docs/learning/director-on-projects.md`. `tests/test_director_projects.py`: 14 new tests (fake model, a real project on disk,
+stand-in tools using the real act cache key): library reuse with no art tool, a missing character built and published,
+pins, per-act approvals (act 2 is not planned before act 1 is approved), resume after a crash, revising one act re-renders
+only that act, dropped shots, working-folder deletion. 93 director tests pass. A latent bug was fixed on the way:
+`StageCtx.tool(name, **args)` could not call `build_puppet` (its `name` argument clashed), nothing had exercised it.
+
+**Real run (qwen3:14b, ComfyUI not running), honest result: partial.** 2-act film `kite-smoke` on `test-cast`
+(pinned kit, bo, orchard; preview quality). Worked for real: story plan (the safety check refused the first story because
+the kids climbed a tree: correct, I revised it), library reuse (no art tool), voices and lines, act 1 planned (3 shots),
+built and rendered by the model loop (`act.mp4`, 9.5 s, 640x360, with audio), act 2 planned, and a resume saw act 1 as up
+to date (`render_act` skipped it). Failed: act 2's first shot, three tries (one after `revise act_s02`): the shot
+conversation stopped as "stuck" (the vision `check_frame` kept flagging a face and the model repeated a call three times;
+the loop's stop condition did its job). It is the 14B model's shot loop, not the project plumbing, but it means **no full
+film and no `export_movie` run for real**, and the review skill was **not run** (nothing complete to review). Found by the
+real run and fixed: a scene with 3 lines at 8 s cannot fit its lines (the story is planned before the lines are spoken), so
+an act's target is now `max(scene seconds, what its recorded lines need)`. The film is left in
+`projects/test-cast/films/` and `~/ai-studio/work/test-cast/kite-smoke/` (gitignored): `uv run scripts/direct.py retry
+kite-smoke --stage shots --project test-cast` continues it.
+
+**Full test suite:** 1047 passed, 6 failed. Four are real-model tests that refuse when `qwen3:14b` is loaded (my smoke film
+was holding it), two more heavy model tests (`test_comfy_graph_depth[da3]`, `test_puppet_segment` SAM); not re-run after the
+smoke film because they load ComfyUI models. None touch the director.
+
+**Not done / open:** director files are not behind `ProjectStore` and there is no event-log document (D-084 wanted one);
+`--dry-run` stubs work on old folders only; a shot renders twice (`render_shot` for the model's check, then `render_act`);
+`retry` resets a stage, not one act. **Next:** make the shot conversation less brittle (do not stop on a repeated
+`check_frame`; let the code accept the plan's face when the vision advice repeats), then a full 2-act film through the review
+skill. **Question for the owner:** should the director keep stopping at every act in non-auto runs (story, cast, first shot, each
+act, final is six stops for two acts), or should `first_shot` be dropped when acts exist?
+
+---
+
+## 2026-10-30 (night): Mia round 2, review findings fixed (D-096)
+
+**Done and verified:** the independent review's findings: the double-exposure dissolve is gone (one real camera push-in, rule
+`transition_for`: cut when both scenes hold the character at scales more than 1.25x apart), the neck is a tapered torso part under
+a collar band with a chin shade, the hair is one smooth unioned shape (no flat top, notch or slab), legs are 27.7% of the height
+(11% before) with boots at 9% (14%), hands overlap the cuffs (the hand image was clipped), new `walk_step` motion (higher eased
+lift, knee bend, bob, sway), pupils converge. 11 new tests (`tests/test_flat_round2.py`); `clip_v2.mp4`, `sheet_v2.png` and my
+own `review_v2/review.md` are in `~/ai-studio/scratch/rigged-character-test/`; `motion.csv` has 0 spikes above 5x median.
+**Not done / honest:** my own review (sheet once, two zooms) found no major but five minors (a small brown square under the hem,
+collar reads as a bowl, hard step between hair tones, front-view shuffle walk, plate tree highlight); the review was by the author,
+so an independent re-review is due; audio and lip-sync not re-checked; defect counter not rerun on the new art.
+
+---
+
 ## 2026-10-30 (late): rig-first Mia, parametric face, smooth motion (D-095)
 
 **Done and verified:** a one-session spike (`docs/spikes/rigged-character-test.md`). Old Mia's face measured: eyes 78% of the

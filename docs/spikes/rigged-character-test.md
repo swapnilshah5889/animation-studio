@@ -142,3 +142,53 @@ face that follows the head turn, but she is **not production ready**:
 `engines/bake.py`, `engines/face_sprite.py`, `engines/blender/build_render.py`, `motions/timeline.py`, `principles.py`,
 `schemas/rig.schema.json` (extended, defaults unchanged); `scripts/spikes/rigged_character_test.py`,
 `rigged_character_motion.py`; tests `test_face_layout.py`, `test_smooth.py`. Learning note: `docs/learning/rig-first-characters.md`.
+
+## Round 2 (D-096): the independent review's findings
+
+The independent review of `clip.mp4` said NEEDS WORK (face within spec; two-plus majors). Fixes, one round plus a framing
+touch-up, all with tests (`tests/test_flat_round2.py`, 11 tests):
+
+1. **Ghost crossfade (major).** The 8-frame dissolve between the wide and close framings showed two Mias and doubled trees.
+   Now one continuous camera push-in (`rigged_character_test.CAM`), and a rule `smooth.transition_for(zoom_a, zoom_b,
+   character_in_both)`: a dissolve between two scenes that both contain the character at scales more than 1.25x apart is a
+   "cut". Test: the ghost case is a cut; the clip's camera is a keyed push-in with no CUT constant.
+2. **Neck (major).** The neck was a block in the head image drawn over the coat. Now it belongs to the torso: a narrow tapered
+   neck (at most 16% of the head width) behind a collar band, with an under-chin shade; the head image ends at the chin.
+3. **Hair (major).** Clipped circles and rectangles became one smoothed shape: the pieces are unioned, blurred and cut at half
+   (`_smooth`), the fringe is a cut cap with a scalloped edge, the images have 46 px of room so no curl is clipped (that was
+   the flat top), the dark shade slab is gone. Tests: each hair image is one component, nothing touches the image border,
+   the outline never jumps more than 6 px per column, no flat run on top.
+4. **Walk.** Legs: coat shortened and boots reduced, so the visible leg is 27.7% of the height (11% before) and the boots 9.1%
+   (14%); test `leg_ratios`. New motion `walk_step` (`motions/library.py`, in the shot schema): `walk_cycle`'s planted feet plus
+   a 1.2 to 1.7 times higher eased foot lift, a knee bend on the lifted leg (declared via `Clip.limits`), a body bob at every
+   step and a small torso sway. Hands: the mitten image was clipped by a 22 px pad (the "gap"); now 48 px, the hand starts under
+   the cuff and the cuff is drawn over it (test: skin and cuff touch along an edge, nothing clipped). Pupils converge 9% toward
+   the nose.
+
+Verification: `clip_v2.mp4`, `sheet_v2.png` in `~/ai-studio/scratch/rigged-character-test/`; `review_v2/review.md` is the
+**independent** review, `review_v2/review_self.md` my own. `motion.csv` spikes above 5x median: 0 (round 1: one of 6.5x at
+the dissolve).
+
+**Independent verdict: NEEDS WORK** (no blocker, three majors). My self-review said PASS; it was wrong on the framing (I
+looked at a sheet from before my last camera change) and too kind on the walk and the hair. Round-1 findings: dissolve FIXED,
+neck PARTLY fixed, hair NOT fixed, walk NOT fixed. Findings of the independent review:
+
+| # | Sev | Time | Finding |
+|---|---|---|---|
+| 1 | major | 3.75 to 6.0 s | After the push-in the hair top touches or is clipped by the top edge and the boots are cut off from about 4.25 s: no head room. Fix: anchor on face and chest with 8 to 10% head room, or scale less; add a check that the head box stays inside the frame |
+| 2 | major | 0.25 to 2.0 s | Walk: short thin legs under a big head, a scissor cross at 1.25 s, almost no arm swing, a shuffle (28% legs is still short next to the head). Fix: longer and thicker legs, longer stride with contact/pass/up poses, arm counter-swing, hip bob |
+| 3 | major | whole clip | Hair is a helmet with square scalloped lobes and the face is a near-rectangle: round the skull and jaw, taper the hair, curve the bob lobes |
+| 4 | minor | talking frames | Neck still reads as a tan rectangle in a bowl-shaped collar: taper into jaw and collar, make the collar a fold |
+| 5 | minor | 2.0 to 3.0 s | Dead hold (8 frames under 0.3 change) after the walk, then a rigid straight arm: add a settle, bend the elbow |
+| 6 | minor | 3.25 s, 5.25 s | Half-lidded sideways eyes read sly or sleepy: keep lids higher, gaze at the listener |
+| 7 | minor | 4.0 to 5.5 s | Body nearly frozen while talking: small nods, weight shifts, hair settle |
+
+Not checked by the reviewer: lip-sync, foot sliding, hair and arm follow-through. Reviewer's frank take: would not pass for
+children's TV; the face is acceptable now, but the framing, the stick-leg shuffle and the helmet hair are not.
+
+**My own list of what is still wrong** (not contradicted): a small brown square under the hem at 0.75 s, the two hair tones
+meeting in a hard step, a front-view-only walk, no hair follow-through on the turn, a tree highlight like a half moon in the
+plate. I did not listen to the audio and did not rerun the defect counter on the new art.
+
+**Status:** round 2 stopped by instruction after two fix passes. The face and the transition are fixed and tested; the
+character is not production ready. The owner decides whether to continue.
