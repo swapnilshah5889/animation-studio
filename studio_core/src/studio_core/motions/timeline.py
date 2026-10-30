@@ -38,6 +38,9 @@ class Clip:
     end: int  # last frame the clip affects (inclusive)
     channels: dict[Channel, list[Key]]
     additive: bool = False
+    # angle ranges (degrees) this clip needs beyond a bone's default `limits_deg`, per bone, e.g. a
+    # real walk bends the knee the way a person does, not the way the front-view rig allows
+    limits: dict[str, tuple[float, float]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for channel, keys in self.channels.items():

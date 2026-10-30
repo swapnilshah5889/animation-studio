@@ -72,11 +72,14 @@ def facing_frames(
     return out
 
 
+GAITS = ("walk_cycle", "walk_real", "run_real")
+
+
 def walking_frames(actions: list[dict[str, Any]], fps: int, n_frames: int) -> list[bool]:
-    """Frames covered by a walk_cycle action (to its duration, else to the end of the shot)."""
+    """Frames covered by a gait action (to its duration, else to the end of the shot)."""
     flags = [False] * n_frames
     for a in actions:
-        if a["motion"] != "walk_cycle":
+        if a["motion"] not in GAITS:
             continue
         start = frames(a["start_s"], fps)
         end = start + frames(a["duration_s"], fps) if "duration_s" in a else n_frames

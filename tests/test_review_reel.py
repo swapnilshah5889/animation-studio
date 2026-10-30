@@ -22,7 +22,9 @@ spec.loader.exec_module(reel)
 def test_beats_cover_everything_the_task_lists() -> None:
     names = {b.name for b in reel.plan_beats(hands=True)}
     assert set(EXPRESSIONS) <= names
-    assert set(MOTIONS) - {"idle_breathe", "blink"} <= names
+    # the *_real motions are compared against the old ones by scripts/compare_motions.py
+    hand_keyed = {m for m in MOTIONS if not m.endswith("_real")}
+    assert hand_keyed - {"idle_breathe", "blink"} <= names
     hands = [b.name for b in reel.plan_beats(hands=True) if b.kind == "hand"]
     assert hands == list(reel.HAND_POSES)
     assert not [b for b in reel.plan_beats(hands=False) if b.kind == "hand"]

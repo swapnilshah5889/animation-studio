@@ -15,9 +15,13 @@ from typing import Any
 
 from studio_core.motions.follow import follow_through
 from studio_core.motions.library import MOTIONS, MotionContext, MotionError
+from studio_core.motions.principles import apply_principles
+from studio_core.motions.real import MOTIONS as REAL_MOTIONS
 from studio_core.motions.timeline import Clip, Key, compose, sample
 from studio_core.rig import clamp_offset
 from studio_core.sif import Angle, Animated, Interp, Vec, Waypoint, frames
+
+MOTIONS.update(REAL_MOTIONS)  # the *_real motions (mocap clips) sit beside the hand-keyed ones
 
 __all__ = [
     "MOTIONS",
@@ -40,6 +44,27 @@ class Animation:
     eyes: Animated | None = None  # eye-state track for the face
     hands: dict[str, Animated] = field(default_factory=dict)  # forearm bone → hand-pose track
     clips: list[Clip] = field(default_factory=list)
+
+
+def _clamp(
+    view: dict[str, Any], bone: str, offset: float, widened: dict[str, tuple[float, float]]
+) -> float:
+    """The bone's default limits, widened by what the playing clips declare they need."""
+    if bone not in widened:
+        return clamp_offset(view, bone, offset)
+    limits = view["bones"][bone].get("limits_deg") or {"min": -360, "max": 360}
+    lo, hi = min(limits["min"], widened[bone][0]), max(limits["max"], widened[bone][1])
+    return max(lo, min(hi, offset))
+
+
+def _widened(clips: list[Clip]) -> dict[str, tuple[float, float]]:
+    """Per bone, the widest range any clip declares it needs beyond the default limits."""
+    widened: dict[str, tuple[float, float]] = {}
+    for clip in clips:
+        for bone, (lo, hi) in clip.limits.items():
+            old = widened.get(bone, (lo, hi))
+            widened[bone] = (min(old[0], lo), max(old[1], hi))
+    return widened
 
 
 def animate(
@@ -81,7 +106,11 @@ def animate(
             seed=seed,
             travel=travel,
         )
-        clips.append(MOTIONS[name](ctx))
+        clip = MOTIONS[name](ctx)
+        if (amount := float(ctx.params.get("principles", 0.0))) > 0:  # opt-in, any motion
+            head = ctx.bone("head") if ctx.has("head") else None
+            clip = apply_principles(clip, fps, amount, head=head)
+        clips.append(clip)
 
     for pose in poses or []:  # manual key poses (pose_at): one-frame override keys per bone
         f = frames(pose["time_s"], fps)
@@ -116,12 +145,13 @@ def animate(
             clips.append(layer)
 
     out = Animation(clips=clips)
+    widened = _widened(clips)
     for (kind, bone), keys in compose(clips).items():
         if kind == "angle":
             out.angles[bone] = Animated(
                 "angle",
                 tuple(
-                    Waypoint(k.frame, Angle(clamp_offset(view, bone, float(k.value))), k.interp)
+                    Waypoint(k.frame, Angle(_clamp(view, bone, float(k.value), widened)), k.interp)
                     for k in keys
                 ),
             )

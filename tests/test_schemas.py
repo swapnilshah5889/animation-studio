@@ -124,7 +124,7 @@ CASES: list[tuple[str, str, Mutation, str, str]] = [
     (
         "shot",
         "unknown param",
-        lambda s: s["characters"][0]["actions"][2]["params"].update(speed=2),
+        lambda s: s["characters"][0]["actions"][2]["params"].update(volume=2),
         "actions[2].params",
         "Additional",
     ),

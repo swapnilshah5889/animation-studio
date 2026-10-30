@@ -68,6 +68,7 @@ VIEWS = ("front", "three_quarter")
 # Motions with a `side` parameter are swept once per side the rig has arms (or a head) for.
 SIDED = {
     "wave": ("upper_arm", "forearm"),
+    "wave_real": ("upper_arm", "forearm"),
     "point": ("upper_arm",),
     "talk_gesture": ("upper_arm",),
     "head_tilt": ("head",),

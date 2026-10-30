@@ -99,7 +99,7 @@
       "additionalProperties": false,
       "properties": {
         "motion": {
-          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "jump", "point", "talk_gesture", "shrug", "bow", "look_around", "sneak", "clap", "laugh", "think"]
+          "enum": ["idle_breathe", "blink", "wave", "nod", "head_tilt", "walk_cycle", "jump", "point", "talk_gesture", "shrug", "bow", "look_around", "sneak", "clap", "laugh", "think", "walk_real", "run_real", "wave_real", "jump_real", "shrug_real"]
         },
         "start_s": { "$ref": "#/$defs/time_s" },
         "duration_s": { "type": "number", "exclusiveMinimum": 0, "description": "Defaults to the motion's natural length." },
@@ -110,7 +110,9 @@
             "energy": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "0 = subtle, 1 = big and fast." },
             "side": { "enum": ["left", "right"], "description": "Which arm/side, from the character's point of view." },
             "cycles": { "type": "integer", "minimum": 1, "maximum": 20, "description": "Repetitions (wave back-and-forths, walk steps)." },
-            "target": { "$ref": "#/$defs/frame_pos", "description": "Where to point or look, in the frame." }
+            "target": { "$ref": "#/$defs/frame_pos", "description": "Where to point or look, in the frame." },
+            "principles": { "type": "number", "minimum": 0, "maximum": 1, "default": 0, "description": "Add anticipation, overshoot-and-settle, head lead and landing dips to any motion (0 = none, 1 = strong)." },
+            "speed": { "type": "number", "minimum": 0.5, "maximum": 2, "default": 1, "description": "Playback speed of a *_real motion (1 = the actor's own pace)." }
           }
         }
       }
