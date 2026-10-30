@@ -30,10 +30,6 @@ def _content(doc: Mapping[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in doc.items() if k not in VOLATILE_FIELDS}
 
 
-def _ref_key(ref: Mapping[str, Any]) -> tuple[str, int]:
-    return ref["id"], ref["version"]
-
-
 def act_cache_key(
     act: Mapping[str, Any],
     shots: Sequence[Mapping[str, Any]],
@@ -54,11 +50,9 @@ def act_cache_key(
     recipe = {
         "key_version": KEY_VERSION,
         "engine": engine_id,
+        # The act carries its background and cast as {id, version}, so their versions are in here.
         "act": _content(act),
         "shots": [_content(s) for s in shots],
-        # Spelled out beside the act so the dependency on versions is visible in the recipe.
-        "background": _ref_key(act["background"]),
-        "cast": sorted(_ref_key(r) for r in act.get("cast", [])),
         "extra": dict(extra or {}),
     }
     return content_hash(recipe)
