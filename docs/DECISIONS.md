@@ -1638,3 +1638,11 @@ The owner wants a desktop app to keep projects and stories, interact with the di
 and GUI stay equivalent; proposed stack is a local FastAPI backend, a Svelte UI and Tauri packaging (the owner
 knows Svelte/React/TypeScript). Why not a GUI-only state: it would break resume, scripting and tests. The stack
 is a proposal and may change at the step's brief.
+
+## D-082: Projects own characters and backgrounds; films reference them (2026-10-30)
+
+The five test characters are for testing only. The unit of reuse becomes the **project**: it owns the characters
+and backgrounds (built once, versioned, immutable once a film uses them); each film in the project references them
+by `{id, version}` instead of copying them (replaces the `--import-cast` copying). Why: the owner wants many films
+per project with a stable cast and shared places; copies drift and waste disk. The GUI (D-081) shows projects as
+the top level. Layout and migration are specified in ROADMAP Step 5B.

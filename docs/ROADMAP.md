@@ -160,6 +160,29 @@ checks and the owner's review.
 **Done when:** one prompt produces a **60-second children's film** (2 characters, 2 backgrounds,
 dialogue, music, sound effects) that the owner can open and polish in Kdenlive.
 
+## Step 5B: Projects (own cast, shared places, many films)
+
+Owner requirement (2026-10-30): the five test characters (Kit, Bo, Pim, Mia, Bolt) are only for testing. Every
+**project** has its **own characters**, and has **many films** that reuse them; films also reuse the project's
+**backgrounds**. Today a film folder holds its own `characters/` and `backgrounds/` and the cast is copied in
+(`--import-cast`), so there is no project level.
+
+- **Layout (proposal, D-082):** `projects/<project-id>/` holds `project.json` (name, premise, style, status),
+  `characters/<id>/` (sheet, puppet, rig, voice; built once), `backgrounds/<id>/` (plates and depth layers),
+  optional shared music cues, and `films/<film-id>/` (story, shots, audio lines, edit, QA, director state).
+- **References, not copies:** `film.json` lists its cast and places as `{id, version}`; a resolver in `studio_core`
+  finds them in the project. Characters and backgrounds are versioned and immutable once used by a film, so
+  improving a character makes a new version and finished films keep rendering the same.
+- **Director:** a story prompt in an existing project first reuses its characters and places; only missing ones go
+  through the art stages, and they are added to the project library for the next film.
+- **MCP servers:** tools take a project and a film id; no engine fields (D-030).
+- **Migration:** the existing test films become a "test-cast" project; old film folders keep working through a
+  one-off script.
+
+**Done when:** two different films in one project reuse the same characters and at least one shared background
+without copying files; a new character built during film 2 is available to film 3; old films still render; tests
+cover the resolver, versioning and migration.
+
 ## Step 6: OpenToonz backend + render containers
 The strategic engine (D-031) behind the engine-neutral scene model (D-030), packaged for server-side
 rendering (D-032). Starting point: the spike scripts in `scripts/spikes/` and `docs/spikes/opentoonz.md`.
