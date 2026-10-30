@@ -16,7 +16,7 @@ never pass a clip you did not look at, never fix while reviewing, report plainly
 ## Procedure (keep image use small: one sheet, at most three zooms)
 1. Evidence: `skills/animation-review/make_evidence.sh <video-or-image> <out-dir> [start] [end]` writes
    `sheet.png` (12 evenly spaced frames, left to right and top to bottom; their times are in `sheet_times.txt`),
-   `motion.csv` (per-frame change; spikes are pops or cuts) and `audio.txt` (loudness).
+   `motion.csv` (per-frame change; spikes above 5x the median are pops or cuts, e.g. a crossfade shows as a spike) and `audio.txt` (loudness).
 2. Read `motion.csv` and `sheet_times.txt`, view `sheet.png` once, then crop (ffmpeg `-vf crop=w:h:x:y`) at most three
    zooms: a face, the worst frame, a joint or edge.
 3. Compare with the reference (character sheet, `describe_art`, the design the owner chose).
