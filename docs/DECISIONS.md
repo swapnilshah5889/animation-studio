@@ -1775,3 +1775,14 @@ smoothing live in `studio_core`, only the transparent render and keyed camera to
 (`face.layout`, shot `smooth`, `camera.move: track`), so older films render as before. Not adopted yet for other characters or
 backgrounds: the owner decides whether the flat vector look is the film's look. Mia is still not production ready (front view
 only, simple art, a sideways walk); see the spike's recommendation.
+
+## D-096: A shot change never dissolves two framings of the same character; neck, hair, legs and hands get shape rules (2026-10-30)
+
+The independent review of the first Mia clip (NEEDS WORK) found a double-exposure dissolve, a flat neck block, clipped and
+stair-stepped hair and a stiff, short-legged walk. Decisions: (1) `motions/smooth.transition_for` returns "cut" when both scenes
+contain the character and their scales differ more than 1.25x; the clip uses one real camera push-in instead. (2) The neck is a
+torso part tucked under a collar band, the head image ends at the chin. (3) Hair pieces are one unioned and smoothed shape with
+room for the curls. (4) Visible legs are at least 27% of the figure's height and boots at most 10% (`leg_ratios`), the hand starts
+under the cuff, and `walk_step` (opt-in) adds foot lift, knee bend, bob and sway to the stride walk. Each rule has a test in
+`tests/test_flat_round2.py`. See `docs/spikes/rigged-character-test.md`, "Round 2". Not decided: whether the flat vector look is
+the film's look (still the owner's call), and the side/three-quarter part sets.
