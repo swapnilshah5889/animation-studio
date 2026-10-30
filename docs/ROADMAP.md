@@ -349,7 +349,20 @@ stage) and **browse the saved files** (character sheets, backgrounds, shot previ
 - **Independent of the engine choice**, so a first version (project list, director console, file browser) can be
   built in parallel with Step 6 and the engine bake-off.
 
-**Done when:** from the app alone, a new story prompt becomes a finished film, with every approval stop answered
+- **Install target (D-085): macOS on Apple Silicon (arm64) only, for now.** The deliverable is a signed-or-ad-hoc
+  `.app` in a `.dmg` that a user drags into Applications. The app is a shell plus the Python backend (shipped as
+  a sidecar with its own `uv`-built Python 3.12 environment, so the system Python does not matter). It does **not**
+  contain models or the big engines: on first launch a **Setup screen** checks the machine (Apple Silicon, memory,
+  free disk), installs or locates the engines (Blender, OpenToonz or Synfig, ffmpeg/MLT, Ollama, Rhubarb,
+  ComfyUI) and downloads the models into the user's models folder, with licence and size shown before each
+  download, a progress bar, resume and a "repair" button. Data lives in `~/Library/Application Support/` (settings,
+  caches) and a user-chosen projects folder; the store interface (D-084) keeps it portable. Windows and Intel
+  Macs are out of scope until the Windows node step.
+- **Distribution:** personal use needs no Apple Developer account (ad-hoc signing, first launch via right-click
+  Open). Sharing the `.dmg` with others needs a paid Developer ID and notarization; decide at the step's brief.
+  GPL engines are installed separately or bundled with their licence notices and source offers.
+
+**Done when:** from a fresh `.dmg` install on a clean Apple Silicon Mac, with no terminal commands, a new story prompt becomes a finished film, with every approval stop answered
 in the UI, and a closed and reopened app resumes the project where it was.
 
 ## Step 14: Online backend (later, opt-in)

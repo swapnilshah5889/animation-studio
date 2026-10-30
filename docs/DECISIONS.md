@@ -1664,3 +1664,11 @@ referenced JSON documents with `schema_version`, `owner_id`, `project_id`, `rev`
 content-addressed assets; specs hold no paths. The project is the tenancy boundary. Why: the owner wants user
 logins and saved data online later; retrofitting that into path-based folders would mean rewriting every tool.
 Contract tests keep every store equivalent. See ROADMAP "Storage rule" and Step 14.
+
+## D-085: The desktop app installs on Apple Silicon Macs first; heavy parts are installed by a setup screen (2026-10-30)
+
+Target is a `.dmg` with a `.app` for macOS arm64 only (Windows and Intel later). The app bundles the UI and the
+Python backend (own `uv` environment); models and large engines are not inside the installer but are installed
+and checked by a first-run Setup screen (licence and size shown, resumable, with repair). Why: models are tens of
+GB and the engines are separate GPL and BSD apps; keeping them out keeps the installer small, the licences clean
+and the fully-local rule intact after setup. Signing and notarization are decided when sharing beyond the owner.
