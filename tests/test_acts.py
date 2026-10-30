@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from project_world import make_film, make_project, make_workspace
+from project_world import FIXTURES, make_film, make_project, make_workspace
 
 from studio_core import acts, shot_spec
 from studio_core.acts import ActError, Target
@@ -194,3 +194,49 @@ def test_a_new_character_version_makes_exactly_the_acts_that_use_it_stale(world)
     (folder.root / "characters" / "pip" / "notes.txt").write_text("rounder ears")
     folder.link.publish_character("pip")  # version 2, film and acts follow
     assert all(r["stale"] for r in acts.act_table(folder, PREVIEW))
+
+
+@pytest.mark.render
+@pytest.mark.skipif(not CFG.path("tools", "synfig").exists(), reason="no synfig CLI")
+def test_three_acts_with_the_real_engine_end_to_end(tmp_path):
+    """The Step 5C 'done when', with Synfig: a 3-act film (a place per act, 3 camera angles each)
+    renders per act; editing one shot renders only its act; one movie comes out of export; and
+    after deleting every render the same movie comes back from the specs."""
+    ws = make_workspace(tmp_path)
+    project = make_project(ws)
+    make_film(ws, project)
+    folder = folder_of(ws, project)
+    renderer = acts.synfig_renderer(CFG)
+    target = Target("synfig", "preview")
+    seen: list[str] = []
+
+    def counting(root, shot_id, size):
+        seen.append(shot_id)
+        return renderer(root, shot_id, size)
+
+    for sub, name, src in (
+        ("dialogue", "l001.wav", "pip_line_01.wav"),
+        ("dialogue", "l001.txt", "pip_line_01.txt"),
+        ("lipsync", "l001.json", "pip_line_01.rhubarb.json"),
+    ):  # one recorded line, so the movie is not silent
+        (folder.root / "audio" / sub).mkdir(parents=True, exist_ok=True)
+        shutil.copy(FIXTURES / "audio" / src, folder.root / "audio" / sub / name)
+    folder.link.sync_audio()
+    shot_spec.add_dialogue(folder, "s01_sh01", "pip", "l001", 0.0, "Hello there")
+    first = acts.export_movie(folder, target, counting, CFG)
+    assert first["checks_passed"], first["problems"]
+    assert len(seen) == 9 and first["rendered_acts"] == ["Act 1", "Act 2", "Act 3"]
+    movie_hashes = frame_hashes(Path(first["path"]))
+
+    seen.clear()
+    shot_spec.add_expression(folder, "s03_sh01", "pip", "happy", 0.0)
+    edited = acts.export_movie(folder, target, counting, CFG)
+    assert edited["rendered_acts"] == ["Act 3"] and seen == ["s03_sh01", "s03_sh02", "s03_sh03"]
+    edited_hashes = frame_hashes(Path(edited["path"]))
+    assert edited_hashes != movie_hashes
+
+    acts.clear_renders(folder)
+    shutil.rmtree(ws.work_root)
+    seen.clear()
+    again = acts.export_movie(ws.open_film("three-acts", project.id), target, counting, CFG)
+    assert len(seen) == 9 and frame_hashes(Path(again["path"])) == edited_hashes
