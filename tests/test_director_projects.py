@@ -279,3 +279,39 @@ def test_helpers_cut_the_story_to_one_act_and_merge_plans(tmp_path):
 
 def test_the_planner_reports_a_plan_error_for_an_impossible_act_count():
     assert PlanError  # (the story stage turns this into a failed stage; see the pinned-cast test)
+
+
+def test_link_home_moves_a_real_folder_into_the_home_and_is_idempotent(tmp_path):
+    from director.project_mode import check_pins, link_home
+
+    work, home = tmp_path / "work", tmp_path / "home"
+    (work / "story").mkdir(parents=True)
+    (work / "story" / "story.json").write_text("{}")
+    link_home(work, home)
+    link_home(work, home)
+    assert (work / "story").is_symlink() and (home / "story" / "story.json").is_file()
+    assert (work / "director").is_symlink()
+    w = ProjectWorld(tmp_path / "w2")
+    assert check_pins(w.project, ["kit", "nobody"], ["orchard", "moon"]) == [
+        "character 'nobody'",
+        "place 'moon'",
+    ]
+
+
+def test_an_act_with_many_lines_gets_the_seconds_its_lines_need(tmp_path):
+    from director.checks import act_target
+
+    (tmp_path / "director").mkdir()
+    lines = [
+        {"scene": "s01", "who": "kit", "text": f"Line {i}", "line_id": f"l{i}", "duration_s": 2.0}
+        for i in range(3)
+    ]
+    (tmp_path / "director" / "lines.json").write_text(json.dumps(lines))
+    scene = {
+        "id": "s01",
+        "seconds": 8,
+        "lines": [{"who": "kit", "text": f"Line {i}"} for i in range(3)],
+    }
+    assert (
+        act_target(tmp_path, scene) == 11
+    )  # each line's shot lasts lead + line + tail = 3.2 s, rounded up to 3.5; 10.5 -> 11

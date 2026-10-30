@@ -172,7 +172,7 @@ def show_status(film: Path, slug: str) -> None:
 
 async def run(args: argparse.Namespace) -> int:
     slug = args.film if args.cmd == "new" else args.slug
-    if args.project and args.dry_run:
+    if args.project and getattr(args, "dry_run", False):
         sys.exit("--dry-run (stubs) works on old film folders only")
     async with McpHub(REPO_ROOT, SERVERS) as hub:
         if hub.skipped:
@@ -192,7 +192,9 @@ async def run(args: argparse.Namespace) -> int:
         if args.cmd == "retry":
             runner.retry(state, film, args.stage)
         deps = build_deps(slug, hub, args)
-        if args.dry_run:  # real model and cheap tools; slow tools replaced by stand-ins (stubs.py)
+        if getattr(
+            args, "dry_run", False
+        ):  # real model and cheap tools; slow tools replaced by stand-ins (stubs.py)
             template = FILMS / "step4-proof" / "audio" / "music" / "m01"
             deps.hub = StubbedHub(hub, stub_handlers(FILMS, template))
         root = Workspace.from_config().work_root / args.project if args.project else FILMS

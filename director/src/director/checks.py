@@ -7,9 +7,11 @@ what is missing (also the nudge text). Resume re-runs these from the top (runner
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
+from director.config import LINE_LEAD_S, LINE_TAIL_S, SHOT_SECONDS
 from director.plans import check_shotplan, check_story, norm
 from studio_core import safety
 from studio_core.schema import schema_issues
@@ -40,6 +42,18 @@ def one_scene_story(story: dict[str, Any], scene_id: str) -> dict[str, Any]:
         "scenes": [scene],
         "characters": [c for c in story["characters"] if c["id"] in scene["characters"]],
     }
+
+
+def act_target(film: Path, scene: dict[str, Any]) -> int:
+    """Seconds an act must add up to: the scene's, or more when its recorded lines need more.
+    A shot with a line lasts at least lead + line + tail, and the story was planned before the lines
+    were spoken, so a scene with three lines can be too short for them (seen live)."""
+    by_text = {(x["scene"], norm(x["text"])): x["duration_s"] for x in lines_of(film)}
+    need = 0.0
+    for ln in scene["lines"]:
+        if dur := by_text.get((scene["id"], norm(ln["text"]))):
+            need += max(SHOT_SECONDS[0], round((LINE_LEAD_S + dur + LINE_TAIL_S) * 2 + 0.499) / 2)
+    return max(int(scene["seconds"]), math.ceil(need))
 
 
 def act_plan_of(film: Path, scene_id: str) -> dict[str, Any] | None:
@@ -184,7 +198,7 @@ def _shots_project(film: Path, target: int) -> str | None:
         plan = act_plan_of(film, sc["id"])
         if plan is None:
             return f"act {sc['id']} has no shot plan (story/plans/{sc['id']}.json)."
-        if problems := check_shotplan(plan, one_scene_story(story, sc["id"]), sc["seconds"]):
+        if problems := check_shotplan(plan, one_scene_story(story, sc["id"]), act_target(film, sc)):
             return f"act {sc['id']}: {problems[0]}"
         if gap := next(filter(None, (shot_missing(film, s) for s in plan["shots"])), None):
             return gap

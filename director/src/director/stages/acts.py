@@ -21,6 +21,7 @@ from typing import Any
 
 from director.checks import (
     act_plan_of,
+    act_target,
     lines_of,
     merged_plan,
     one_scene_story,
@@ -47,7 +48,7 @@ async def plan_act(
         ctx.deps.chat,
         one_scene_story(story, scene["id"]),
         caps,
-        scene["seconds"],
+        act_target(ctx.film, scene),
         [x for x in lines_of(ctx.film) if x["scene"] == scene["id"]],
         notes=notes,
         on_event=ctx.deps.on_event,
