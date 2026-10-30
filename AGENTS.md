@@ -119,3 +119,12 @@ Read these before doing anything, in this order:
   sessions.)
 - **Always show progress** of background work, and write results down in the repo (PROGRESS, DECISIONS, spike
   notes, `docs/learning/`). Chat is not storage: anything learned must be committed.
+
+## Skills and rubrics are agent-agnostic
+
+Reusable know-how lives in plain files in the repo, never only in one tool's folder: rubrics as craft notes in
+`docs/craft/` (the director reads them with `read_craft`), procedures and helper scripts in `skills/<name>/`
+(`README.md` plus scripts, no tool-specific syntax). Tool-specific files such as `.claude/skills/<name>/SKILL.md`
+are thin adapters that point to the neutral copy. Current skill: `skills/animation-review/` (use it before showing
+any render to the owner).
+
