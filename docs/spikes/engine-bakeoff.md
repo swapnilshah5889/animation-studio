@@ -157,7 +157,7 @@ the two deformers shape the same bend differently). Mia's face in Blender and Op
    sequence on twos, xsheet timing) plus an arm64 or Windows-node render check. Until then Blender alone covers
    the benchmark.
 3. **Synfig is only the reference** (rigid and bendable runs, both with the same limb images; no tuning was done).
-   Both candidates beat its rigid limbs on the smoothness of the joint and Blender beats it on speed
+   Whether the candidates bend more smoothly than its rigid limbs is for the owner's eye (numbers cannot show it); Blender beats it on speed
    (0.03 to 0.23 against 0.15 s/frame) and on automation surface; its bendable limbs render fine but are not worth
    more investment if it is being replaced.
 4. The engine is only half the lifelike gap. The clips are still eased to the rig's limits (knee 64 degrees in
