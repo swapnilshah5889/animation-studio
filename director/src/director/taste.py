@@ -86,7 +86,12 @@ def _names(story: dict[str, Any]) -> dict[str, str]:
     return {c["id"]: c["name"] for c in story["characters"]}
 
 
-def check_taste(plan: dict[str, Any], story: dict[str, Any]) -> list[Violation]:
+def check_taste(
+    plan: dict[str, Any], story: dict[str, Any], *, final: bool = True
+) -> list[Violation]:
+    """`final` False = the plan is a film so far (the acts before this one plus this act): the
+    rules that ask the whole film for a peak, a calm ending or a variety of feelings wait for the
+    last act (D-094); every rule about one shot or one scene applies at once."""
     shots = normalize(plan)
     scenes = {s["id"]: s for s in story["scenes"]}
     names = _names(story)
@@ -244,7 +249,7 @@ def check_taste(plan: dict[str, Any], story: dict[str, Any]) -> list[Violation]:
 
     # -- arc: a start, a peak, a calm end ------------------------------------------------------
     emo = [shot_emotion(s) for s in shots]
-    if len(shots) >= 3:
+    if final and len(shots) >= 3:
         want = 3 if len(shots) >= 4 else 2
         if len(set(emo)) < want:
             add(
@@ -261,13 +266,13 @@ def check_taste(plan: dict[str, Any], story: dict[str, Any]) -> list[Violation]:
             )
     if len(shots) >= 2 and emo[0] not in OPENING:
         add("arc", f"open quietly: the first shot should feel calm or curious, not {emo[0]}.")
-    if emo[-1] not in ENDING:
+    if final and emo[-1] not in ENDING:
         add(
             "arc",
             f"end warm and settled: the last shot should feel calm, joy or proud, not {emo[-1]}.",
         )
     last = shots[-1]
-    if (
+    if final and (
         last["camera"] not in ("static", "pull_out")
         or last["seconds"] < 3
         or any(m["does"] not in CALM_END_MOTIONS for m in last["characters"])

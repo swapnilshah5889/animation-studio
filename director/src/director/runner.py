@@ -21,8 +21,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from director import state as st
-from director.checks import shotplan_of, stage_complete
-from director.config import CHECKPOINTS, STAGE_SECONDS, STAGES
+from director.checks import act_plan_of, shotplan_of, stage_complete
+from director.config import ACT_CHECKPOINT, STAGE_SECONDS, STAGES, checkpoint_stage
 from director.context import Deps, PauseForApproval, StageCtx, StageFailed
 from director.hub import ToolRefused
 from director.memory import MemoryConflict
@@ -53,7 +53,7 @@ def reverify(state: st.DirectorState, film: Path) -> None:
             if s.status == "running":
                 s.status = "pending"
             elif s.status in ("complete", "awaiting_approval") and stage_complete(
-                name, film, state.target_seconds
+                name, film, state.target_seconds, bool(state.project)
             ):
                 stale_from, s.status = name, "pending"
         elif s.status in ("complete", "awaiting_approval", "running"):
@@ -80,7 +80,7 @@ async def run_stage(name: str, state: st.DirectorState, film: Path, deps: Deps) 
                 await _with_budget(STAGE_FNS[name](ctx), name)
         else:
             await _with_budget(STAGE_FNS[name](ctx), name)
-        missing = stage_complete(name, film, state.target_seconds)
+        missing = stage_complete(name, film, state.target_seconds, bool(state.project))
         if missing:
             raise StageFailed(f"the stage ended but is not complete: {missing}")
         s.status = "complete"
@@ -133,6 +133,8 @@ async def run_film(slug: str, deps: Deps, films_root: Path) -> str:
     "finished", "awaiting_approval:<stage>", "failed:<stage>"."""
     film = films_root / slug
     state = st.load(film)
+    if deps.refresh:  # a film of a project: the working folder is a cache of the store
+        deps.refresh()
     reverify(state, film)
     st.save(film, state)
     for name in STAGES:
@@ -151,30 +153,50 @@ async def run_film(slug: str, deps: Deps, films_root: Path) -> str:
 
 
 def approve(state: st.DirectorState, film: Path, name: str) -> None:
-    if name not in CHECKPOINTS:
-        raise KeyError(f"unknown checkpoint {name!r}; checkpoints: {', '.join(CHECKPOINTS)}")
+    stage_name = checkpoint_stage(name)
+    if stage_name is None or name not in state.approvals:
+        raise KeyError(f"unknown checkpoint {name!r}; checkpoints: {', '.join(state.approvals)}")
     state.approvals[name].status, state.approvals[name].at = "approved", st.now()
-    stage = state.stage(CHECKPOINTS[name])
+    stage = state.stage(stage_name)
     if stage.status == "awaiting_approval":
-        stage.status = "pending" if name == "first_shot" else "complete"
+        # first_shot and the act stops pause inside the shots stage: it runs on from there
+        stage.status = "pending" if stage_name == "shots" else "complete"
     st.save(film, state)
 
 
 def revise(state: st.DirectorState, film: Path, name: str, note: str) -> None:
-    """Ask for a change: the checkpoint's stage runs again with the owner's note in its brief."""
-    stage_name = CHECKPOINTS[name]
+    """Ask for a change: the checkpoint's stage runs again with the owner's note in its brief.
+    `act_<scene>` (a film of a project) plans and builds that one act again; the other acts keep
+    their shots, and only the changed act renders again (its cache key changed)."""
+    stage_name = checkpoint_stage(name)
+    if stage_name is None or name not in state.approvals:
+        raise KeyError(f"unknown checkpoint {name!r}; checkpoints: {', '.join(state.approvals)}")
     stage = state.stage(stage_name)
-    stage.revision_notes.append(note)
-    stage.status = "pending"
     state.approvals[name].status = "pending"
+    stage.status = "pending"
+    if name.startswith(ACT_CHECKPOINT):
+        scene = name[len(ACT_CHECKPOINT) :]
+        state.act_notes.setdefault(scene, []).append(note)
+        plan = act_plan_of(film, scene)
+        (film / "story" / "plans" / f"{scene}.json").unlink(missing_ok=True)
+        (film / "story" / "shotplan.json").unlink(missing_ok=True)
+        (film / "director" / "export.json").unlink(missing_ok=True)
+        _forget_shots(film, stage, plan)
+        st.save(film, state)
+        return
+    stage.revision_notes.append(note)
     owned = {"story": ["story/story.json"], "shots": ["story/shotplan.json"]}.get(stage_name, [])
     plan = shotplan_of(film) if stage_name == "shots" else None
     for rel in owned:
         (film / rel).unlink(missing_ok=True)
+    _forget_shots(film, stage, plan)
+    st.save(film, state)
+
+
+def _forget_shots(film: Path, stage: st.StageState, plan: dict | None) -> None:
     for planned in (plan or {"shots": []})["shots"]:  # the old renders no longer match the new plan
         (film / "shots" / planned["id"] / "shot.mp4").unlink(missing_ok=True)
         stage.per_item.pop(planned["id"], None)
-    st.save(film, state)
 
 
 def retry(state: st.DirectorState, film: Path, stage: str | None = None) -> None:

@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from director.config import CHECKPOINTS, STAGES
+from director.config import ACT_CHECKPOINT, CHECKPOINTS, STAGES
 
 Status = Literal["pending", "running", "awaiting_approval", "complete", "failed"]
 
@@ -66,6 +66,14 @@ class DirectorState(BaseModel):
         default_factory=lambda: {c: Approval() for c in CHECKPOINTS}
     )
     counters: Counters = Field(default_factory=Counters)
+    # Project films (D-094): the film is a film of `project`, a scene of the story is an act, and
+    # the story may only use the pinned cast / places (empty = the whole library and new ones).
+    project: str | None = None
+    pinned_cast: list[str] = Field(default_factory=list)
+    pinned_places: list[str] = Field(default_factory=list)
+    target_acts: int | None = None  # ask for exactly this many acts (scenes)
+    acts: dict[str, str] = Field(default_factory=dict)  # scene id -> act id in the project
+    act_notes: dict[str, list[str]] = Field(default_factory=dict)  # scene id -> owner notes
 
     def stage(self, name: str) -> StageState:
         return self.stages[name]
@@ -73,6 +81,9 @@ class DirectorState(BaseModel):
     def checkpoint_after(self, stage: str) -> str | None:
         """The approval checkpoint that follows a whole stage (first_shot is inside shots)."""
         return next((c for c, s in CHECKPOINTS.items() if s == stage and c != "first_shot"), None)
+
+    def act_approvals(self) -> list[str]:
+        return [k for k in self.approvals if k.startswith(ACT_CHECKPOINT)]
 
     def first_pending(self) -> str | None:
         return next((s for s in STAGES if self.stages[s].status != "complete"), None)

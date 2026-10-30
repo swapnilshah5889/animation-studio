@@ -15,6 +15,7 @@ from typing import Any
 from director.checks import read_json, story_of
 from director.context import StageCtx, StageFailed
 from director.hub import ToolRefused
+from director.project_mode import add_library_items
 
 SHEETS, DRAFTS, ROUNDS, BUILDS = 3, 2, 2, 2  # candidates per round, rounds, builds before giving up
 
@@ -57,9 +58,21 @@ async def make_puppet(ctx: StageCtx, c: dict[str, Any], known: dict[str, Any] | 
     raise StageFailed(f"no sheet of {c['id']} passed its checks and built consistently")
 
 
+def use_library(ctx: StageCtx, cast: list[str], places: list[str]) -> None:
+    """Project film: what the project already has is put into the film (the working folder then
+    has it, so `built` sees it and no art tool runs); only the missing ones get made (D-094)."""
+    if ctx.deps.project is None:
+        return
+    for slug in add_library_items(ctx.deps.project, ctx.slug, cast, places):
+        ctx.me.per_item[slug] = "from the project library"
+        ctx.note(f"{slug}: reused from the project library")
+    ctx.refresh()
+
+
 async def run_characters(ctx: StageCtx) -> None:
     story = story_of(ctx.film)
     assert story is not None
+    use_library(ctx, [c["id"] for c in story["characters"]], [])
     art = await ctx.tool("describe_art")
     known = {x["id"]: x for x in art["characters"]}
     for c in story["characters"]:
@@ -83,6 +96,7 @@ async def run_characters(ctx: StageCtx) -> None:
 async def run_backgrounds(ctx: StageCtx) -> None:
     story = story_of(ctx.film)
     assert story is not None
+    use_library(ctx, [], [p["id"] for p in story["places"]])
     for p in story["places"]:
         layers = (read_json(ctx.film / "backgrounds" / p["id"] / "layers.json") or {}).get(
             "layers", []

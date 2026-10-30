@@ -14,6 +14,7 @@ from director.hub import ToolDispatcher, call_data
 from director.log import EventFn, null_log
 from director.memory import MemoryGuard
 from director.plans import Capabilities
+from studio_core.project import Project
 
 # Tools that take no film argument (find_sfx searches the shared library; check_safety, given only
 # `text`, would refuse a lone `film`).
@@ -42,6 +43,10 @@ class Deps:
     auto: bool = False  # every approval checkpoint approves itself
     quality: str = "final"  # render quality for shots and the film: preview | final
     clock: Callable[[], float] | None = None
+    # Project films (D-094): the project (for code-side bookkeeping such as adding library items to
+    # the film) and a function that brings the derived working folder up to date with the store.
+    project: Project | None = None
+    refresh: Callable[[], None] | None = None
 
 
 @dataclass
@@ -65,10 +70,23 @@ class StageCtx:
     def note(self, msg: str) -> None:
         self.deps.on_event({"kind": "stage", "stage": self.stage, "msg": msg})
 
-    async def tool(self, name: str, **args: Any) -> dict[str, Any]:
+    def film_args(self) -> dict[str, Any]:
+        """The arguments that say which film a tool works on: `film`, and `project` for a film of
+        a project (the servers then keep its specs, art and recordings in the project)."""
+        return {
+            "film": self.slug,
+            **({"project": self.state.project} if self.state.project else {}),
+        }
+
+    def refresh(self) -> None:
+        """Bring the working folder up to date with the project (no-op for an old film folder)."""
+        if self.deps.refresh:
+            self.deps.refresh()
+
+    async def tool(self, name: str, /, **args: Any) -> dict[str, Any]:
         """A code-driven tool call (film is filled in). Raises ToolRefused on a refusal."""
         if "film" not in args and name not in TEXT_ONLY_TOOLS:
-            args = {"film": self.slug, **args}
+            args = {**self.film_args(), **args}
         res = await call_data_timed(self, name, args)
         return res
 

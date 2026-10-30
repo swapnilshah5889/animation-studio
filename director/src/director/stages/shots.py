@@ -34,7 +34,7 @@ from director.plans import (
     shotplan_schema,
 )
 from director.review import write_review
-from director.state import Counters, now
+from director.state import Approval, Counters, now
 from director.toolview import ToolView
 
 PROMPTS = Path(__file__).resolve().parents[1] / "prompts"
@@ -118,8 +118,14 @@ async def plan_shots(
     notes: list[str],
     on_event: EventFn,
     counters: Counters,
+    prior: list[dict[str, Any]] | None = None,
+    final: bool = True,
+    taste_story: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """The shot plan for a story: one schema-forced call, checked, one feedback round."""
+    """The shot plan for a story: one schema-forced call, checked, one feedback round.
+
+    For one act of a project film `story` has only that act's scene, `prior` is the planned shots
+    of the acts before it and `final` says whether it is the last act (taste.check_taste)."""
     scene_of = {s["id"]: s["place"] for s in story["scenes"]}
 
     need = line_seconds(lines, story, target)
@@ -150,7 +156,7 @@ async def plan_shots(
         check,
         on_event=on_event,
         counters=counters,
-        advice=lambda plan: advise_shotplan(plan, story),
+        advice=lambda plan: advise_shotplan(plan, taste_story or story, final=final, prior=prior),
     )
 
 
@@ -184,7 +190,10 @@ def positions(members: list[dict[str, Any]]) -> dict[str, float]:
 
 
 def scaffold_steps(
-    planned: dict[str, Any], line_ids: dict[str, str], music_cue: str | None
+    planned: dict[str, Any],
+    line_ids: dict[str, str],
+    music_cue: str | None,
+    act: str | None = None,
 ) -> list[tuple[str, dict[str, Any]]]:
     """The deterministic tool calls that turn a planned shot into a shot spec (film and shot_id
     are added when they run). Everything here is a rule, not a choice."""
@@ -199,6 +208,7 @@ def scaffold_steps(
                 "background": planned["place"],
                 "camera_move": planned["camera"],
                 "replace": True,
+                **({"act": act} if act else {}),
             },
         )
     ]
@@ -291,7 +301,7 @@ async def run_scaffold(
         except Exception as err:
             refused.append(f"find_sfx {sfx!r}: {err}")
     for tool, args in steps:
-        res = await ctx.deps.hub.call(tool, {"film": ctx.slug, "shot_id": planned["id"], **args})
+        res = await ctx.deps.hub.call(tool, {**ctx.film_args(), "shot_id": planned["id"], **args})
         ctx.state.counters.tool_calls += 1
         ctx.state.counters.tool_seconds += res.seconds
         short = f"{tool} {json.dumps(args, separators=(',', ':'))}"
@@ -357,13 +367,17 @@ def shot_brief(
 
 
 async def build_shot(
-    ctx: StageCtx, planned: dict[str, Any], scene_place: dict[str, str], music: dict[str, str]
+    ctx: StageCtx,
+    planned: dict[str, Any],
+    scene_place: dict[str, str],
+    music: dict[str, str],
+    act: str | None = None,
 ) -> None:
     planned = {**planned, "place": scene_place[planned["scene"]]}
     lines = [x for x in lines_of(ctx.film) if x["scene"] == planned["scene"]]
     line_ids = {norm(x["text"]): x["line_id"] for x in lines}
     done, refused = await run_scaffold(
-        ctx, planned, scaffold_steps(planned, line_ids, music.get(planned["scene"]))
+        ctx, planned, scaffold_steps(planned, line_ids, music.get(planned["scene"]), act)
     )
     ctx.note(f"{planned['id']}: scaffold {len(done)} ok, {len(refused)} refused")
 
@@ -371,7 +385,7 @@ async def build_shot(
     shot_hub = ShotHub(ctx.deps.hub, {"check_frame": guard.release_llm} if guard else {})
     view = ToolView.for_stage("shots", shot_hub.tools)
     call_ctx = CallContext(
-        fixed_args={"film": ctx.slug, "shot_id": planned["id"]},
+        fixed_args={**ctx.film_args(), "shot_id": planned["id"], **({"act": act} if act else {})},
         allowed={"character_id": {m["id"] for m in planned["characters"]}},
         preconditions={
             "render_shot": lambda: (
@@ -424,6 +438,10 @@ async def build_shot(
 
 
 async def run(ctx: StageCtx) -> None:
+    if ctx.state.project:  # a project film is built act by act (stages/acts.py)
+        from director.stages import acts
+
+        return await acts.run(ctx)
     plan = shotplan_of(ctx.film)
     if plan is None:
         plan = await make_plan(ctx)
@@ -445,13 +463,14 @@ async def run(ctx: StageCtx) -> None:
             gate(ctx)  # the look-and-feel check before the other shots render
 
 
-def gate(ctx: StageCtx) -> None:
-    ap = ctx.state.approvals["first_shot"]
+def gate(ctx: StageCtx, name: str = "first_shot") -> None:
+    """An approval stop inside the stage: `first_shot`, or `act_<scene>` for a project film."""
+    ap = ctx.state.approvals.setdefault(name, Approval())
     if ap.status == "approved":
         return
     if ctx.deps.auto or ap.mode == "auto":
         ap.status, ap.at = "approved", now()
         return
     ap.status = "waiting"
-    write_review("first_shot", ctx.film, ctx.state)
-    raise PauseForApproval("first_shot")
+    write_review(name, ctx.film, ctx.state)
+    raise PauseForApproval(name)

@@ -44,7 +44,20 @@ class Capabilities:
         return [m for m in self.motions if m not in ("blink", "idle_breathe")]
 
 
-def story_schema(caps: Capabilities, max_scenes: int = 4) -> dict[str, Any]:
+@dataclass
+class Roster:
+    """A project film's library and the owner's pins (D-094). A scene of the story is an act."""
+
+    cast: list[str] = field(default_factory=list)  # library character slugs
+    places: list[str] = field(default_factory=list)  # library background slugs
+    pin_cast: list[str] = field(default_factory=list)  # the story may only use these (if any)
+    pin_places: list[str] = field(default_factory=list)
+    acts: int | None = None  # exactly this many acts (scenes)
+
+
+def story_schema(
+    caps: Capabilities, max_scenes: int = 4, roster: Roster | None = None
+) -> dict[str, Any]:
     line = {
         "type": "object",
         "required": ["who", "text"],
@@ -88,6 +101,16 @@ def story_schema(caps: Capabilities, max_scenes: int = 4) -> dict[str, Any]:
             "time_of_day": {"enum": ["morning", "day", "afternoon", "sunset"]},
         },
     }
+    scenes_min = scenes_max = None
+    if roster is not None:  # a project film: every scene is an act and has a title
+        scene["required"].insert(1, "title")
+        scene["properties"]["title"] = {"type": "string", "minLength": 2, "maxLength": 40}
+        if roster.pin_cast:
+            char["properties"]["id"] = {"enum": roster.pin_cast}
+        if roster.pin_places:
+            place["properties"]["id"] = {"enum": roster.pin_places}
+        if roster.acts:
+            scenes_min = scenes_max = roster.acts
     return {
         "type": "object",
         "required": ["title", "logline", "characters", "places", "scenes"],
@@ -97,7 +120,12 @@ def story_schema(caps: Capabilities, max_scenes: int = 4) -> dict[str, Any]:
             "logline": {"type": "string", "maxLength": 240},
             "characters": {"type": "array", "items": char, "minItems": 1, "maxItems": 3},
             "places": {"type": "array", "items": place, "minItems": 1, "maxItems": 2},
-            "scenes": {"type": "array", "items": scene, "minItems": 1, "maxItems": max_scenes},
+            "scenes": {
+                "type": "array",
+                "items": scene,
+                "minItems": scenes_min or 1,
+                "maxItems": scenes_max or max_scenes,
+            },
         },
     }
 
@@ -112,10 +140,15 @@ def norm(text: str) -> str:
 
 
 def check_story(
-    story: dict[str, Any], target: int, blocked: Callable[[str], list[str]]
+    story: dict[str, Any],
+    target: int,
+    blocked: Callable[[str], list[str]],
+    roster: Roster | None = None,
 ) -> list[str]:
     """Every problem with a story plan, each phrased as an instruction to the model."""
     out: list[str] = []
+    if roster is not None:
+        out += _roster_problems(story, roster)
     chars = [c["id"] for c in story["characters"]]
     places = [p["id"] for p in story["places"]]
     scenes = story["scenes"]
@@ -162,6 +195,21 @@ def check_story(
     if bad := blocked(text):
         out.append(
             f"these words are not allowed in a children's film: {sorted(set(bad))}. Rewrite."
+        )
+    return out
+
+
+def _roster_problems(story: dict[str, Any], roster: Roster) -> list[str]:
+    out = []
+    for kind, ids, pinned in (
+        ("character", [c["id"] for c in story["characters"]], roster.pin_cast),
+        ("place", [p["id"] for p in story["places"]], roster.pin_places),
+    ):
+        if pinned and (bad := [i for i in ids if i not in pinned]):
+            out.append(f"the owner allows only these {kind}s: {pinned}. Remove {bad}.")
+    if roster.acts and len(story["scenes"]) != roster.acts:
+        out.append(
+            f"the film must have exactly {roster.acts} scenes (acts), not {len(story['scenes'])}."
         )
     return out
 
@@ -290,12 +338,29 @@ def check_shotplan(plan: dict[str, Any], story: dict[str, Any], target: int) -> 
     return out
 
 
+SHOT_ID = re.compile(r"\bs[0-9]{2}_sh[0-9]{2}\b")
 MAX_ADVICE = 10  # taste messages sent back at once: more than that and the 14B model drops some
 
 
-def advise_shotplan(plan: dict[str, Any], story: dict[str, Any]) -> list[str]:
-    """Taste problems of a shot plan (taste.py): fed back once, never fatal."""
-    return [v.message for v in check_taste(plan, story)][:MAX_ADVICE]
+def advise_shotplan(
+    plan: dict[str, Any],
+    story: dict[str, Any],
+    *,
+    final: bool = True,
+    prior: list[dict[str, Any]] | None = None,
+) -> list[str]:
+    """Taste problems of a shot plan (taste.py): fed back once, never fatal.
+
+    One act of a project film (D-094): `prior` is the shots of the acts before it, so the rules
+    about the whole film see the film so far, and `final` is False until the last act. A message
+    about a shot of an earlier act is dropped: this plan cannot change it."""
+    shots = [*(prior or []), *plan["shots"]]
+    mine = {s["id"] for s in plan["shots"]}
+    out = []
+    for v in check_taste({"shots": shots}, story, final=final):
+        if all(i in mine for i in SHOT_ID.findall(v.message)):
+            out.append(v.message)
+    return out[:MAX_ADVICE]
 
 
 async def plan_json(

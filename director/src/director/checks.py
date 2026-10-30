@@ -32,8 +32,35 @@ def shotplan_of(film: Path) -> dict[str, Any] | None:
     return read_json(film / "story" / "shotplan.json")
 
 
-def stage_complete(stage: str, film: Path, target_seconds: int) -> str | None:
-    return CHECKS[stage](film, target_seconds)
+def one_scene_story(story: dict[str, Any], scene_id: str) -> dict[str, Any]:
+    """The story cut down to one scene (one act of a project film) and the characters in it."""
+    scene = next(s for s in story["scenes"] if s["id"] == scene_id)
+    return {
+        **story,
+        "scenes": [scene],
+        "characters": [c for c in story["characters"] if c["id"] in scene["characters"]],
+    }
+
+
+def act_plan_of(film: Path, scene_id: str) -> dict[str, Any] | None:
+    return read_json(film / "story" / "plans" / f"{scene_id}.json")
+
+
+def merged_plan(film: Path, story: dict[str, Any]) -> dict[str, Any]:
+    """The shot plan of the acts planned so far, in story order (story/shotplan.json)."""
+    shots: list[dict[str, Any]] = []
+    for sc in story["scenes"]:
+        shots += (act_plan_of(film, sc["id"]) or {"shots": []})["shots"]
+    return {"shots": shots}
+
+
+def stage_complete(
+    stage: str, film: Path, target_seconds: int, project: bool = False
+) -> str | None:
+    """None when the stage is complete. `project`: a film of a project (acts instead of one
+    shot plan, one exported movie instead of an assembled edit)."""
+    checks = PROJECT_CHECKS if project else CHECKS
+    return checks[stage](film, target_seconds)
 
 
 def _story(film: Path, target: int) -> str | None:
@@ -149,6 +176,33 @@ def _qa(film: Path, target: int) -> str | None:
     return None
 
 
+def _shots_project(film: Path, target: int) -> str | None:
+    story = story_of(film)
+    if story is None:
+        return "no story yet."
+    for sc in story["scenes"]:
+        plan = act_plan_of(film, sc["id"])
+        if plan is None:
+            return f"act {sc['id']} has no shot plan (story/plans/{sc['id']}.json)."
+        if problems := check_shotplan(plan, one_scene_story(story, sc["id"]), sc["seconds"]):
+            return f"act {sc['id']}: {problems[0]}"
+        if gap := next(filter(None, (shot_missing(film, s) for s in plan["shots"])), None):
+            return gap
+    return None
+
+
+def _edit_project(film: Path, target: int) -> str | None:
+    story = story_of(film)
+    done = read_json(film / "director" / "export.json")
+    if story is None or done is None:
+        return "the movie has not been exported (director/export.json)."
+    if done.get("acts") != [s["id"] for s in story["scenes"]]:
+        return f"the movie has acts {done.get('acts')} but the story has a different list."
+    if not (film / "edit" / "final.mp4").is_file():
+        return "edit/final.mp4 is missing (export_movie)."
+    return None
+
+
 CHECKS = {
     "story": _story,
     "characters": _characters,
@@ -158,3 +212,6 @@ CHECKS = {
     "edit": _edit,
     "qa": _qa,
 }
+
+# A film of a project: same stages, two different checks (D-094).
+PROJECT_CHECKS = {**CHECKS, "shots": _shots_project, "edit": _edit_project}

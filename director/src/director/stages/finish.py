@@ -17,7 +17,28 @@ from director.context import StageCtx, StageFailed
 TITLE_CARD_MIN_S = 40  # a 15 s film has no room for a 3 s title card
 
 
+async def export_acts(ctx: StageCtx) -> None:
+    """A film of a project: export all acts. Only acts whose specs changed render again."""
+    story = story_of(ctx.film)
+    assert story is not None
+    args: dict[str, Any] = {"quality": ctx.deps.quality, "transition": "cut"}
+    if ctx.state.target_seconds >= TITLE_CARD_MIN_S:
+        args["start_title"] = story["title"]
+    result = await ctx.tool("export_movie", **args)
+    if not result.get("checks_passed", True):
+        raise StageFailed(f"export_movie checks failed: {result.get('problems') or result}")
+    done = {
+        "acts": [s["id"] for s in story["scenes"]],
+        "rendered_acts": result.get("rendered_acts", []),
+        "reused_acts": result.get("reused_acts", []),
+        "duration_s": result.get("duration_s"),
+    }
+    (ctx.film / "director" / "export.json").write_text(json.dumps(done, indent=2) + "\n")
+
+
 async def run_edit(ctx: StageCtx) -> None:
+    if ctx.state.project:
+        return await export_acts(ctx)
     plan, story = shotplan_of(ctx.film), story_of(ctx.film)
     assert plan is not None and story is not None
     args: dict[str, Any] = {"shots": [s["id"] for s in plan["shots"]], "default_transition": "cut"}

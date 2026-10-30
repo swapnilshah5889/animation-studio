@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from director import state as st
-from director.checks import read_json, shotplan_of, story_of
+from director.checks import act_plan_of, read_json, shotplan_of, story_of
+from director.config import ACT_CHECKPOINT
 
 
 def review_path(film: Path, name: str) -> Path:
@@ -19,9 +20,15 @@ def review_path(film: Path, name: str) -> Path:
 
 
 def write_review(name: str, film: Path, state: st.DirectorState) -> Path:
-    body = {"story": _story, "characters": _characters, "first_shot": _first_shot, "final": _final}[
-        name
-    ](film, state)
+    if name.startswith(ACT_CHECKPOINT):
+        body = _act(name[len(ACT_CHECKPOINT) :], film, state)
+    else:
+        body = {
+            "story": _story,
+            "characters": _characters,
+            "first_shot": _first_shot,
+            "final": _final,
+        }[name](film, state)
     path = review_path(film, name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -45,7 +52,9 @@ def _story(film: Path, state: st.DirectorState) -> str:
     for s in story.get("scenes", []):
         out += [
             "",
-            f"## Scene {s['id']} at `{s['place']}`, {s['seconds']} s, mood {s['mood']}",
+            f"## {'Act' if state.project else 'Scene'} {s['id']}"
+            + (f" '{s['title']}'" if s.get("title") else "")
+            + f" at `{s['place']}`, {s['seconds']} s, mood {s['mood']}",
             s["summary"],
         ]
         out += [f'- {ln["who"]}: "{ln["text"]}"' for ln in s["lines"]]
@@ -64,6 +73,29 @@ def _characters(film: Path, state: st.DirectorState) -> str:
             f"Sheet: `{_first(cdir / 'design', '*/sheet.png')}`, "
             f"preview: `{_first(cdir, '**/preview*.mp4')}`"
         )
+    return "\n".join(out)
+
+
+def _act(scene_id: str, film: Path, state: st.DirectorState) -> str:
+    story = story_of(film) or {}
+    scene = next((s for s in story.get("scenes", []) if s["id"] == scene_id), {})
+    plan = act_plan_of(film, scene_id) or {"shots": []}
+    video = state.stage("shots").per_item.get(ACT_CHECKPOINT + scene_id, "(not rendered)")
+    out = [
+        f"Act `{scene_id}` '{scene.get('title', '')}' at `{scene.get('place', '?')}`: "
+        f"{scene.get('summary', '')}",
+        "",
+        f"Act video: `{video}`",
+        "",
+    ]
+    for sh in plan["shots"]:
+        qa = read_json(film / "shots" / sh["id"] / "qa.json")
+        out.append(
+            f"- `{sh['id']}` {sh['seconds']} s, {sh['framing']}, {sh['camera']}: {sh['beat']}"
+        )
+        if qa:
+            out.append(f"  QA: {qa}")
+    out += ["", "Only this act renders again after a change; the other acts are reused."]
     return "\n".join(out)
 
 

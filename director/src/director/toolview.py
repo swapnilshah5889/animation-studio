@@ -55,14 +55,15 @@ class ToolView:
     """The tools one conversation may use."""
 
     tools: dict[str, ToolInfo] = field(default_factory=dict)
-    hidden: tuple[str, ...] = ("film", "shot_id")  # filled in by code, not by the model
+    # filled in by code, not by the model
+    hidden: tuple[str, ...] = ("film", "shot_id", "project", "act")
 
     @classmethod
     def for_stage(
         cls,
         stage: str,
         available: dict[str, ToolInfo],
-        hidden: tuple[str, ...] = ("film", "shot_id"),
+        hidden: tuple[str, ...] = ("film", "shot_id", "project", "act"),
     ) -> ToolView:
         allowed = STAGE_TOOLS.get(stage, ())
         picked = {n: available[n] for n in allowed if n in available}

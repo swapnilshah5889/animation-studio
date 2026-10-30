@@ -12,6 +12,19 @@ StageName = Literal["story", "characters", "backgrounds", "audio", "shots", "edi
 # Owner stops. name -> the stage it follows. `first_shot` pauses inside the shots stage.
 CHECKPOINTS = {"story": "story", "characters": "characters", "first_shot": "shots", "final": "qa"}
 
+# Project films (D-094) add one stop per act, "act_<scene id>", inside the shots stage.
+ACT_CHECKPOINT = "act_"
+
+
+def act_checkpoint(scene_id: str) -> str:
+    return ACT_CHECKPOINT + scene_id
+
+
+def checkpoint_stage(name: str) -> str | None:
+    """The stage a checkpoint belongs to (None = unknown name)."""
+    return "shots" if name.startswith(ACT_CHECKPOINT) else CHECKPOINTS.get(name)
+
+
 MODEL = "qwen3:14b"  # D-024
 NUM_CTX = 16384
 KEEP_ALIVE = "30m"  # while LLM stages run back to back; art stages unload it (keep_alive 0)
