@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/act_render.schema.json",
+  "title": "Act render record",
+  "description": "Stored beside an act's last render: the cache key it was made from (D-083). id equals the act id; parent_id is the film.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "act_id",
+    "cache_key",
+    "engine"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "act_render"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parent_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "act_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "cache_key": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "engine": {
+      "type": "string",
+      "minLength": 1
+    },
+    "video": {
+      "$ref": "asset_record.schema.json"
+    }
+  }
+}

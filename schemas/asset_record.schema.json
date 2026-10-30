@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/asset_record.schema.json",
+  "title": "Asset record",
+  "description": "A media file in the content-addressed blob store: {id, sha256, mime, bytes}; id is the sha256 hex digest.",
+  "type": "object",
+  "required": [
+    "id",
+    "sha256",
+    "mime",
+    "bytes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "mime": {
+      "type": "string",
+      "minLength": 3
+    },
+    "bytes": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

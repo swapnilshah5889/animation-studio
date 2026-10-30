@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/project.schema.json",
+  "title": "Project",
+  "description": "projects/<id>/project.json: the tenancy boundary. Owns characters, backgrounds and films (D-082).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "name"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "project"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "premise": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "style": {
+      "type": "string",
+      "description": "Style preset id."
+    },
+    "status": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    }
+  }
+}

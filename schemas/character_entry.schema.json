@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/character_entry.schema.json",
+  "title": "Character entry",
+  "description": "A project's character (a puppet: sheet, parts, rig, voice). Versions are append-only; films reference {id, version} (D-082).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "slug",
+    "name",
+    "versions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "character"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "slug": {
+      "$ref": "document.schema.json#/$defs/slug"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "version",
+          "created_at",
+          "files"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "created_at": {
+            "$ref": "document.schema.json#/$defs/timestamp"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "files": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "document.schema.json#/$defs/relpath"
+            },
+            "additionalProperties": {
+              "$ref": "asset_record.schema.json"
+            },
+            "description": "relative path -> asset record. A version is immutable once published."
+          }
+        }
+      }
+    }
+  }
+}

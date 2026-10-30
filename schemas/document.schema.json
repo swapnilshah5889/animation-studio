@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/document.schema.json",
+  "title": "Document envelope",
+  "description": "Fields every stored spec carries (D-084). The store sets rev, created_at and updated_at; specs hold ids and {id, version} references, never paths.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "description": "A ULID (26 chars) or a caller-chosen project id; never a name or a path."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,59}$",
+      "description": "Short human handle, unique per project and kind. Tools may accept it; the id is the identity."
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    },
+    "ref": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false,
+      "description": "A reference to a character or background version.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "relpath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\:]+$",
+      "description": "A path inside a character or background (rig.json, parts/head.png): relative, forward slashes."
+    }
+  },
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$"
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "#/$defs/id"
+    },
+    "parent_id": {
+      "$ref": "#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

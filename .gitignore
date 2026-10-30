@@ -1,5 +1,6 @@
 # --- Generated films and media (large) ---
 films/
+projects/
 renders/
 *.mp4
 *.mov

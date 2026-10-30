@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/act.schema.json",
+  "title": "Act",
+  "description": "One act of a film (D-083): its place, cast, story beats and ordered shot ids. parent_id is the film. Editable until export.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "order",
+    "title",
+    "background",
+    "cast",
+    "beats",
+    "shot_ids"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "act"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parent_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "background": {
+      "$ref": "document.schema.json#/$defs/ref"
+    },
+    "cast": {
+      "type": "array",
+      "items": {
+        "$ref": "document.schema.json#/$defs/ref"
+      }
+    },
+    "beats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "shot_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "document.schema.json#/$defs/id"
+      },
+      "uniqueItems": true
+    }
+  }
+}

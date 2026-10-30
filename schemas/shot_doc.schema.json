@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/shot_doc.schema.json",
+  "title": "Shot (project document)",
+  "description": "A shot spec stored as a document: `spec` is the engine-neutral shot spec (shot.schema.json). parent_id is the film.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "act_id",
+    "spec"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "shot"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parent_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "act_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "spec": {
+      "type": "object"
+    }
+  }
+}

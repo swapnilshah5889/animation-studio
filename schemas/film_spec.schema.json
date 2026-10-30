@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animation-studio.local/schemas/film_spec.schema.json",
+  "title": "Film (project document)",
+  "description": "A film in a project: its cast and places by reference. Acts and shots are separate documents with parent_id = this film.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "project_id",
+    "owner_id",
+    "created_at",
+    "updated_at",
+    "rev",
+    "slug",
+    "title",
+    "cast",
+    "places"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "film"
+    },
+    "id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "document.schema.json#/$defs/id"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "document.schema.json#/$defs/timestamp"
+    },
+    "rev": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "slug": {
+      "$ref": "document.schema.json#/$defs/slug"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "premise": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "style": {
+      "type": "string"
+    },
+    "cast": {
+      "type": "array",
+      "items": {
+        "$ref": "document.schema.json#/$defs/ref"
+      }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "$ref": "document.schema.json#/$defs/ref"
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Where an imported film came from (migration); informational.",
+      "additionalProperties": true
+    }
+  }
+}
