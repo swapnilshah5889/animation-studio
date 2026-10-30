@@ -1463,6 +1463,7 @@ def _cut_view(
     bendable: bool = False,
     secondary: bool = False,
     underlay: bool = False,
+    overlap: bool = False,
 ) -> _Cut:
     """Cut one figure of the sheet into a rig view: parts/<view>/*.png and the view's bones,
     parts, draw order and face block. Debug images go to build/<view>/."""
@@ -1517,12 +1518,28 @@ def _cut_view(
             pixels[name] = paint_from(pixels[name], parts[name], fill)
             masks[name] |= fill
             drawn[name] = fill
+    alpha = _alpha(img, figure, bg)
+    if overlap:  # the hidden stretch near each joint, so bending shows paint and not background
+        from studio_core.puppet.overlap import grow_under
+
+        solid = alpha >= 1.0  # the antialiased outer ring is see-through: nothing hides there
+        hung = {  # the arms are turned to hang after the cut (hang_arms): judge hiding as they rest
+            part: (
+                -90.0 - bones[f"upper_arm_{s}"]["direction_deg"],
+                bones[f"upper_arm_{s}"]["joint_px"],
+            )
+            for s in ("l", "r")
+            for part in (f"upper_arm_{s}", f"forearm_{s}")
+        }
+        for name, zone in grow_under(
+            masks, pixels, bones, fits, order, sk.height_px, opaque=solid, turn=hung
+        ).items():
+            drawn[name] = drawn[name] | zone if name in drawn else zone
     secondary_report = None
     if secondary:  # ears and a tail as bones of their own (puppet/secondary.py)
         from studio_core.puppet.secondary import add_secondary
 
         order, secondary_report = add_secondary(rgb, figure, parts, masks, pixels, bones, sk, order)
-    alpha = _alpha(img, figure, bg)
 
     parts_dir = folder / "parts" / sk.view
     parts_dir.mkdir(parents=True)
@@ -1736,6 +1753,7 @@ def build_puppet(
     bendable: bool = False,
     secondary: bool = False,
     underlay: bool = True,
+    overlap: bool = False,
 ) -> Built:
     """Cut the chosen candidate's two figures into the front and three-quarter views of one
     rig: parts/<view>/*.png, rig.json (validated and registered through shot_spec.register_rig),
@@ -1767,7 +1785,10 @@ def build_puppet(
 
     `underlay` lets the torso reach under the head's hair and hat where they overhang the body
     (add_caps), so a nod or a turn opens no thin gap there (the sweep's neck-line seams). On by
-    default since D-076; pass False for the old cut."""
+    default since D-076; pass False for the old cut.
+
+    `overlap` draws the hidden stretch of each part under its neighbour around the joints
+    (puppet/overlap.py), so a bent joint shows paint and not background (D-091)."""
     data = load_candidates(film_root, character_id)
     if data is None:
         raise BuildError(f"{character_id!r} has no design candidates; run design_character")
@@ -1826,6 +1847,7 @@ def build_puppet(
             bendable,
             secondary,
             underlay,
+            overlap,
         )
         for sk in skeletons
     }
