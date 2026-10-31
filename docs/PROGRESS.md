@@ -2,9 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the vertical slice (ROADMAP "Reset", D-101, D-102). Blender only; Rain and Snow rigs checked in Blender
-5.2.3. Next: render proposed 2D and 2.5D look stills side by side and get the owner's choice before animating. The slice
-brief's status label and older D-101 history still need reconciliation with D-102 and the owner's approvals.
+**Current step:** vertical slice task 2 is rendered and independently reviewed. Waiting for the owner's choice of look
+direction before any animation. Blender only; Rain and Snow rigs checked in Blender 5.2.3. The slice brief's status label
+and older D-101 history still need reconciliation with D-102 and the owner's approvals.
 
 ---
 
@@ -37,6 +37,20 @@ or ask the owner. The memory-budget test `test_compose_within_the_memory_budget`
 Removed the Claude and Codex animation-review skill pointer files. `skills/animation-review/README.md` and
 `docs/craft/visual-review.md` are the shared procedure and rubric; `AGENTS.md` now prohibits platform-specific skill or
 instruction Markdown copies. Unrelated local configuration was left alone.
+
+## 2026-10-31: vertical slice task 2, Rain look stills
+
+Rendered the same Rain rig, relaxed pose, 50 mm camera and locally generated storybook meadow at 1920x1080 in Blender
+5.2.3. The flat 2D candidate uses an EEVEE toon ramp and value quantization; the painterly 2.5D candidate uses the rig's
+shading with warm lighting, shallow depth of field, restrained posterization and edges. The pair and metadata are in
+`~/ai-studio/scratch/slice-look/` (`look_2d.png`, `look_2_5d.png`, `compare.png`, `look_test.json`); all generated media
+stays outside the repo. Fixed the comparison script so the 2.5D panel matches its saved candidate.
+
+**Independent review:** both candidates are **NEEDS WORK**. The 2D character's flat, clean fills do not match the
+textured painted background; the 2.5D character still reads as a smooth CG model beside that background. Both have a
+readable face and full-figure framing in this still. Hands look rigid in the 2D still. Motion, transitions, lip-sync,
+audio, shot consistency and animation quality cannot be judged from stills. These are direction tests, not a pass or
+production approval. **Stop here for the owner's visual choice/direction; do not animate before that.**
 
 ---
 
