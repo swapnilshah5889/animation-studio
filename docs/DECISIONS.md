@@ -1815,3 +1815,6 @@ After watching `compare.mp4` (A flat parts on planes, B Grease Pencil, C toon 3D
 already called the round-3 clip "very very bad". The flat-part rig (front view only, squash-slide turns) is no longer developed;
 `framing.py`, `motions/gait.py` and the parametric face rules stay as reusable, engine-neutral rules. The pick between B (2D, a
 drawing per view) and C (3D with cel shading, needs 2.5D approval) is still open. See `docs/spikes/blender-foundations.md`.
+
+## D-100: Replace Mia with a ready-made CC0 cast for the Blender and OpenToonz tests (2026-10-31)
+The owner rejected Mia ("I hate mia") after the round-3 review. Four rounds of home-made art did not reach the bar, so test the engines on professionally drawn, consistent art with separate limbs: Kenney "Toon Characters 1" (CC0, recorded in `docs/MODELS.md`), using the Female person and the Robot. Why: the bake-off showed art, not the engine, is the limit (D-090, D-095); a clean flat cast with hidden-limb art, back views and expression heads removes that variable. Costs: game-style proportions (short, chibi), one fixed mouth, small raster parts (use the SVG). Mia code (`face_layout`, `framing`, `gait`, smoothing) stays as engine-neutral rules. This does not approve 3D.

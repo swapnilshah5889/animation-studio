@@ -86,3 +86,11 @@ Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217."
 AMASS and LAFAN1 (non-commercial / no-derivatives), Mixamo (Adobe terms, account needed), pose
 estimation from video (MediaPipe is Apache-2.0, but there is no licence-clean clip of a person
 walking, waving and jumping to run it on; see docs/spikes/real-motion.md).
+
+## Character art (not a model; ready-made art the rig is built from)
+
+| Asset | Source | License | Commercial use | Size | Location | Date |
+|---|---|---|---|---|---|---|
+| Kenney "Toon Characters 1": 6 characters (girl, boy, zombie, man, woman, robot), 45 poses each, separate parts (head with expression variants, back views, arm, hand, leg, bent leg, body), SVG source | [OpenGameArt](https://opengameart.org/content/toon-characters-1) (zip `kenney_toonCharacters1.zip`), also kenney.nl | CC0 (`License.txt` in the zip; credit optional) | Yes | 5.5 MB zip, 6.9 MB unpacked | `~/ai-studio/assets/kenney-toon-characters-1/src/` | 2026-10-31 |
+
+Chosen after the owner rejected Mia (D-100). Raster parts are small, so rebuild at full size from the SVG sources.
