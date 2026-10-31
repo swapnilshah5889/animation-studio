@@ -51,6 +51,22 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-30 (night): head turn moves the whole head (D-097)
+
+**Done and verified:** the owner's bug (on a turn only the face moved). `face_layout.head_warp` turns the whole head about its
+vertical axis (skin, face, fringe, hair back, side locks; the far side narrows more; the hair trails by about 0.12 s); the face
+features still slide more than the outline (parallax). Rules in code with 140 test cases over yaw -1..1: features stay inside the
+skin, the head moves at least 40% of the face's shift, the head stays on the neck (at least 60% chin-over-neck at the collar), turned
+parts are not clipped, the hair lags without overshoot. Blender harness swaps the hair images per frame. `turn_test.mp4` and
+`turn_sheet.png` are in `~/ai-studio/scratch/rigged-character-test/`. **Independent review (separate agent, rubric item "on a turn
+the head moves as a whole"): PASS**, minors only (far locks do not tuck more, square skin corners beside the fringe, the neck does
+not follow, the swing through centre reads as a whip, tight headroom in the test). `docs/craft/visual-review.md` Faces has the new
+line (file kept under 2400 chars). **Not done / honest:** a real three-quarter set for turns beyond about 0.6; the round-2 majors
+(walk, hair shape, headroom in the clip) are untouched by instruction; frames between the sheet times, the body in the turn and
+audio were not checked.
+
+---
+
 ## 2026-10-30 (night): Mia round 2, review findings fixed (D-096)
 
 **Done and verified:** the independent review's findings: the double-exposure dissolve is gone (one real camera push-in, rule

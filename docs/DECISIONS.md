@@ -1786,3 +1786,14 @@ room for the curls. (4) Visible legs are at least 27% of the figure's height and
 under the cuff, and `walk_step` (opt-in) adds foot lift, knee bend, bob and sway to the stride walk. Each rule has a test in
 `tests/test_flat_round2.py`. See `docs/spikes/rigged-character-test.md`, "Round 2". Not decided: whether the flat vector look is
 the film's look (still the owner's call), and the side/three-quarter part sets.
+
+## D-097: A head turn moves the whole head; the face moves more than the outline (2026-10-30)
+
+The owner saw the face slide like a sticker on a fixed head: yaw only shifted the features inside the head image. Now a turn is a
+horizontal map about the head's vertical axis applied to the head composite and to the hair back and side locks
+(`face_layout.head_warp`, `engines/face_flat.warp_image`): the head's centre shifts 8% of its width at yaw 1, the side turned
+toward narrows 4% and the far side 22%, the hair follows a lagged yaw (0.12 s), and the features keep their extra slide (the nose
+most). Rules held by tests over yaw -1..1: features inside the skin, the head moves at least 40% of the face's shift, the chin
+stays over the neck. The Blender harness swaps per-frame part images (`part_images`); the contract is engine-neutral (baked
+numbers, PNGs per frame). Independent review of a 3 s turn test: PASS with minors. Limit: beyond about yaw 0.6 the cheat shows;
+a turned part set is the real answer. Not changed: walk, framing, hair shape (round 3 not started).

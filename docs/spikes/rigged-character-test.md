@@ -192,3 +192,32 @@ plate. I did not listen to the audio and did not rerun the defect counter on the
 
 **Status:** round 2 stopped by instruction after two fix passes. The face and the transition are fixed and tested; the
 character is not production ready. The owner decides whether to continue.
+
+### Head turn moves the whole head (D-097)
+
+The owner's bug report on `clip_v2`: on a turn only the inner face moved, the skin, hair and locks stayed put, so the face slid
+like a sticker (the first independent review had called this a major). Cause, confirmed in code: `face_layout` yaw only shifted
+the features inside the head image.
+
+Fix (scoped: walk, framing and hair shape untouched): `face_layout.head_warp(yaw, head_w)` is a piecewise-linear horizontal map
+about the head's vertical axis (shift 8% of the head width at yaw 1; the side turned toward narrows 4%, the far side 22%, so it
+tucks). `engines/face_flat.warp_image` applies it to the composed head (skin, face, fringe) and, from `write_flat_sprites`, to
+`hair_back` and both side locks, which use a lagged yaw (`smooth_lag`, about 0.12 s, baked as `yaw_hair`) so the lobes trail the
+head. The Blender harness swaps those part images per frame (`frames[].part_images`). The features still slide within the head
+(parallax, the nose most), so they move more than the outline. Lock images got more room (the shift would clip them).
+Rules in code, tested over yaw -1..1 in 0.05 steps on Mia's real art (`tests/test_head_turn.py`, 140 cases): the warp is
+identity at 0, mirrors, is monotone (nothing folds); eye edges, nose and mouth corners stay inside the warped skin; the head's
+shift is at least 40% of the face's shift (`MIN_HEAD_SHARE`) and the nose moves more than the face, the face more than the head;
+the warped chin still covers at least 60% of the neck width at the collar (never detaches); turned parts keep their size and are
+not clipped; the hair lags and settles without overshoot.
+
+Render: `scripts/spikes/rigged_turn_test.py` gives `turn_test.mp4` (3 s, silent: look left, right, back) and `turn_sheet.png`
+(+ `turn_sheet_times.txt`) in `~/ai-studio/scratch/rigged-character-test/`. **Independent review (a separate agent, rubric item "on a
+turn the head moves as a whole"): PASS**, no blocker or major, `review_turn/review.md`: the outline narrows (about 290 to 255
+px) and shifts about 42 px at yaw 0.9, hair and locks move with it, the features move about 75 px (parallax) and stay inside the
+skin, the head stays on the collar, the hair lags about 14 px mid-swing, 0 motion spikes. Its minors: the far side locks do not
+tuck more than the near ones (reads as squash plus slide, not a three-quarter silhouette); square skin corners show beside the
+fringe; the neck stays centred while the head slides (no gap); the swing through centre (0.55 s) reads as a whip; the hair top
+is about 20 px from the frame top in this test (framing). Not checked by the reviewer: frames between the sheet times, the
+body (the coat looked slightly sheared on the small sheet, unverified), walking, audio. A turn up to about yaw 0.6 reads as a
+turn; beyond it a real turned part set is still needed.
