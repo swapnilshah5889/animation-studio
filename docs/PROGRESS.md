@@ -3,7 +3,7 @@
 Update this at the end of every working session. Newest entry at the top.
 
 **Current step:** the vertical slice (ROADMAP "Reset", D-101, D-102). Blender only; Rain and Snow rigs checked in Blender
-5.2.3. Next: render the approved 2D and 2.5D look stills side by side and get the owner's choice before animating. The slice
+5.2.3. Next: render proposed 2D and 2.5D look stills side by side and get the owner's choice before animating. The slice
 brief's status label and older D-101 history still need reconciliation with D-102 and the owner's approvals.
 
 ---

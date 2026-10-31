@@ -1,8 +1,8 @@
 # Skill: animation review
 
-Agent-agnostic. Any coding agent or local model that can run a shell command and look at an image can follow this
-(Claude Code, Codex, Cursor, the director's local reviewer). Tool-specific adapters (for example
-`.claude/skills/animation-review/SKILL.md`) only point here; keep the real content in this folder.
+This repo-native procedure is the sole source of truth. Any coding agent or local model that can run a shell command
+and inspect an image follows this file and `docs/craft/visual-review.md` directly. Do not create platform-specific
+skill or instruction-file copies.
 
 **Independence rule:** the author of a change must not be its only reviewer. On 2026-10-31 an author's self-review passed
 Mia's round 2 clip while a fresh reviewer, working from the same rubric, found three majors (head and boots clipped by

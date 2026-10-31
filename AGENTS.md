@@ -134,7 +134,7 @@ Read these before doing anything, in this order:
 
 Reusable know-how lives in plain files in the repo, never only in one tool's folder: rubrics as craft notes in
 `docs/craft/` (the director reads them with `read_craft`), procedures and helper scripts in `skills/<name>/`
-(`README.md` plus scripts, no tool-specific syntax). Tool-specific files such as `.claude/skills/<name>/SKILL.md`
-are thin adapters that point to the neutral copy. Current skill: `skills/animation-review/` (use it before showing
-any render to the owner).
+(`README.md` plus scripts, no tool-specific syntax). These are the sole source of truth. Do not create or maintain
+agent-specific skill files, instruction Markdown files, or adapter copies; every agent must use the same repo-native
+skill and rubric. Current skill: `skills/animation-review/` (use it before showing any render to the owner).
 
