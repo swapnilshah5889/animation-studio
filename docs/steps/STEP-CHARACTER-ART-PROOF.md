@@ -1,40 +1,46 @@
-# Character-art proof: one original detailed child character
+# Character-art proof: canonical design, then reference-conditioned turnaround
 
-**Status: owner-approved 2026-10-31 (D-105).** This is a design-only prerequisite to the vertical slice, not a new
-animation step. Keep Blender as the engine. Rain and Snow remain technical rig baselines, not approved film characters.
+**Status: owner-approved 2026-10-31 (D-105, amended by D-106).** This is a design-only prerequisite to the vertical
+slice, not an animation step. Blender remains the engine. Rain and Snow remain technical rig baselines, not approved
+film characters.
 
-## Goal
+## Stage 1: one canonical illustration (current task)
 
-Create one original child-character concept that feels fully designed and belongs in the existing painted forest. The
-previous Rain attempts showed that shader tweaks cannot bridge the style gap. This proof changes the art source, not the
-engine or story scope.
+Create one original, age-appropriate child character around 8–10 years old in a detailed drawn storybook style that fits
+the painted forest. The first multi-view attempt failed because the model generated several different characters. Do not
+ask it for a turnaround sheet yet.
 
-## Art direction
+- One full-body front or gentle three-quarter view only. Include a distinct silhouette, clear face, layered clothing,
+  and a few meaningful small motifs/material details. Keep details readable at full-body scale and use a restrained
+  palette related to the forest.
+- Face: exactly two level eyes, small nose and mouth, balanced child proportions; no extra marks that resemble eyes.
+- Include a short written design description and an optional enlarged crop of the same face. Do not include extra
+  characters, clothing-only panels, or other views.
+- Judge style against the existing painted forest plate. Do not regenerate or modify the plate.
 
-- Original, age-appropriate child character, about 8–10 years old; do not imitate a named studio or living artist.
-- Drawn storybook illustration with a clear silhouette, intentional layered clothing, recognizable small motifs/material
-  details, and a restrained palette related to the forest. Details should read at full-body scale instead of becoming noise.
-- Normal face: two level eyes, small nose and mouth, balanced proportions; no extra facial marks that resemble eyes.
-- Present front and three-quarter views of the same design plus one face detail, with a short written design description.
-- Place the character in a still over the existing forest plate to judge style coherence. Do not redraw or regenerate the plate.
+## Stage 2: more views (only after owner approval of Stage 1)
+
+Use the approved canonical image as the visual reference for additional front, three-quarter and side views. Review
+whether face, hair, proportions, colors, clothing and motifs remain the same. The independent reviewer and owner must
+approve the turnaround sheet before rigging begins.
 
 ## Scope and limits
 
-- Use the already-installed local SDXL + StoryBook model and pipeline recorded in `docs/MODELS.md`; no downloads or new
-  dependencies. Fully local.
-- One character only, one focused session, maximum 45 minutes. It may make a small number of controlled refinements to
-  the same design, but must not start character variants, rigging, animation, or a story/engine change.
+- Use installed local models only; no downloads, installs or new dependencies. Runtime must remain local.
+- One focused session per stage, maximum 45 minutes; a small number of controlled refinements to the same approved
+  design are allowed. Do not produce variants or advance stages without owner approval.
 - Save images outside the repository under `~/ai-studio/scratch/character-art-proof/`.
-- Run the agent-neutral visual-review procedure and rubric. The artist cannot be the only reviewer.
+- Follow the agent-neutral visual-review procedure and rubric in `skills/animation-review/` and
+  `docs/craft/visual-review.md`. The artist cannot be the only reviewer.
+- Do not rig or animate until the owner approves the reviewed turnaround sheet.
 
-## Done when
+## Stage 1 done when
 
-1. The face is normal and readable at full-body and face-detail sizes.
-2. The design has deliberate, useful detail without clutter and a silhouette that is distinct at a glance.
-3. The character and existing forest read as one illustrated world.
-4. An independent reviewer returns no blocker or major finding.
-5. Record prompts/model/seed, outputs and verdict in `docs/PROGRESS.md`; commit and push. **Then show the owner and
-   wait for approval before rigging.**
+1. The single character has a normal, readable face and distinct child silhouette.
+2. The illustration has deliberate detail without clutter and reads well at full-body and face-detail sizes.
+3. The art style is compatible with the painted forest plate.
+4. Independent review finds no blocker or major.
+5. Record model/prompt/seed, output and verdict in `docs/PROGRESS.md`; commit and push; show the image and wait for owner
+   approval before Stage 2.
 
-If the local model cannot keep views consistent or the independent review still finds a major, stop and report; do not
-automatically broaden the art or animation scope.
+If the image still fails independent review, stop and report the findings. Do not generate turnarounds or broaden scope.

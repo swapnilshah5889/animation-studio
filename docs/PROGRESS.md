@@ -2,10 +2,18 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the D-105 character-art proof failed independent review. The watercolor/detail direction and face were
-promising, but local SDXL did not produce one consistent character across views. No rigging or animation has started.
-Recommended next step: approve one canonical view first, then use reference-conditioned editing for other views and
-review identity consistency before building a rig.
+**Current step:** D-106 is owner-approved. Create one canonical full-body character illustration and independently
+review it; show the owner and wait for approval. Only then generate reference-conditioned turnaround views. No rigging
+or animation until the turnaround sheet also passes independent review and owner approval.
+
+## 2026-10-31: owner approved staged character-art workflow (D-106)
+
+After the D-105 multi-view proof failed (details in `docs/spikes/character-art-proof.md`), the owner approved a staged
+path: first one canonical full-body design; independent review; owner approval; then generate reference-conditioned
+turnaround views and independently check identity; owner approves the turnaround sheet before any rig. This keeps the
+current task to one canonical image and prevents the model from silently defining multiple inconsistent designs.
+
+**Next:** create the canonical illustration only. Do not generate other views, rig, or animate before owner approval.
 
 ## 2026-10-31: Rowan character-art proof failed (D-105)
 

@@ -104,12 +104,13 @@ Read these before doing anything, in this order:
 
 ## Owner's standing preferences (learned; keep these across sessions)
 
-- **Reset (2026-10-31, D-101; cast-art amendment D-105): one vertical slice first.** Read ROADMAP "Reset" before any
+- **Reset (2026-10-31, D-101; cast-art amendments D-105/D-106): one vertical slice first.** Read ROADMAP "Reset" before any
   work. Engine is Blender. Rain and Snow remain technical rig baselines, but the owner reopened the character-art source
-  after the look gate failed (D-105); do not treat their current appearance as approved film art. One design-only character
-  proof comes next; no animation until it passes independent review and the owner approves it. One working session at a
-  time, each with an owner-approved "done when". A session never changes direction or builds unrequested candidates: it
-  stops and asks.
+  after the look gate failed (D-105); do not treat their current appearance as approved film art. Make one canonical
+  character illustration first. It must pass independent review and receive owner approval before reference-conditioned
+  turnarounds are generated. The turnaround sheet must pass identity review and owner approval before rigging or
+  animation. One working session at a time, each with an owner-approved "done when". A session never changes direction
+  or builds unrequested candidates: it stops and asks.
   Bring the owner one decision at a time, with a recommendation, and record it. A short owner message ("fix X") gets a
   question about what "fixed" means before a large brief, not a guess.
 

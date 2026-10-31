@@ -1854,3 +1854,11 @@ existing forest. Use the existing local image model only; do not download or ins
 normal readable face; deliberate detail without clutter; coherent style with the forest; independent review with no blocker
 or major. No rigging or animation until the owner approves the concept. Blender remains the engine. See
 `docs/steps/STEP-CHARACTER-ART-PROOF.md`.
+
+## D-106: Approve canonical character art before generating turnarounds (2026-10-31)
+The first local SDXL multi-view prompt produced inconsistent characters, and its independent review failed. The owner
+approved a staged workflow: generate one canonical full-body character illustration, review it independently, and show
+it to the owner for approval. Only after that approval may a focused task generate additional views using the canonical
+image as a reference. Review identity across views independently and get owner approval of the turnaround sheet before
+rigging. This isolates art direction from view-consistency problems and prevents unapproved designs from becoming rigged
+production assets. See `docs/steps/STEP-CHARACTER-ART-PROOF.md`.

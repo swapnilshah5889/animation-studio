@@ -42,7 +42,9 @@ changed direction on their own.
   (D-031 stays the long-term plan); Synfig is legacy. No more engine comparisons.
 - **Technical rig baselines: Blender Studio Rain and Snow** (CC-BY 4.0, D-102; Kenney is retired). On 2026-10-31 the
   owner reopened the creative character-art source (D-105) because these rigs rendered as CG against the painted plate.
-  Their art is not approved for the film; a one-character design-only proof must pass before rigging or animation.
+  Their art is not approved for the film. First create and approve one canonical character illustration; then create
+  reference-conditioned turnaround views, review cross-view identity, and get owner approval before rigging or animation
+  (D-106).
 - **Look:** 2D or 2.5D (the owner's end goal): 3D rigs rendered to look drawn (cel shading, outlines), painted
   backgrounds with depth (D-102). The owner's
   references (2026-10-31) are a lush, softly lit painted 2D scene and a stylised 3D feature teaser; the
