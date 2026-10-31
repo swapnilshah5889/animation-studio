@@ -328,6 +328,10 @@
               "maxItems": 4,
               "description": "The visible skin in the head image: [centre x, top y, width, height] in pixels."
             },
+            "head_w": {
+              "type": "number",
+              "description": "The head's width in the head image, hair included (px): the scale of a whole-head turn (face_layout.head_warp)."
+            },
             "style": {
               "type": "object",
               "description": "FaceStyle proportions (eye_gap, eye_w, eye_aspect, eye_y, brow_gap, nose_y, mouth_y, mouth_w); each is clamped to face_layout.LIMITS.",

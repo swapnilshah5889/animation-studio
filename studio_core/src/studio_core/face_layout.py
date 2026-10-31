@@ -265,3 +265,62 @@ def face_box_of_rig_face(face: dict) -> FaceBox:
 
 def style_of_rig_face(face: dict) -> FaceStyle:
     return FaceStyle(**face["layout"].get("style", {}))
+
+
+# ----------------------------------------------------------------------------- whole-head turn
+# A turn moves the WHOLE head (skin, hair, fringe, locks) about a vertical axis, and the face
+# features move on top of it by more (parallax; the nose most). Before D-097 only the features
+# slid, so the face moved like a sticker on a fixed head.
+HEAD_SHIFT = 0.08  # of the head width: the head's outline centre moves this far at yaw 1
+NEAR_SQUASH = 0.04  # the side the head turns toward narrows this much at yaw 1
+FAR_SQUASH = 0.22  # the far side narrows this much (it tucks behind the near side)
+MIN_HEAD_SHARE = 0.40  # the head moves at least this share of the face's total shift
+HAIR_LAG_S = 0.12  # the hair lobes trail the head by about this long (overlap)
+
+
+@dataclass(frozen=True)
+class HeadWarp:
+    """The horizontal map of a turned head: x is measured from the head's vertical axis (px),
+    positive toward the viewer's right. Piecewise linear, continuous at the axis."""
+
+    shift: float
+    near: float  # scale of the side the head turns toward
+    far: float
+    toward: int  # +1 / -1: which side is near (0 when not turned)
+
+    def map_x(self, x: float) -> float:
+        if self.toward == 0:
+            return x
+        near_side = (x > 0) == (self.toward > 0)
+        return self.shift + x * (self.near if near_side else self.far)
+
+
+def head_warp(yaw: float, head_w: float) -> HeadWarp:
+    """The turn's map for a head `head_w` px wide (hair included)."""
+    t = clamp(yaw, -MAX_YAW, MAX_YAW)
+    a = abs(t)
+    if a < 1e-9:
+        return HeadWarp(0.0, 1.0, 1.0, 0)
+    return HeadWarp(
+        t * HEAD_SHIFT * head_w, 1 - NEAR_SQUASH * a, 1 - FAR_SQUASH * a, 1 if t > 0 else -1
+    )
+
+
+def face_total_shift(layout_yaw_slide: float, warp: HeadWarp) -> float:
+    """How far a feature at the face centre moves on screen: the head's shift plus its slide
+    within the head (signed, px)."""
+    return warp.shift + layout_yaw_slide
+
+
+def smooth_lag(yaws: list[float], fps: int, lag_s: float = HAIR_LAG_S) -> list[float]:
+    """The yaw the hair lobes follow: the head's yaw through two cascaded one-pole filters, so
+    they trail by about `lag_s` and settle (overlap and follow-through on a turn)."""
+    import math
+
+    a = 1 - math.exp(-1 / fps / (lag_s / 2))
+    out, y1, y2 = [], yaws[0] if yaws else 0.0, yaws[0] if yaws else 0.0
+    for v in yaws:
+        y1 += (v - y1) * a
+        y2 += (y1 - y2) * a
+        out.append(y2)
+    return out

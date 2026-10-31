@@ -253,6 +253,33 @@ def state_of(params: dict[str, Any]) -> FaceState:
     )
 
 
+def warp_image(img: Image.Image, axis_px: float, warp: Any) -> Image.Image:
+    """The image turned by `warp` (face_layout.HeadWarp) about the vertical line x = axis_px:
+    each half is resized horizontally (the far side narrower, the near side nearly full) and
+    both are placed at the shifted axis. Same size as the input; content shifted outside is
+    cut, so part images carry padding for the shift."""
+    if warp.toward == 0:
+        return img.copy()
+    W, H = img.size
+    cut = round(axis_px)
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    left = img.crop((0, 0, cut, H)) if cut > 0 else None
+    right = img.crop((cut, 0, W, H)) if cut < W else None
+    # figure x < 0 is the left half; scale by the side's factor
+    s_left = warp.near if warp.toward < 0 else warp.far
+    s_right = warp.near if warp.toward > 0 else warp.far
+    new_axis = axis_px + warp.shift
+    for half, scale, is_left in ((left, s_left, True), (right, s_right, False)):
+        if half is None or half.width == 0:
+            continue
+        w2 = max(1, round(half.width * scale))
+        small = half.convert("RGBa").resize((w2, H), Image.LANCZOS).convert("RGBA")
+        x = round(new_axis - w2) if is_left else round(new_axis)
+        if x < W and x + w2 > 0:
+            out.alpha_composite(small, (max(x, 0), 0), (max(-x, 0), 0))
+    return out
+
+
 def write_flat_sprites(
     rig_dir: Any, view: dict[str, Any], frames: list[dict[str, Any]], folder: Any
 ) -> None:
@@ -279,12 +306,38 @@ def write_flat_sprites(
     box = face_box_of_rig_face(face)
     style = FaceStyle(**face["layout"].get("style", {}))
     cache: dict[str, Path] = {}
+    from studio_core.face_layout import head_warp
+
+    parts = view["parts"]
+    head_w = face["layout"].get("head_w") or box.w / 0.74  # the head incl. hair (box is its skin)
+    head_axis = parts["head"]["pivot_px"][0]
+    turned_parts = {}  # name -> (image, axis px in that image)
+    for name in ("hair_back", "hair_l", "hair_r"):
+        if name in parts:
+            img = Image.open(root / parts[name]["file"]).convert("RGBA")
+            axis = head_axis
+            if name in view["bones"] and view["bones"][name].get("attach"):  # a lock: its own frame
+                axis = parts[name]["pivot_px"][0] + (
+                    head_axis - view["bones"][name]["attach"]["at_px"][0]
+                )
+            turned_parts[name] = (img, axis)
     for fr in frames:
-        key = hashlib.sha1(json.dumps(fr["face"], sort_keys=True).encode()).hexdigest()[:12]
+        face_p = fr["face"]
+        yaw, yaw_hair = face_p["yaw"], face_p.get("yaw_hair", face_p["yaw"])
+        key = hashlib.sha1(json.dumps(face_p, sort_keys=True).encode()).hexdigest()[:12]
         if key not in cache:
             path = Path(folder) / f"head_{key}.png"
             if not path.exists():
-                lay = layout_face(box, style, fr["face"]["yaw"])
-                draw_face(skin, over, lay, state_of(fr["face"]), pal).save(path)
+                lay = layout_face(box, style, yaw)
+                whole = draw_face(skin, over, lay, state_of(face_p), pal)
+                warp_image(whole, head_axis, head_warp(yaw, head_w)).save(path)
             cache[key] = path
         fr["head"] = str(cache[key])
+        if turned_parts:
+            hk = f"{round(yaw_hair, 3):+.3f}"
+            fr["part_images"] = {}
+            for name, (img, axis) in turned_parts.items():
+                path = Path(folder) / f"{name}_{hk}.png"
+                if not path.exists():
+                    warp_image(img, axis, head_warp(yaw_hair, head_w)).save(path)
+                fr["part_images"][name] = str(path)

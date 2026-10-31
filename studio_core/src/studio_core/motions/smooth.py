@@ -258,6 +258,9 @@ def face_series(
     # the eyes follow the turn a few frames before the head arrives, as a person looks first
     lead = 3
     look = [yaw[min(n - 1, i + lead)] for i in range(n)]
+    from studio_core.face_layout import smooth_lag
+
+    hair = smooth_lag(yaw, fps)  # the hair lobes trail the head (overlap)
     return [
         {
             "eye_open": round(eo[i], 4),
@@ -267,6 +270,7 @@ def face_series(
             "mouth": {k: round(v, 4) for k, v in ms[i].items()},
             "look": [round(look[i], 4), 0.0],
             "yaw": round(yaw[i], 4),
+            "yaw_hair": round(hair[i], 4),
         }
         for i in range(n)
     ]

@@ -185,6 +185,7 @@ def build_character(ch, z0):
     items.sort(key=lambda t: t[0])
 
     head_obj = None
+    mats = {}
     for order_i, (_, kind, item) in enumerate(items):
         rig_dir = Path(ch["rig_dir"])
         w, h = item["size_px"]
@@ -211,6 +212,7 @@ def build_character(ch, z0):
         obj.location.z = z0 + order_i * 0.01
         scene.collection.objects.link(obj)
         mat = material(item["name"], str(rig_dir / item["file"]))
+        mats[item["name"]] = mat
         obj.data.materials.append(mat)
         mod = obj.modifiers.new("arm", "ARMATURE")
         mod.object = arm
@@ -227,7 +229,7 @@ def build_character(ch, z0):
                 g_lo.add([vi], wl, "REPLACE")
         if kind == "part" and ch.get("face") and item["name"] == ch["face"]["part"]:
             head_obj = (obj, mat)
-    return {"arm": arm, "head": head_obj, "data": ch}
+    return {"arm": arm, "head": head_obj, "data": ch, "mats": mats}
 
 
 def build_skinned(ch, arm, z0):
@@ -314,6 +316,10 @@ def pose(built_ch, frame):
     if built_ch["head"] and "head" in fr:
         obj, mat = built_ch["head"]
         mat.node_tree.nodes[mat["tex"]].image = image(fr["head"])
+    for name, path in fr.get("part_images", {}).items():  # a turned head's hair (D-097)
+        m = built_ch.get("mats", {}).get(name)
+        if m:
+            m.node_tree.nodes[m["tex"]].image = image(path)
 
 
 first, last = 0, bake["n_frames"] - 1

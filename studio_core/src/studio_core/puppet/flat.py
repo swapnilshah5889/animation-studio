@@ -344,7 +344,7 @@ def _head_parts(spec: FlatSpec) -> tuple[list[_Part], FaceBox, dict[str, Art]]:
     locks = []
     for side, nm_ in ((1, "hair_l"), (-1, "hair_r")):
         jx, jy = side * (W / 2 - 34), top + H * 0.52
-        a = Art((jx - 54, jy - 40, jx + 54, jy + 160))
+        a = Art((jx - 96, jy - 40, jx + 96, jy + 160))  # room for the turn's shift
         mm, dd = a.mask()
         for k in range(3):
             a.circle(dd, (jx + side * 3 * k, jy + 18 + 36 * k), 30 - 2 * k)
@@ -637,6 +637,7 @@ def build_flat_puppet(spec: FlatSpec, folder: Path) -> dict[str, Any]:
         "colors": {"line": spec.palette.line, "iris": spec.palette.iris},
         "layout": {
             "box": face_box,
+            "head_w": spec.head_w,
             "style": {k: getattr(spec.face_style, k) for k in vars(spec.face_style)},
             "layers": {"skin": "parts/front/head_skin.png", "over": "parts/front/head_over.png"},
         },
