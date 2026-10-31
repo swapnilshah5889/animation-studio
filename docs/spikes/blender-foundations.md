@@ -28,3 +28,5 @@ Not decided here: the foundation. Option C is the only one with real turns and h
 but needs a drawing per view. See PROGRESS for the open question to the owner.
 
 Code: `scripts/spikes/blender_gp/blender_gp_mia.py`, `scripts/spikes/blender_toon3d/mia_toon3d.py`.
+
+Owner verdict after watching: **A is the worst of the three** (D-099). B versus C is still open.

@@ -1808,3 +1808,10 @@ mid-swing). Mia: legs 140+160 px and thicker, wider arm swing; the head is an eg
 face contour. The walk stays lateral with the front-view puppet (no side-view set exists; building one is the next real step).
 The push-in ends as a full-body shot, because the rule forbids cropping head or feet. Independent review of the full clip: NEEDS
 WORK (the wave arm and the straight tube legs); framing fixed, walk and hair partly. Not production ready; remaining list in the spike note.
+
+## D-099: Flat parts on planes are dropped as the character foundation (2026-10-31)
+
+After watching `compare.mp4` (A flat parts on planes, B Grease Pencil, C toon 3D) the owner said A is the worst of the three, and had
+already called the round-3 clip "very very bad". The flat-part rig (front view only, squash-slide turns) is no longer developed;
+`framing.py`, `motions/gait.py` and the parametric face rules stay as reusable, engine-neutral rules. The pick between B (2D, a
+drawing per view) and C (3D with cel shading, needs 2.5D approval) is still open. See `docs/spikes/blender-foundations.md`.
