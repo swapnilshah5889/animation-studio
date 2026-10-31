@@ -91,7 +91,12 @@ class Column:
 
 
 def build_tnz(
-    levels: dict[str, str], columns: list[Column], camera: Peg, frames: int, out: str
+    levels: dict[str, str],
+    columns: list[Column],
+    camera: Peg,
+    frames: int,
+    out: str,
+    transparent: bool = False,
 ) -> str:
     ids = iter(range(1, 100_000))
     level_ids = {n: next(ids) for n in levels}
@@ -129,7 +134,7 @@ def build_tnz(
         f'<properties><cameras>{CAMERA_XML}</cameras><outputs><output name="main">'
         f"<range>0 {frames - 1}</range><step>1</step><shrink>1</shrink><fps>{FPS}</fps>"
         f'<path>"{out}"</path><bpp>32</bpp><resquality>1</resquality></output></outputs>'
-        "<bgColor>255 255 255 255</bgColor></properties>"
+        f"<bgColor>255 255 255 {0 if transparent else 255}</bgColor></properties>"
         f"<levelSet><levels>{lv}</levels></levelSet>"
         f"<xsheet><columns>{''.join(cols)}</columns><pegbars>{''.join(pegs)}"
         "<grid_dimension>1</grid_dimension></pegbars>"

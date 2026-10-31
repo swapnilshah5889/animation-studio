@@ -18,13 +18,18 @@ PLANTED_PX = 3.0  # a sole this close to the ground counts as planted
 EDGE_FRAMES = 2  # frames at each end of a planted run that belong to the step, not the stance
 
 
+def foot_bones(char: dict[str, Any]) -> list[str]:
+    """The bones that end in a foot: the shins, or the thighs of a rig whose legs are one piece."""
+    shins = [b for b, sp in char["bones"].items() if sp["role"] == "shin"]
+    return shins or [b for b, sp in char["bones"].items() if sp["role"] == "thigh"]
+
+
 def sole_tracks(char: dict[str, Any]) -> dict[str, list[tuple[float, float]]]:
     """Per shin bone, per frame: the sole's (x, y) in the bake's stage px (y up). The sole is the
     knee plus the shin's length (knee to ground) along its world direction."""
     scale = char["scale"]
-    shins = [b for b, sp in char["bones"].items() if sp["role"] == "shin"]
     out: dict[str, list[tuple[float, float]]] = {}
-    for shin in shins:
+    for shin in foot_bones(char):
         length = char["bones"][shin]["length_px"] * scale
         track = []
         for fr in char["frames"]:

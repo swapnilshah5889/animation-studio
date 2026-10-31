@@ -143,6 +143,11 @@ def limb_weights(rest, upper, lower, half_width, x, y):
 
 def build_character(ch, z0):
     cid, rest = ch["id"], ch["rest"]
+    sc = ch["scale"]
+    # the rest armature lives in the same scaled space as the meshes and the posed bones (bake
+    # positions are scaled): an unscaled rest pulled every part toward the root by (1 - scale) of
+    # its distance (a 12% error on Mia at 0.88, a collapsed figure at 0.6)
+    rest_s = {b: (v[0] * sc, v[1] * sc, v[2]) for b, v in rest.items()}
     # armature: one bone per rig bone, head at the joint, along the rest direction
     arm_data = bpy.data.armatures.new(cid)
     arm = bpy.data.objects.new(cid + "-arm", arm_data)
@@ -151,10 +156,10 @@ def build_character(ch, z0):
     bpy.ops.object.mode_set(mode="EDIT")
     order = sorted(ch["bones"], key=lambda b: len(chain(ch, b)))
     for b in order:
-        x, y, d = rest[b]
+        x, y, d = rest_s[b]
         eb = arm_data.edit_bones.new(b)
         eb.head = (x * PX, y * PX, 0)
-        length = max(ch["bones"][b]["length_px"] or 20, 5) * PX
+        length = max(ch["bones"][b]["length_px"] or 20, 5) * sc * PX
         eb.tail = (
             eb.head.x + length * math.cos(math.radians(d)),
             eb.head.y + length * math.sin(math.radians(d)),
@@ -224,7 +229,7 @@ def build_character(ch, z0):
             hw = w / 2
             g_up, g_lo = obj.vertex_groups.new(name=up), obj.vertex_groups.new(name=lo)
             for vi, (vx, vy, _) in enumerate(verts):
-                wl = limb_weights(rest, up, lo, hw, vx / PX, vy / PX)
+                wl = limb_weights(rest_s, up, lo, hw * sc, vx / PX, vy / PX)
                 g_up.add([vi], 1 - wl, "REPLACE")
                 g_lo.add([vi], wl, "REPLACE")
         if kind == "part" and ch.get("face") and item["name"] == ch["face"]["part"]:

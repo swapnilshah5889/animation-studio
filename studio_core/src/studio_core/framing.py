@@ -36,7 +36,9 @@ def figure_boxes(
     past the edge is not a crop."""
     scale = char["scale"]
     heads = [b for b, sp in char["bones"].items() if sp["role"] == "head"]
-    shins = [b for b, sp in char["bones"].items() if sp["role"] == "shin"]
+    from studio_core.motions.gait import foot_bones
+
+    shins = foot_bones(char)
     root = next(b for b, sp in char["bones"].items() if sp["parent"] is None)
     head = heads[0]
     reach = (char["bones"][head]["length_px"] + hair_above_px) * scale
@@ -77,12 +79,13 @@ def check_framing(
     camera_track: list[list[float]],
     size: tuple[int, int],
     margins: Margins = Margins(),  # noqa: B008
+    half_w_px: float = 170.0,
 ) -> list[dict[str, Any]]:
     """Every frame where the head, the feet or a side of the character is closer to the frame
     edge than the margin (or outside it). [] means the framing holds for the whole shot."""
     w, h = size
     bad = []
-    for f, box in enumerate(figure_boxes(char)):
+    for f, box in enumerate(figure_boxes(char, half_w_px=half_w_px)):
         x0, y0, x1, y1 = screen_box(box, tuple(camera_track[f]), size)  # type: ignore[arg-type]
         problems = []
         if y0 < margins.top * h:
