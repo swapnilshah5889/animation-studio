@@ -53,3 +53,29 @@ def test_the_feet_define_the_ground_and_the_head_is_above_the_body(built):
     view = load_rig(built / "rig.json").view("front")
     pose = world_pose(view)
     assert pose["head"][0].y > pose["upper_arm_l"][0].y > pose["thigh_l"][0].y
+
+
+def test_the_walk_keeps_the_planted_foot_on_the_ground_and_the_legs_close_the_gap(tmp_path):
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).parents[1] / "scripts/spikes"))
+    import new_character_test as nct
+
+    from studio_core.engines.bake import bake_shot
+    from studio_core.motions.gait import foot_report
+
+    film = tmp_path / "film"
+    build_kenney_puppet(SRC, film / "characters" / "kit", px_per_unit=4, name="kit")
+    ch = bake_shot(film, nct.shot_spec("kit"))["characters"][0]
+    r = foot_report(ch, nct.H - 0.92 * nct.H)
+    # measured on the first review's walk: float 9 px, sink 21 px (a leg image wider than its hip
+    # moved the foot point); now the foot point is under the hip
+    assert r["float"] <= 4.0 and r["sink"] <= 8.0 and r["slide"] <= 8.0, r
+    view = load_rig(film / "characters/kit/rig.json").view("front")
+    assert "pelvis" in view["parts"]  # the see-through gap between the thighs is closed
+
+
+def test_the_leg_canvas_is_symmetric_so_the_foot_point_sits_under_the_hip(built):
+    view = load_rig(built / "rig.json").view("front")
+    p = view["parts"]["thigh_l"]
+    assert p["pivot_px"][0] == pytest.approx(p["size_px"][0] / 2, abs=1.5)

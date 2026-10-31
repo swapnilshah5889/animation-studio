@@ -44,7 +44,7 @@ HEADS = [  # (from s, head image): the expression heads are drawn art, swapped p
     (0.0, "head"),
     (1.7, "headShock"),  # a surprised hello as the wave starts
     (2.4, "head"),
-    (3.6, "headFocus"),  # focused while talking
+    # (the 'headFocus' head read as grumpy while talking in the first review: the default head)
 ]
 
 
@@ -66,10 +66,10 @@ def shot_spec(cid: str) -> dict:
                 "actions": [
                     {"motion": "idle_breathe", "start_s": 0.0},
                     {
-                        "motion": "walk_cycle",
+                        "motion": "walk_step",
                         "start_s": 0.0,
                         "duration_s": 1.7,
-                        "params": {"energy": 0.6},
+                        "params": {"energy": 0.9, "lift": 1.5},
                     },
                     {
                         "motion": "wave",
@@ -98,6 +98,8 @@ def swap_variants(bake: dict, rig_dir: Path) -> None:
         swaps = {}
         if head != "head":
             swaps["head"] = str(base / variants[head])
+        if 2.0 <= t < 3.4:  # the waving hand is open (drawn by code), not the mitten
+            swaps["hand_r"] = str(base / variants["handOpen_mirror"])
         root = fr["bones"]["torso"]
         for tag, mirror in (("l", ""), ("r", "_mirror")):
             b = f"thigh_{tag}"

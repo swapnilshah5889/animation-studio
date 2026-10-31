@@ -321,10 +321,19 @@ def pose(built_ch, frame):
     if built_ch["head"] and "head" in fr:
         obj, mat = built_ch["head"]
         mat.node_tree.nodes[mat["tex"]].image = image(fr["head"])
-    for name, path in fr.get("part_images", {}).items():  # a turned head's hair (D-097)
+    want = fr.get("part_images", {})
+    swapped = built_ch.setdefault("swapped", set())
+    for name in swapped - set(want):  # a part not swapped this frame goes back to its own drawing
+        m = built_ch.get("mats", {}).get(name)
+        part = next(p for p in ch["parts"] if p["name"] == name)
+        if m:
+            m.node_tree.nodes[m["tex"]].image = image(str(Path(ch["rig_dir"]) / part["file"]))
+    swapped.clear()
+    for name, path in want.items():  # a turned head's hair (D-097), a bent leg, an open hand
         m = built_ch.get("mats", {}).get(name)
         if m:
             m.node_tree.nodes[m["tex"]].image = image(path)
+            swapped.add(name)
 
 
 first, last = 0, bake["n_frames"] - 1

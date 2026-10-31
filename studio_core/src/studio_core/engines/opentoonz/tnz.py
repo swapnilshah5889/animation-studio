@@ -134,7 +134,7 @@ def build_tnz(
         f'<properties><cameras>{CAMERA_XML}</cameras><outputs><output name="main">'
         f"<range>0 {frames - 1}</range><step>1</step><shrink>1</shrink><fps>{FPS}</fps>"
         f'<path>"{out}"</path><bpp>32</bpp><resquality>1</resquality></output></outputs>'
-        f"<bgColor>255 255 255 {0 if transparent else 255}</bgColor></properties>"
+        f"<bgColor>{'0 0 0 0' if transparent else '255 255 255 255'}</bgColor></properties>"
         f"<levelSet><levels>{lv}</levels></levelSet>"
         f"<xsheet><columns>{''.join(cols)}</columns><pegbars>{''.join(pegs)}"
         "<grid_dimension>1</grid_dimension></pegbars>"

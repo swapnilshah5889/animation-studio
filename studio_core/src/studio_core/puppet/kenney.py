@@ -33,7 +33,7 @@ XLINK = "{http://www.w3.org/1999/xlink}href"
 GROUPS: dict[str, list[str]] = {  # canvas group -> symbol names sharing it
     "leg": ["leg", "legBend"],
     "arm": ["arm"],
-    "hand": ["hand"],
+    "hand": ["hand", "handOpen"],
     "body": ["body", "bodyBack"],
     "head": ["head", "headFocus", "headShock", "headBack"],
 }
@@ -44,7 +44,23 @@ LIMITS = {
     "hand": (-60, 60),
     "thigh": (-35, 35),
 }
+LEG_IN = 4.0  # units: the thighs sit this much closer together (the art leaves a wide gap)
+# An open hand, drawn by code (the set has only a mitten): palm, four fingers, a thumb, pointing
+# down from the wrist like the mitten. Units match the SVG sheet, origin at the wrist.
+OPEN_HAND_SVG = (
+    '<g fill="none" stroke="#BF7958" stroke-linecap="round" stroke-linejoin="round">'
+    '<path stroke-width="2.7" d="M -6.6 6 L -7.6 12"/>'
+    '<path stroke-width="2.7" d="M -4.2 7 L -4.6 13.5"/>'
+    '<path stroke-width="2.7" d="M -1.7 7 L -1.2 13"/>'
+    '<path stroke-width="2.5" d="M 0.6 6 L 2.2 11"/>'
+    '<path stroke-width="3" d="M -7.4 3.5 L -12 7.5"/>'
+    "</g>"
+    '<path fill="#BF7958" d="M -8 0 Q -8.5 -2 -5 -2.4 L 0 -2.4 Q 3.4 -2 3 0 L 3 6 '
+    'Q 2.6 9 -2.5 9 Q -8 9 -8 6 Z"/>'
+    '<path fill="#A8623F" d="M 3 0 L 3 6 Q 2.6 9 -2.5 9 Q 0.5 8 1 4 Z"/>'
+)
 DRAW_ORDER = [
+    "pelvis",
     "thigh_l",
     "thigh_r",
     "upper_arm_l",
@@ -113,6 +129,17 @@ def _render(defs: ET.Element, ids: list[str], px: float, pad: int = 60) -> Image
     return Image.open(io.BytesIO(png)).convert("RGBA")
 
 
+def _render_raw(body: str, px: float, pad: int = 60) -> Image.Image:
+    import cairosvg
+
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{2 * pad * px}" height="{2 * pad * px}" '
+        f'viewBox="{-pad} {-pad} {2 * pad} {2 * pad}">{body}</svg>'
+    )
+    return Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode()))).convert("RGBA")
+
+
 def _symbol_ids(defs: ET.Element, name: str) -> list[str]:
     ids = {e.get("id") for e in defs.iter() if e.get("id")}
     return sorted(i for i in ids if i and i.startswith(name + "_0_Layer0"))
@@ -136,13 +163,21 @@ def build_kenney_puppet(
         str, dict[str, Any]
     ] = {}  # group -> {"box": (x0,y0,x1,y1) units, "imgs": {sym: img}}
     for group, symbols in GROUPS.items():
-        renders = {s: _render(defs, _symbol_ids(defs, s), px) for s in symbols}
+        renders = {
+            s: _render_raw(OPEN_HAND_SVG, px)
+            if s == "handOpen"
+            else _render(defs, _symbol_ids(defs, s), px)
+            for s in symbols
+        }
         pad = 60
         boxes = [im.getchannel("A").getbbox() for im in renders.values()]
         x0 = min(b[0] for b in boxes)
         y0 = min(b[1] for b in boxes)
         x1 = max(b[2] for b in boxes)
         y1 = max(b[3] for b in boxes)
+        if group == "leg":  # the foot point (bottom centre) sits under the hip: the gait solver
+            m = max(pad * px - x0, x1 - pad * px)  # and the foot rules both assume it
+            x0, x1 = int(pad * px - m), int(pad * px + m)
         canvases[group] = {
             "box_px": (x0, y0, x1, y1),
             "pad": pad,
@@ -194,9 +229,10 @@ def build_kenney_puppet(
         ("headFocus", "head"),
         ("headShock", "head"),
         ("headBack", "head"),
+        ("handOpen", "hand"),
     ):
         for sign, tag in ((1, ""), (-1, "_mirror")):
-            if tag and group != "leg":
+            if tag and group not in ("leg", "hand"):
                 continue
             img = canvases[group]["imgs"][sym]
             if sign < 0:
@@ -210,7 +246,10 @@ def build_kenney_puppet(
     head_o = L["head"].origin
     arm_o = {"l": L["arm_l"].origin, "r": L["arm_r"].origin}
     hand_o = {"l": L["hand_l"].origin, "r": L["hand_r"].origin}
-    leg_o = {"l": L["leg_l"].origin, "r": L["leg_r"].origin}
+    leg_o = {
+        "l": (L["leg_l"].origin[0] - LEG_IN, L["leg_l"].origin[1]),
+        "r": (L["leg_r"].origin[0] + LEG_IN, L["leg_r"].origin[1]),
+    }
 
     def part(name_: str, group: str, sign: int, origin: tuple[float, float], bone: str):
         w, h = size(group)
@@ -221,7 +260,28 @@ def build_kenney_puppet(
             "bone": bone,
         }
 
+    # a pelvis behind the legs closes the see-through gap between the thighs (the reviewer read it
+    # as a pasted slab): shorts colour at the top, skin below, colours sampled from the leg art
+    leg_img = canvases["leg"]["imgs"]["leg"]
+    lpx, lpy = pivot("leg", 1)
+    shorts = leg_img.getpixel((int(lpx + 2 * px), int(lpy + 3 * px)))
+    skin = leg_img.getpixel((int(lpx + 2 * px), int(lpy + 9 * px)))
+    pw, ph = int(18 * px), int(15 * px)
+    pelvis = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
+    split = int((leg_o["l"][1] - body_o[1] + 7) * px)
+    for y in range(ph):
+        for x in range(pw):
+            pelvis.putpixel((x, y), shorts if y < split else skin)
+    pelvis.save(pdir / "pelvis.png")
+    files["pelvis"] = "parts/front/pelvis.png"
+
     parts = {
+        "pelvis": {
+            "file": files["pelvis"],
+            "size_px": [pw, ph],
+            "pivot_px": [pw / 2, 0.0],
+            "bone": "torso",
+        },
         "thigh_l": part("thigh_l", "leg", 1, leg_o["l"], "thigh_l"),
         "thigh_r": part("thigh_r", "leg", -1, leg_o["r"], "thigh_r"),
         "upper_arm_l": part("upper_arm_l", "arm", 1, arm_o["l"], "upper_arm_l"),

@@ -329,7 +329,7 @@ def _stride_walk(ctx: MotionContext) -> Clip | None:
     legs = {side: _leg(ctx, side) for side in SIGN}
     length = min(leg[1] for leg in legs.values())
     steps, stride = stride_plan(travel[f1] - travel[f0], length)
-    lift_px = FOOT_LIFT * length
+    lift_px = FOOT_LIFT * length * float(ctx.params.get("lift_gain", 1.0))
     arm = ctx.lerp(8, 18)
     root = ctx.bone("torso")
     sides = list(SIGN)  # sides[k % 2] is planted during step k
@@ -447,33 +447,35 @@ def walk_step(ctx: MotionContext) -> Clip:
     small torso sway toward the planted leg. A side-view part set would show the swing better;
     the front-view puppet has none, so this is the best the rig allows. The motion data stays
     in code: everything derives from the lift the stride already computes."""
+    gain = ctx.lerp(1.2, 1.7) * float(ctx.params.get("lift", 1.0))  # x walk_cycle's foot lift
+    ctx.params = {**ctx.params, "lift_gain": gain}  # the stride keeps the sole on the ground
     base = walk_cycle(ctx)
-    sides = [s for s in SIGN if ctx.has("thigh", s) and ctx.has("shin", s)]
+    sides = [s for s in SIGN if ctx.has("thigh", s)]  # shins are optional (one-piece legs)
     if not sides or ("shift", ctx.bone("thigh", sides[0])) not in base.channels:
         return base
     direction = 1.0 if float(ctx.params.get("dir", 1.0)) >= 0 else -1.0
-    gain = ctx.lerp(1.2, 1.7)  # the foot rises this many times walk_cycle's lift
     knee, sway, swing = ctx.lerp(22, 42), ctx.lerp(1.5, 3.0), ctx.lerp(1.8, 2.6)
-    lifts: dict[str, dict[int, float]] = {}
-    for side in sides:
-        thigh = ctx.bone("thigh", side)
-        keys = [
-            Key(k.frame, Vec(k.value.x, k.value.y * gain), k.interp)
-            for k in base.channels[("shift", thigh)]
-        ]
-        base.channels[("shift", thigh)] = keys
-        lifts[side] = {k.frame: k.value.y for k in keys}
+    lifts: dict[str, dict[int, float]] = {
+        side: {k.frame: k.value.y for k in base.channels[("shift", ctx.bone("thigh", side))]}
+        for side in sides
+    }
     peak = max((v for d in lifts.values() for v in d.values()), default=0.0) or 1.0
     frames = sorted({f for d in lifts.values() for f in d})
     limits: dict[str, tuple[float, float]] = {}
     for side in sides:
-        shin = ctx.bone("shin", side)
-        base.channels[("angle", shin)] = [
-            Key(f, direction * knee * max(0.0, min(1.0, lifts[side].get(f, 0.0) / peak)), L)
-            for f in frames
-        ]
-        lim = ctx.view["bones"][shin]["limits_deg"]
-        limits[shin] = (min(lim["min"], -knee), max(lim["max"], knee))
+        has_shin = ctx.has("shin", side)
+        if has_shin:
+            shin = ctx.bone("shin", side)
+            base.channels[("angle", shin)] = [
+                Key(
+                    f,
+                    direction * knee * max(0.0, min(1.0, lifts[side].get(f, 0.0) / peak)),
+                    L,
+                )
+                for f in frames
+            ]
+            lim = ctx.view["bones"][shin]["limits_deg"]
+            limits[shin] = (min(lim["min"], -knee), max(lim["max"], knee))
         if not ctx.has("upper_arm", side):
             continue
         arm = ctx.bone("upper_arm", side)
