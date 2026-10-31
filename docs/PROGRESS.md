@@ -51,6 +51,17 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-31: Blender foundations bake-off (no decision yet)
+
+**Done:** after the owner rejected the flat Mia (clip_v3, "very very bad"), built two Blender candidates by code and put them next to
+the flat one in `~/ai-studio/scratch/blender-compare/compare.mp4`: B Grease Pencil strokes (2D, 5/10 by its builder) and C a
+procedural 3D rig with cel shading (6/10, breaks the strict-2D rule). Details in `docs/spikes/blender-foundations.md`.
+**Not verified:** neither clip was reviewed frame by frame by its builder or by an independent reviewer; scores are the builders'.
+**Open question for the owner:** after watching compare.mp4, is 2.5D (C) acceptable, or should the 2D route (B, with a drawing per
+view) get a second round? No decision recorded in DECISIONS.md until the owner chooses.
+
+---
+
 ## 2026-10-31: Mia round 3, framing, walk, head shape (D-098)
 
 **Done and verified:** `clip_v3.mp4`, `sheet_v3.png` in `~/ai-studio/scratch/rigged-character-test/`. Framing rule in code
