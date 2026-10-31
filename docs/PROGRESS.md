@@ -51,6 +51,17 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-31 (later): Grease Pencil round 2, whole character redrawn per frame
+
+**Done:** the owner liked the Grease Pencil route but called the character quality bad. Round 2 redraws Mia per frame from pose
+numbers (model sheet, tapered outlines, bending limbs, heel-and-ball walk, a blended turn). Files in
+`~/ai-studio/scratch/blender-compare/grease-pencil-r2/`. **Independent review: NEEDS WORK**: better than the flat puppet, not yet
+passable; two majors (the walk is a shuffle without clear key poses; the side-view head and hair read as a beanie with a stick nose).
+The turn, front face and line quality work. Details in `docs/spikes/blender-foundations.md`. **Not done:** fixes for the two majors,
+hands, collar, boots, a back view, audio. Waiting for the owner on whether to run round 3 on the two majors.
+
+---
+
 ## 2026-10-31: Blender foundations bake-off (no decision yet)
 
 **Done:** after the owner rejected the flat Mia (clip_v3, "very very bad"), built two Blender candidates by code and put them next to

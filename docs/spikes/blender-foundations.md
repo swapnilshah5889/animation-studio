@@ -30,3 +30,23 @@ but needs a drawing per view. See PROGRESS for the open question to the owner.
 Code: `scripts/spikes/blender_gp/blender_gp_mia.py`, `scripts/spikes/blender_toon3d/mia_toon3d.py`.
 
 Owner verdict after watching: **A is the worst of the three** (D-099). B versus C is still open.
+
+## Grease Pencil round 2 (character craft)
+
+The owner's note: the tool is right, the character quality is bad. Round 2 (`scripts/spikes/blender_gp/blender_gp_mia_r2.py`,
+files in `~/ai-studio/scratch/blender-compare/grease-pencil-r2/`) redraws the whole character every frame from pose numbers
+(no bones, no rigid pieces): designed model sheet, thick-thin outlines, one shadow shape per form, bending limbs, heel-and-ball walk,
+hair and hem lag, a turn that blends front, three-quarter and side drawings, a wave with anticipation.
+
+**Independent review of the clip (separate agent, `review/review.md`): NEEDS WORK** (no blocker, two majors; better than the flat
+puppet, "clearly"; passable for a children's video: "not yet, strictly"). Majors: (1) the walk is a short shuffle with no clear
+contact, down, passing and up poses, a rigid torso, small arm swing, feet slightly skating (judged by eye); (2) the side-view head
+and hair: a hatched beanie with a flap stuck on, a stick-thin nose past the outline, a stray tick on the hair, a squiggle mouth
+(the model sheet has the same problem, so it is the art). Minors: front brows read stern, the wave hand is small and partly behind the
+hair, one squint frame, the character is small in an empty background. What works: the turn from profile to front (head and body as one
+form in about 0.4 s, no pop), the front face, consistent line and colour. The builder's own notes also list oversized fist-like hands,
+a flat coat without a collar, blocky boots and an unlabeled sheet without a back view. 0 motion spikes. Not checked: audio, a real
+background, foot sliding other than by eye.
+
+Next, if the owner wants it: fix the two majors (a real walk with a longer stride, bob, lean and foot lift; a drawn side head with
+a chin, a nose inside the outline and designed hair), then re-review.
