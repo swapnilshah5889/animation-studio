@@ -1,0 +1,44 @@
+# Character-art proof: Rowan
+
+**Date:** 2026-10-31
+**Decision:** D-105
+**Outcome:** FAIL; no rig approved.
+
+## Setup
+
+Two local ComfyUI generations with SDXL Base 1.0 and StorybookRedmondV2 LoRA. No downloads or installs. The first image used 30 steps, CFG 6, DPM++ 2M Karras, seed 418027351. The second used the same model/settings with seed 731904286. Final scratch images and JSON run records are in `~/ai-studio/scratch/character-art-proof/`.
+
+## Results
+
+- First image: adult-looking front figure plus clothing diagrams; it did not provide the requested matching views or face detail.
+- Second image: richer watercolor detail and readable normal faces, but three different children appear. Hair, clothing and proportions differ; no clear front/three-quarter pair, no face-detail panel, and no composite against the existing meadow plate.
+- Independent reviewer verdict: **FAIL**. Blocker: three characters instead of one. Majors: no identity-consistent front/three-quarter pair; missing face detail and design description. Minor: foliage is part of the generated art rather than the existing forest plate.
+- No animation, rigging or engine behavior was reviewed.
+
+## Next-step recommendation (not yet approved)
+
+Select one canonical illustration before generating views. Then create the three-quarter view by reference-conditioned image editing, compare the face, hair, outfit and proportions against the canonical view, and only build a model sheet/rig after independent identity review passes. Do not reuse the current multi-view prompt workflow as a consistency guarantee.
+
+## Prompts
+
+### Seed 418027351
+
+```text
+KidsRedmAF, illustrated storybook character design sheet, clean hand-painted ink and watercolor texture, warm gentle children's book illustration. One original 9-year-old forest explorer child named Rowan, full body, large readable figure with unmistakable silhouette: short sturdy child proportions, oversized soft moss-green hooded capelet with broad rounded shoulder shape, asymmetrical hem and small acorn-shaped wooden clasp, rust-red quilted vest, cream linen shirt, deep teal knee-length shorts, ochre socks, sturdy brown boots, small crossbody satchel with a stitched fern motif and two tiny brass leaf charms. Layered fabrics visibly distinct: brushed wool cape, quilted cotton vest, linen shirt, leather boots, woven strap; fine restrained seams and embroidery, details readable at full figure scale. Forest palette of moss, fern, bark brown, muted cranberry, warm cream and subdued golden ochre. Painterly edges, delicate dark olive linework, soft natural light, subtle paper grain, richly designed but uncluttered. Model sheet layout on warm pale parchment background with three clearly separated panels: left full-body FRONT view, center full-body THREE-QUARTER view turned slightly toward viewer, right enlarged FACE DETAIL. Exactly the same child, same outfit, same proportions, same short wavy dark chestnut hair with one small fern-green hair clip in all views. Face front-facing in front and face detail: exactly two level evenly spaced dark brown eyes, one tiny simple nose, one small closed friendly mouth; clean unmarked cheeks, no freckles, no face decorations. No text, no labels, no border, no extra figures, no props beyond described clothing accessories.
+```
+
+### Seed 731904286
+
+```text
+KidsRedmAF, hand-painted watercolor and ink children’s storybook illustration, original character Rowan, unmistakably an 8-year-old child, short child height, large head relative to body, compact torso, short arms and legs, round soft child face. Exactly two full-body views of the SAME child side-by-side at equal scale: left a straight front view, right a three-quarter view turned slightly toward viewer. Both standing neutrally, entire head and boots visible, generous clean space between figures. Preserve this exact design in both views: moss-green hooded capelet worn down on shoulders, rust-red vest, cream shirt, deep teal shorts, ochre socks, brown boots, small crossbody satchel with a clear fern motif, short chestnut hair and one small green hair clip. Warm restrained forest palette, gentle painterly paper texture, fine clean olive linework, readable simple shapes, childlike rounded proportions, clear silhouette. Plain pale warm cream background. Face visible in both views, exactly two level eyes, one small nose and one small closed mouth, no marks on cheeks.
+```
+
+### Negative prompt (both runs)
+
+```text
+text, letters, labels, watermark, logo, extra person, duplicate child, adult, teen, baby, photoreal, 3d render, plastic, glossy, anime, huge eyes, asymmetrical eyes, third eye, extra eyes, eye-like dots, freckles, cheek spots, face marks, eyebrows resembling eyes, extra nose, extra mouth, open mouth, teeth, beard, makeup, clutter, excessive jewelry, weapons, frightening, grim, sexualized, cropped feet, cropped head, missing limbs, fused limbs, extra fingers, bad hands, inconsistent outfit, mismatched views, different character, hat, hood covering face, modern branding
+```
+
+## Independent review
+
+Reviewer followed `docs/craft/visual-review.md` without seeing the artist assessment. The face is small and readable with two eyes, a small nose and restrained mouth; the watercolor rendering, layered clothing and green-brown palette work. The identity and sheet-layout failures above prevent a pass. The existing-plate composite, animation and rig behavior were not checked.

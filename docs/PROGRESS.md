@@ -2,9 +2,36 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** owner reopened the creative character-art source (D-105) while keeping Blender. Next is one
-design-only character proof with more visual detail, a normal face, and a style that belongs in the existing painted
-forest. No rigging or animation until independent review and owner approval.
+**Current step:** the D-105 character-art proof failed independent review. The watercolor/detail direction and face were
+promising, but local SDXL did not produce one consistent character across views. No rigging or animation has started.
+Recommended next step: approve one canonical view first, then use reference-conditioned editing for other views and
+review identity consistency before building a rig.
+
+## 2026-10-31: Rowan character-art proof failed (D-105)
+
+Used the installed local SDXL Base 1.0 checkpoint and StorybookRedmondV2 LoRA (no downloads or installs). Two prompts
+were run: seed `418027351` produced an adult-looking single figure plus a costume board; seed `731904286` produced a
+more childlike watercolor image, but it showed three distinct children with different hair, clothing and proportions,
+not a front/three-quarter pair of one design. The second image's faces were normal and its palette, layered outdoor
+clothing and watercolor texture were promising. It did not include the required face detail or a composite on the
+existing forest plate. Images and complete prompt/seed notes are outside the repo at
+`~/ai-studio/scratch/character-art-proof/`.
+
+**Independent review:** FAIL. Blocker: three visible characters instead of one. Majors: no matching front/three-quarter
+views; missing face detail and written design description. Minor: forest-like foliage was generated into the sheet,
+not composited on the existing plate. Animation and rigging were not evaluated. No character is approved for rigging.
+
+**Finding and recommendation:** the current one-shot SDXL multi-view workflow does not reliably preserve character
+identity or obey model-sheet layout, even when the face and painting style improve. Do not spend time on rigging or
+more style polish yet. Next, get approval on one canonical character illustration; then generate other views by
+reference-conditioned image editing and independently check identity before making a model sheet. This next art step
+is a recommendation only; no further generation was started.
+
+---
+
+**Previous current step:** owner reopened the creative character-art source (D-105) while keeping Blender. The approved
+design-only proof required more detail, a normal face, and a style that belongs in the existing painted forest. No
+rigging or animation until independent review and owner approval.
 
 ## 2026-10-31: owner reopened character-art source (D-105)
 
