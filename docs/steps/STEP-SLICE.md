@@ -1,7 +1,7 @@
-# Step SLICE: one 30-second vertical slice (draft, for owner approval)
+# Step SLICE: one 30-second vertical slice
 
-Status: **draft, waiting for the owner's approval.** Decisions: D-101 (reset), D-102 (stylised 3D characters).
-Nothing else is active until this passes (ROADMAP "Reset").
+Status: **owner-approved 2026-10-31, as amended by D-102.** The look gate has not passed, so animation is paused.
+Nothing else is active until the slice passes (ROADMAP "Reset").
 
 ## Target look
 

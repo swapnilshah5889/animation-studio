@@ -2,9 +2,25 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** vertical slice task 2 is rendered and independently reviewed. Waiting for the owner's choice of look
-direction before any animation. Blender only; Rain and Snow rigs checked in Blender 5.2.3. The slice brief's status label
-and older D-101 history still need reconciliation with D-102 and the owner's approvals.
+**Current step:** vertical slice task 2 has not passed its drawn-look gate. The owner delegated the look choice to us;
+we pursued painterly 2.5D, but independent reviewers still see a CG character over painted art. No animation has started.
+Blender only; Rain and Snow rigs remain frozen. We need the owner's direction on whether to harmonize the background with
+the character's toon treatment or reopen the character-art constraint.
+
+## 2026-10-31: Rain look gate failed; stopped before animation
+
+The owner asked us to choose the best 2.5D direction and continue. We kept Blender, the Rain rig and the same painted
+forest, and tested three levels of treatment: the original soft-lit render, localized character-only texture/value
+processing with face restoration, and actual EEVEE three-band toon shading with Freestyle contours. All stills were
+1920x1080; output is outside the repo at `~/ai-studio/scratch/slice-look/`.
+
+**Independent verdicts:** the original flat 2D and painterly 2.5D candidates both received NEEDS WORK; the 2.5D issue
+was a visible CG-character/painted-background style gap. The refined character-only treatment also received NEEDS WORK.
+The toon-shader proof, after removing crease lines and increasing the silhouette outline, still received NEEDS WORK for
+the same style gap. Face landmarks are readable on the final toon proof; motion, turns, dialogue, transitions, and film
+quality were not evaluated. This is a failed look gate, not a film result. We stopped before animation rather than
+building the four-shot slice on a look that reviewers found visibly inconsistent. Details and next-step options are in
+`docs/spikes/rain-toon-look.md`.
 
 ---
 

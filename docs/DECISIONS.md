@@ -1836,3 +1836,11 @@ The owner gave two reference clips: a lush, softly lit painted 2D scene and a st
 The owner requires a single source of truth for skills and instructions, independent of coding-agent brand. The canonical
 procedures live under `skills/<name>/` and rubrics under `docs/craft/`; no agent-specific skill Markdown or adapter copies
 are maintained. Every agent reads the same repo-native files directly.
+
+## D-104: Do not animate the Rain slice until the drawn-look gate passes (2026-10-31)
+The owner delegated the 2D/2.5D choice to the orchestrator, who selected painterly 2.5D as the direction to pursue.
+Independent reviews of the original stills, a localized character-texture pass, and an EEVEE cel-shading/Freestyle proof
+all returned NEEDS WORK: the 3D character still reads apart from the painted forest. The final toon proof has a readable
+face, but a single still says nothing about motion. No treatment is adopted, and animation is paused until the visual
+mismatch has a viable solution. Recommended next decision: allow a unified illustrative treatment across the painted plate
+and character; if that still fails, reopen the character-art constraint. See `docs/spikes/rain-toon-look.md`.
