@@ -1818,3 +1818,8 @@ drawing per view) and C (3D with cel shading, needs 2.5D approval) is still open
 
 ## D-100: Replace Mia with a ready-made CC0 cast for the Blender and OpenToonz tests (2026-10-31)
 The owner rejected Mia ("I hate mia") after the round-3 review. Four rounds of home-made art did not reach the bar, so test the engines on professionally drawn, consistent art with separate limbs: Kenney "Toon Characters 1" (CC0, recorded in `docs/MODELS.md`), using the Female person and the Robot. Why: the bake-off showed art, not the engine, is the limit (D-090, D-095); a clean flat cast with hidden-limb art, back views and expression heads removes that variable. Costs: game-style proportions (short, chibi), one fixed mouth, small raster parts (use the SVG). Mia code (`face_layout`, `framing`, `gait`, smoothing) stays as engine-neutral rules. This does not approve 3D.
+
+Update (2026-10-31, spike `docs/spikes/new-character-engines.md`): rebuilt Kenney "Female person" from the SVG and ran one 6 s shot
+through Blender and OpenToonz; both clips FAILED the independent review for fixable reasons (leg gap, face choice, fist wave, walk),
+and the art is a real step up from Mia. The engines tie; keep both adapters. Two adapter bugs fixed (Blender unscaled rest armature,
+OpenToonz scale/camera/swaps/transparency).

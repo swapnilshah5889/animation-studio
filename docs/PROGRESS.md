@@ -51,6 +51,20 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-31 (late): new character (Kenney, CC0) on Blender and OpenToonz
+
+**Done and verified:** Kenney "Female person" rebuilt from its SVG as an engine-neutral rig (`puppet/kenney.py`) and the same 6 s
+shot rendered through Blender and OpenToonz (`compare.mp4`, ~/ai-studio/scratch/new-character-test/). Engine bugs fixed on the way:
+the Blender harness rest armature was unscaled (a collapsed figure at scale 0.6, a 12% error for Mia); the OpenToonz adapter gained
+part scale, a keyed camera, drawing-swap cells and a transparent mode. **Independent review: both clips FAIL** (a see-through gap
+between the legs reads as a slab (blocker), a grumpy talking face, a fist wave, a shoe-shuffle walk); the art is a real step up
+from Mia; the engines look almost the same, OpenToonz slightly better. Details and the quick-win list in
+`docs/spikes/new-character-engines.md`. **Not done:** Blender NLA and mocap walk, Track-To dolly, Plastic, the Robot, fixes for the
+review findings (time box). Deleted my regenerable scratch intermediates (frames, composites, OpenToonz project and raw frames, the
+Mia film, old Mia clips).
+
+---
+
 ## 2026-10-31 (later): Grease Pencil round 2, whole character redrawn per frame
 
 **Done:** the owner liked the Grease Pencil route but called the character quality bad. Round 2 redraws Mia per frame from pose
