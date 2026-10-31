@@ -2,9 +2,41 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the vertical slice (ROADMAP "Reset", D-101, D-102). Blender only; stylised 3D characters (Blender
-Studio's Rain and Snow, CC-BY) in painted backgrounds. Next: the owner approves `docs/steps/STEP-SLICE.md`, then task 1
-(rig check on Blender 5.2.3). Everything else is paused. Owner preferences and process rules are in `AGENTS.md`.
+**Current step:** the vertical slice (ROADMAP "Reset", D-101, D-102). Blender only; Rain and Snow rigs checked in Blender
+5.2.3. Next: render the approved 2D and 2.5D look stills side by side and get the owner's choice before animating. The slice
+brief's status label and older D-101 history still need reconciliation with D-102 and the owner's approvals.
+
+---
+
+## 2026-10-31: handoff, next task for any agent (slice task 2, the look test)
+
+The owner is handing the work to another coding agent. Everything needed is in the repo; read `AGENTS.md`, ROADMAP "Reset",
+D-101, D-102 and its amendment, and `docs/steps/STEP-SLICE.md`. State: slice task 1 (rig check) is done; task 2 is next.
+
+**Task 2, the look test (60 min box):**
+- Assets: Rain `~/ai-studio/assets/blender-studio-rigs/rain/Rain v3.3/rain_v3.2.blend`, Snow `.../snow/Snow/snow_v4.2.blend`
+  (CC-BY, credits in `docs/MODELS.md`). Blender 5.2.3 at `/opt/homebrew/bin/blender`, run headless (`blender -b file.blend
+  --python script.py -- args`). Engine id is `BLENDER_EEVEE`. `scripts/spikes/rig_check.py` shows the pattern (bounds, camera).
+- Rigs are CloudRig. Autoexec is off by default; the bundled `cloudrig.py` UI is not needed to render. Say so if posing needs it.
+- Scene: a painted golden-hour meadow at the forest edge (`comfy_mcp` `generate_background`, or ComfyUI directly; unload
+  Ollama first, one large model at a time; if ComfyUI is unavailable use a simple painted-style plate and say so). Rain in a
+  relaxed standing pose (arms down via the FK arm controls, not the T-pose).
+- Render the same framing twice at 1920x1080: (a) **flat 2D look**: 2 to 3 tone cel shading (Shader to RGB + constant colour
+  ramp, flat colours sampled from her textures), Line Art outlines; (b) **painterly 2.5D look**: soft cel shading, warm key
+  and rim light, glow, depth of field. Both must read as drawn, never CG (D-102 amendment). Output side by side to
+  `~/ai-studio/scratch/slice-look/` (outside the repo).
+- Review with `skills/animation-review/README.md` against `docs/craft/visual-review.md` by a reviewer that did not build it
+  (a separate agent run), record the verdict honestly, show the owner, and stop: the owner picks or mixes a look before task 3.
+- Commit the script under `scripts/spikes/`, add a PROGRESS entry, clean intermediates, push to `main`.
+
+**Housekeeping:** `scripts/run_first_shot.py` has an old uncommitted formatting change that is not part of this work; leave it
+or ask the owner. The memory-budget test `test_compose_within_the_memory_budget` fails while ComfyUI is running (known).
+
+## 2026-10-31: one agent-neutral skill source (D-103)
+
+Removed the Claude and Codex animation-review skill pointer files. `skills/animation-review/README.md` and
+`docs/craft/visual-review.md` are the shared procedure and rubric; `AGENTS.md` now prohibits platform-specific skill or
+instruction Markdown copies. Unrelated local configuration was left alone.
 
 ---
 
