@@ -42,7 +42,8 @@ changed direction on their own.
   (D-031 stays the long-term plan); Synfig is legacy. No more engine comparisons.
 - **Cast: ready-made CC-BY 3D rigs from Blender Studio, Rain and Snow** (D-102; the Kenney cast is retired).
   No new character art until the slice passes.
-- **Look:** stylised 3D characters, soft painterly lighting, painted backgrounds with depth (D-102). The owner's
+- **Look:** 2D or 2.5D (the owner's end goal): 3D rigs rendered to look drawn (cel shading, outlines), painted
+  backgrounds with depth (D-102). The owner's
   references (2026-10-31) are a lush, softly lit painted 2D scene and a stylised 3D feature teaser; the
   target is a short, well-lit cinematic children's scene, not feature-film quality.
 

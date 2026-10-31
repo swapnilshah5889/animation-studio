@@ -28,9 +28,11 @@ Read these before doing anything, in this order:
 
 - **Fully local at runtime.** No paid APIs and no API keys. After models are downloaded, the whole
   pipeline must run offline. (A free Hugging Face token for gated *downloads* is fine.)
-- **Stylised 3D characters in a painterly 2.5D world (owner's decision 2026-10-31, D-102).** Characters may be
-  3D rigs rendered in a soft, painterly, toon-like way in Blender; backgrounds stay painted plates and layers.
-  No photoreal 3D. The earlier "2D only, cut-out puppets" rule is retired; the cut-out pipeline is legacy.
+- **The finished films look 2D or 2.5D (owner, 2026-10-31, D-102).** To get there, characters may be 3D rigs
+  rendered to look drawn (cel shading, line outlines, painted textures, optionally animated on twos) in Blender,
+  in front of painted backgrounds in depth. 3D is a production means, not the look: no photoreal or obviously
+  CG-looking renders. The cut-out puppet pipeline is legacy; hand-drawn 2D (Grease Pencil, OpenToonz) stays the
+  long-term hero tier.
   Anime-style tiers come later (see ARCHITECTURE "Future tiers").
 - **Open-source apps first.** Wrap them through their file formats, command-line tools and APIs
   (level 1). Add in-app plugins (level 2) only when needed, and modify app source (level 3) only as a

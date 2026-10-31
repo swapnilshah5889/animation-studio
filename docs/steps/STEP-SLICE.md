@@ -11,7 +11,8 @@ The owner's references (2026-10-31), described here without names:
 2. A stylised 3D feature teaser: rounded, appealing characters with expressive faces, painterly lighting, depth
    of field, rich environments.
 
-Our target is a short, well-lit, cinematic children's scene in that spirit. It is not feature-film quality: no
+Our target is a short, well-lit, cinematic children's scene in that spirit that **looks 2D or 2.5D**: the
+owner's end goal is 2D/2.5D-style films, and 3D rigs are only how we get reliable motion (D-102). It is not feature-film quality: no
 crowds, cloth or hair simulation, or complex acting.
 
 ## Cast and tools
@@ -45,9 +46,10 @@ crowds, cloth or hair simulation, or complex acting.
 1. **Rig check (30 min):** download, open Rain and Snow in Blender 5.2.3 headless, render a turntable and a
    face-shape sheet, list the controls (body, face, mouth). Record the licence and size in `docs/MODELS.md`.
    Stop and report if a rig fails on 5.2.
-2. **Look test (60 min):** one still of shot 1, with a painted background, soft key and rim light, glow, depth
-   of field and the painterly character shading. Show it to the owner. The look is approved before any
-   animation.
+2. **Look test (60 min):** one still of shot 1 in two looks, same scene, side by side: (a) a **2D look**: flat cel
+   shading (2 to 3 tones), Line Art outlines, painted background; (b) a **painterly 2.5D look**: soft cel shading,
+   soft key and rim light, glow, depth of field. Both must read as drawn, not CG (D-102). The owner picks or mixes
+   them before any animation.
 3. **Motion (90 min):** the walk (retargeted mocap, feet planted, no slide), wave, idle, blink, and lip-sync on
    the face controls. Unit tests for foot slide, framing and the cue-to-mouth timing (±1 frame).
 4. **Assembly (60 min):** four shots, voices, music, sound, cuts, final encode; credits with the CC-BY lines.
