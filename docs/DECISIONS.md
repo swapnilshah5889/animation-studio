@@ -1839,8 +1839,9 @@ are maintained. Every agent reads the same repo-native files directly.
 
 ## D-104: Do not animate the Rain slice until the drawn-look gate passes (2026-10-31)
 The owner delegated the 2D/2.5D choice to the orchestrator, who selected painterly 2.5D as the direction to pursue.
-Independent reviews of the original stills, a localized character-texture pass, and an EEVEE cel-shading/Freestyle proof
-all returned NEEDS WORK: the 3D character still reads apart from the painted forest. The final toon proof has a readable
-face, but a single still says nothing about motion. No treatment is adopted, and animation is paused until the visual
-mismatch has a viable solution. Recommended next decision: allow a unified illustrative treatment across the painted plate
-and character; if that still fails, reopen the character-art constraint. See `docs/spikes/rain-toon-look.md`.
+Independent reviews of the original stills, localized character-texture treatment, EEVEE cel shading/Freestyle, and a
+whole-composite illustrative filter all returned NEEDS WORK. Across them, Rain still reads as a 3D character over painted
+art, or the image treatment reads as a generic filter. The last whole-composite still was self-inspected only, not
+independently reviewed. No treatment is adopted and animation is paused. Recommendation: reopen the character-art source
+while keeping the Blender workflow, rather than accept a CG/paint mismatch or spend more time on filters. See
+`docs/spikes/rain-toon-look.md`.

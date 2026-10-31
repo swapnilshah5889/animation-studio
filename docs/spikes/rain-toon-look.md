@@ -28,7 +28,11 @@ The limitation is not a missing Blender control. With the frozen Rain rig and a 
 and a direct toon shader both leave the character reading as a CG model. Do not spend more time turning isolated shader
 knobs or build the four-shot film on this failed look.
 
-**Recommendation:** keep the painted plate as the source, but test one shared illustrative treatment across both plate and
-character so their edges, value grouping and texture belong to the same visual world. If that cannot pass the independent
-review, ask the owner to reopen the character-art constraint before proceeding. This next move changes visual treatment,
-not engine, cast, model or animation scope.
+**Follow-up:** a shared whole-frame softened/posterized treatment was tried on the toon proof. It kept the forest
+recognizable and the face readable, but looked like a generic filter while Rain still read as 3D. No helper was kept, and
+this still did not receive independent review. It did not close the gap.
+
+**Recommendation:** reopen the character-art source while keeping Blender. The current Rain model's sculpted face and
+rounded forms resist the drawn look through small render treatments. Before making a film, approve a character source or
+design approach intended to match the forest's illustrated style. This is a meaningful change to the frozen cast rule;
+the owner must approve it. Do not quietly substitute another rig or begin a new character build.

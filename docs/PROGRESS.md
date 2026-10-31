@@ -2,10 +2,28 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** vertical slice task 2 has not passed its drawn-look gate. The owner delegated the look choice to us;
-we pursued painterly 2.5D, but independent reviewers still see a CG character over painted art. No animation has started.
-Blender only; Rain and Snow rigs remain frozen. We need the owner's direction on whether to harmonize the background with
-the character's toon treatment or reopen the character-art constraint.
+**Current step:** vertical slice task 2 has not passed its drawn-look gate. A whole-composite illustrative treatment
+was tried on 2026-10-31 and stopped: it reads as a generic softened/posterized filter, while Rain still reads 3D. No
+animation has started. Blender, Rain, and the original forest plate remain fixed.
+
+## 2026-10-31: whole-composite illustrative finish stopped
+
+The owner asked for one genuinely different route after character-only processing and EEVEE toon shading both received
+NEEDS WORK. Using the supplied 1920x1080 `line-refined/rain_toon.png`, I applied restrained global softening, broad
+luminance grouping, and low-opacity contour definition uniformly across Rain and the painted forest. No models, assets,
+or dependencies were loaded, generated, downloaded, or installed.
+
+**Result:** `~/ai-studio/scratch/slice-look/unified/rain_unified.png` and the face inspection crop
+`rain_unified_face.png`. The plate remains recognizable and Rain's eyes, brows, nose, and mouth remain readable, but the
+whole frame has an obvious softened/posterized filter quality and the character still reads as a 3D figure. Stopped at
+the requested guardrail; this is not a viable drawn/coherent look. No rerunnable helper was added because the still was
+not promising. This was visual self-inspection only, not an independent review; animation and film quality were not
+evaluated.
+
+**Next:** do not animate on this treatment. The whole-composite filter route did not close the style gap; the owner can
+choose the next look direction.
+
+---
 
 ## 2026-10-31: Rain look gate failed; stopped before animation
 
