@@ -61,6 +61,19 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-31 (night): Kenney fix round (gap, face, open hand, walk)
+
+**Done and verified:** closed the leg gap (code-drawn pelvis, thighs closer, symmetric leg canvas), default head for talking,
+an open hand for the wave drawn by code, `walk_step` for one-piece legs with the lift inside the stride solver. Foot rule on the
+bake: float 1.5 px, sink 6.9, slide 6.8 (was 9 and 21). Two engine fixes: Blender now reverts swapped textures (it left the bent leg and
+open hand on); OpenToonz transparent mode no longer bleeds white. Clips: `clip_blender.mp4`, `clip_opentoonz.mp4`, `compare.mp4`
+in `~/ai-studio/scratch/new-character-test/`. **Independent review: both NEEDS WORK** (two majors each, identical: the face still
+reads stern, the standing lower body is stacked rectangles with a seam; the walk and the wave are FIXED). No visible engine
+difference. Details in `docs/spikes/new-character-engines.md`. **Not done:** brows, shoe stance, a bigger wave; Track-To dolly,
+NLA, Robot (open). Blender is the one engine from here (D-101).
+
+---
+
 ## 2026-10-31 (late): new character (Kenney, CC0) on Blender and OpenToonz
 
 **Done and verified:** Kenney "Female person" rebuilt from its SVG as an engine-neutral rig (`puppet/kenney.py`) and the same 6 s

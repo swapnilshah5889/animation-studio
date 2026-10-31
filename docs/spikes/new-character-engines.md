@@ -71,3 +71,34 @@ bendy limbs, Blender for anything with real 3D camera or armature features). The
 use the default head for talking, replace the fist wave with an open-hand pose (the pose library has `show`, `cheer` and `talk` PNGs
 to draw hands from), and give the walk a real leg swing (these thighs rotate 35 degrees at most; the art needs the knee-bend variant
 on the lifted leg, which is wired but only switches above an 8 px lift).
+
+
+## Fix round (one round, Blender is the engine from here: D-101)
+
+Changes (the four findings): (1) the thighs sit 4 units closer and a code-drawn **pelvis** part (shorts colour above, skin below,
+sampled from the leg art) closes the gap; the leg canvas is symmetric about the hip so the foot point sits under it (the first
+walk measured float 9 px / sink 21 px because the leg image was wider on one side). (2) the default head replaces `headFocus`
+for talking. (3) an **open hand drawn by code** (palm, four fingers, thumb; the set has only a mitten) is swapped in for the
+wave (2.0 to 3.4 s). (4) `walk_step` now works on one-piece legs (no shin), the foot lift is applied inside the stride solver
+(`lift_gain`, so the sole still lands on the ground), arms swing 2.6x with the hand trailing. Foot rule on the bake after the
+fix: float 1.5 px, sink 6.9 px, slide 6.8 px (thresholds in `tests/test_kenney_rig.py`: 4, 8 and 8; the old numbers were 9 and 21).
+
+Two bugs the render exposed: the Blender harness never **reverted a swapped texture** (a bent leg or the open hand stayed on
+until another swap), which made the first Blender clip look bow-legged; fixed in `build_render.py` (a part not in
+`part_images` goes back to its own drawing). OpenToonz's transparent background bled white edge pixels; the background colour is
+now `0 0 0 0` in transparent mode.
+
+**Independent review (a separate agent, `review.md`, 5 of 5 zooms): Blender NEEDS WORK, OpenToonz NEEDS WORK** (no blocker, two
+majors each, the same in both). Previous findings: leg gap PARTLY (gone and the shoes touch, but a hairline seam and a boxy lower
+body remain, now a major); grumpy face PARTLY (the mouth smiles, but the brows still slant inward, the right brow is clipped by the
+fringe and the pupils sit in the outer corners during the tilt); fist wave FIXED (open fingers at about 2.2 to 2.5 s, but the
+wave is small, brief and sideways); shuffle walk FIXED (legs alternate, shoes lift, the head bobs). Remaining: **major** the face
+still reads stern or sceptical (3 to 6 s); **major** the standing lower body is stacked rectangles with fused feet, flat soles and
+the seam; minor the shoes cross in an X at about 1.0 s and 1.5 s; minor an odd half-white, half-brown mouth; minor audio
+-20.6 LUFS. The motion.csv walk spikes (0.8 to 1.5 s) are a fast legitimate leg swing, not a pop (4.4 s and 5.75 to 5.9 s are mouth and
+eye changes). Engines: no visible difference (mean luma difference 0.16 of 255, per-frame motion equal to 0.01; no fringes);
+every remaining defect is in the shared art. Better than the first version: yes. Passable for a children's TV series: not yet,
+borderline; the reviewer expects two small art fixes (brows, leg and shoe stance) to get it through.
+
+Open (skipped by instruction): Track-To dolly, Blender NLA and a mocap-retargeted walk, OpenToonz Plastic (OpenToonz is parked,
+D-101), the Robot character, a back-view walk, a wider wave (raise the arm higher, longer hold).
