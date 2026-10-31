@@ -2,9 +2,24 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** D-106 is owner-approved. Create one canonical full-body character illustration and independently
-review it; show the owner and wait for approval. Only then generate reference-conditioned turnaround views. No rigging
-or animation until the turnaround sheet also passes independent review and owner approval.
+**Current step:** Rowan's canonical illustration is ready for owner review. Independent review found no blocker or major,
+but returned NEEDS WORK for one minor eye-gaze imbalance. The owner must approve this design before any reference-
+conditioned turnaround is generated. No rigging or animation has started.
+
+## 2026-10-31: canonical character candidate ready (D-106)
+
+Generated one 832×1216 front-view portrait of Rowan with local SDXL Base 1.0 + StorybookRedmondV2 (seed `684291735`,
+30 steps, CFG 6, DPM++ 2M Karras). One generation only; the face crop was derived from that image. Deliverables:
+`~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png`, `rowan-face-crop.png`, and `rowan-notes.json`.
+
+**Independent review:** NEEDS WORK, no blockers or majors. The single child, childlike proportions, two eyes, small nose/mouth,
+layered clothing, and watercolor palette were positive. One minor: the eye on the viewer's right appears slightly higher
+and more outward-looking. The reviewer compared style against the existing forest reference but did not review an exact
+composite. The artist notes that the generated cap, vest/shirt, trousers and leafy setting differ from prompt details;
+the result is a visual candidate, not a locked design.
+
+**Next:** owner review and approval of the canonical character. Only after that may Stage 2 generate reference-conditioned
+views. Do not rig or animate yet.
 
 ## 2026-10-31: owner approved staged character-art workflow (D-106)
 

@@ -15,7 +15,7 @@ Two local ComfyUI generations with SDXL Base 1.0 and StorybookRedmondV2 LoRA. No
 - Independent reviewer verdict: **FAIL**. Blocker: three characters instead of one. Majors: no identity-consistent front/three-quarter pair; missing face detail and design description. Minor: foliage is part of the generated art rather than the existing forest plate.
 - No animation, rigging or engine behavior was reviewed.
 
-## Next-step recommendation (not yet approved)
+## Staged workflow (owner-approved as D-106)
 
 Select one canonical illustration before generating views. Then create the three-quarter view by reference-conditioned image editing, compare the face, hair, outfit and proportions against the canonical view, and only build a model sheet/rig after independent identity review passes. Do not reuse the current multi-view prompt workflow as a consistency guarantee.
 
@@ -42,3 +42,11 @@ text, letters, labels, watermark, logo, extra person, duplicate child, adult, te
 ## Independent review
 
 Reviewer followed `docs/craft/visual-review.md` without seeing the artist assessment. The face is small and readable with two eyes, a small nose and restrained mouth; the watercolor rendering, layered clothing and green-brown palette work. The identity and sheet-layout failures above prevent a pass. The existing-plate composite, animation and rig behavior were not checked.
+
+## Stage 1: canonical Rowan candidate (2026-10-31)
+
+Output: `~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png` (832×1216), with a face crop and full run notes beside it. The image contains one front-facing child, readable full body, layered outdoor clothing, small nose and mouth, and two eyes. The local model changed several requested outfit details and added a leafy forest setting; do not treat the prompt as a locked design specification. Model: SDXL Base 1.0 + StorybookRedmondV2 LoRA (0.9), seed `684291735`, 30 steps, CFG 6, DPM++ 2M Karras. The full prompt is in the adjacent `rowan-notes.json` scratch artifact; the image itself is not committed.
+
+**Independent review verdict: NEEDS WORK.** No blocker or major. Minor: the viewer-right eye is slightly higher and turned outward relative to the other. The watercolor linework, gentle shading, green/teal/ochre/rust palette, child proportions, detail and silhouette were judged promising. Style was compared against the forest reference image but not an exact composite; views, animation and rigging were not checked. The reviewer was separate from the image author and had not seen the author's notes.
+
+**Status:** candidate awaits owner approval. D-106 permits additional reference-conditioned views only after the owner approves this canonical design. No turnaround, rig or animation was created.
