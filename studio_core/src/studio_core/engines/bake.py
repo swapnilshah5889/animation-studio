@@ -107,6 +107,8 @@ def bake_shot(film_dir: Path, shot: dict[str, Any], *, fps: int = FPS) -> dict[s
         offsets = metrics.frame_offsets(view, anim.clips, n)
         smooth_cfg = shot.get("smooth")  # opt-in (D-093); None = off, {} = on with defaults
         if smooth_cfg is not None:
+            if smooth_cfg.get("ground_legs", True):
+                offsets = smooth.ground_legs(offsets, view)
             offsets = smooth.smooth_offsets(
                 offsets,
                 fps,

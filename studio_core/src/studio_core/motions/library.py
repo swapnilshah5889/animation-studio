@@ -350,23 +350,38 @@ def _stride_walk(ctx: MotionContext) -> Clip | None:
         k = min(int(g), steps)
         u = g - k
         hip = s * stride  # hip x from where the walk started
-        fade = min(1.0, 40 * s, 40 * (steps - s))  # the foot settles at the first and last steps
+        # The first and the last step are half steps (the walk starts and ends with the feet
+        # together): the swing foot starts at rest or lands at rest with zero speed, so it neither
+        # jerks off nor skids in. `v` runs 0..1 over the swing of the foot.
+        v = u
+        if k == 0:
+            v = (u - 0.5) * 2
+        elif k == steps:
+            v = min(1.0, 2 * u)
         phi: dict[str, float] = {}
+        rise: dict[str, float] = {}
         drop = 0.0
         for side in sides:
             offset, leg_len, thigh = legs[side]
             if sides[k % 2] == side:  # planted at the hip position of step k's middle
                 reach = k * stride - hip + offset
             else:  # swings from the foot's last spot (k-1) to its next (k+1)
-                sm = u * u * (3 - 2 * u)
-                reach = (k - 1) * stride + 2 * stride * sm - hip + offset
+                sm = v * v * (3 - 2 * v)
+                span_s = stride if k in (0, steps) else 2 * stride
+                start = k * stride if k == 0 else (k - 1) * stride
+                reach = start + span_s * sm - hip + offset
             lim = limits[side]
             phi[side] = foot_angle(offset, leg_len, reach, lim["min"], lim["max"])
             ch[("angle", thigh)].append(Key(f, phi[side], L))
+            r = math.radians(phi[side])
+            rise[side] = offset * math.sin(r) - leg_len * math.cos(r) + leg_len  # tilt lifts a foot
             if sides[k % 2] == side:  # the planted foot rises as its leg tilts: lower the body
-                r = math.radians(phi[side])
-                drop = -(offset * math.sin(r) - leg_len * math.cos(r) + leg_len)
-            lift = 0.0 if sides[k % 2] == side else lift_px * math.sin(math.pi * u) * fade
+                drop = -rise[side]
+        for side in sides:
+            thigh = legs[side][2]
+            planted = sides[k % 2] == side
+            # the swung foot's sole sits `lift` above the ground whatever its tilt does
+            lift = 0.0 if planted else lift_px * math.sin(math.pi * v) + (-drop - rise[side])
             ch[("shift", thigh)].append(Key(f, Vec(0, lift), L))
         ch[("shift", root)].append(Key(f, Vec(0, drop), L))
         span = max(abs(limits[s_]["max"]) for s_ in sides)
@@ -424,18 +439,21 @@ def walk_cycle(ctx: MotionContext) -> Clip:
 
 
 def walk_step(ctx: MotionContext) -> Clip:
-    """A front-view walk across the frame with a visible gait (D-096): `walk_cycle`'s planted
-    feet, plus a higher eased foot lift, a knee bend on the lifted leg (the foot tucks toward the
-    direction of travel, `params.dir` = 1 right, -1 left), a body bob at every step (up at
-    mid-swing, two per cycle) and a small torso sway toward the planted leg. The motion data
-    stays in code: everything derives from the lift the stride already computes."""
+    """A front-view walk across the frame with a visible gait (D-096, D-098): `walk_cycle`'s
+    planted feet (the planted sole stays on the ground and does not slide; the body is lowest
+    when the legs are spread and highest when they pass, which is the bob), plus a higher eased
+    foot lift, a knee bend on the lifted leg (the foot tucks toward the direction of travel,
+    `params.dir` = 1 right, -1 left), a wide opposite arm swing with an elbow that follows, and a
+    small torso sway toward the planted leg. A side-view part set would show the swing better;
+    the front-view puppet has none, so this is the best the rig allows. The motion data stays
+    in code: everything derives from the lift the stride already computes."""
     base = walk_cycle(ctx)
     sides = [s for s in SIGN if ctx.has("thigh", s) and ctx.has("shin", s)]
     if not sides or ("shift", ctx.bone("thigh", sides[0])) not in base.channels:
         return base
     direction = 1.0 if float(ctx.params.get("dir", 1.0)) >= 0 else -1.0
     gain = ctx.lerp(1.2, 1.7)  # the foot rises this many times walk_cycle's lift
-    knee, bob, sway = ctx.lerp(22, 42), ctx.lerp(5, 12), ctx.lerp(1.5, 3.0)
+    knee, sway, swing = ctx.lerp(22, 42), ctx.lerp(1.5, 3.0), ctx.lerp(1.8, 2.6)
     lifts: dict[str, dict[int, float]] = {}
     for side in sides:
         thigh = ctx.bone("thigh", side)
@@ -451,24 +469,25 @@ def walk_step(ctx: MotionContext) -> Clip:
     for side in sides:
         shin = ctx.bone("shin", side)
         base.channels[("angle", shin)] = [
-            Key(f, direction * knee * min(1.0, lifts[side].get(f, 0.0) / peak), L) for f in frames
+            Key(f, direction * knee * max(0.0, min(1.0, lifts[side].get(f, 0.0) / peak)), L)
+            for f in frames
         ]
         lim = ctx.view["bones"][shin]["limits_deg"]
         limits[shin] = (min(lim["min"], -knee), max(lim["max"], knee))
+        if not ctx.has("upper_arm", side):
+            continue
+        arm = ctx.bone("upper_arm", side)
+        if ("angle", arm) not in base.channels:
+            continue
+        base.channels[("angle", arm)] = [  # the arm swings further against its leg
+            Key(k.frame, k.value * swing, k.interp) for k in base.channels[("angle", arm)]
+        ]
+        if ctx.has("forearm", side):  # the elbow bends with the swing: the hand trails the arm
+            fore = ctx.bone("forearm", side)
+            base.channels[("angle", fore)] = [
+                Key(k.frame, 0.45 * k.value, L) for k in base.channels[("angle", arm)]
+            ]
     root = ctx.bone("torso")
-    drop = {k.frame: k.value for k in base.channels.get(("shift", root), [])}
-    base.channels[("shift", root)] = [
-        Key(
-            f,
-            Vec(
-                drop[f].x if f in drop else 0.0,
-                (drop[f].y if f in drop else 0.0)
-                + bob * sum(lifts[s].get(f, 0.0) for s in sides) / peak,
-            ),
-            L,
-        )
-        for f in frames
-    ]
     if len(sides) == 2:
         a, b = sides
         base.channels[("angle", root)] = [

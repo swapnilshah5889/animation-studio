@@ -299,3 +299,14 @@ def transition_for(zoom_a: float, zoom_b: float, character_in_both: bool) -> str
         return "crossfade"
     ratio = max(zoom_a, zoom_b) / max(1e-6, min(zoom_a, zoom_b))
     return "cut" if ratio > MAX_DISSOLVE_SCALE_RATIO else "crossfade"
+
+
+def ground_legs(offsets: list[dict[str, float]], view: dict) -> list[dict[str, float]]:
+    """Keep the legs where the feet are planted while the torso leans (D-098): the thighs hang from
+    the torso, so a lean of a few degrees (a wave, a gesture, the walk's sway) swings both feet
+    sideways by the leg length times the angle (5 degrees on a 300 px leg is 26 px of foot slide).
+    Each thigh takes the opposite of the torso's turn, so its world direction does not change."""
+    bones = view["bones"]
+    root = next(b for b, sp in bones.items() if sp["parent"] is None)
+    thighs = [b for b, sp in bones.items() if sp["role"] == "thigh" and sp["parent"] == root]
+    return [{**fr, **{t: fr.get(t, 0.0) - fr.get(root, 0.0) for t in thighs}} for fr in offsets]

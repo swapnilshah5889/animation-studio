@@ -34,7 +34,7 @@ from studio_core.puppet.flat import FlatSpec, build_flat_puppet
 W, H = 1920, 1080
 SECONDS = 6.0
 N = round(SECONDS * FPS)
-SCALE = 1.05
+SCALE = 0.88  # round 3: the taller Mia (785 px) at 0.88 is as tall on screen as before
 LINES = [("l001", 1.9), ("l003", 4.1)]
 
 
@@ -110,12 +110,13 @@ def shot_spec(camera: dict, background: str = "plate", transparent: bool = True)
 CAM = {
     "move": "track",
     "keys": [
-        {"time_s": 0.0, "zoom": 1.0, "cx": 880, "cy": 560},
-        {"time_s": 2.4, "zoom": 1.12, "cx": 900, "cy": 570},
-        {"time_s": 3.8, "zoom": 1.5, "cx": 800, "cy": 610},
-        {"time_s": 6.0, "zoom": 1.58, "cx": 800, "cy": 600},
+        {"time_s": 0.0, "zoom": 1.0, "cx": 860, "cy": 540},
+        {"time_s": 2.4, "zoom": 1.08, "cx": 830, "cy": 600},
+        {"time_s": 3.8, "zoom": 1.28, "cx": 806, "cy": 630},
+        {"time_s": 6.0, "zoom": 1.3, "cx": 806, "cy": 632},
     ],
 }
+# round 3: no key may crop the head or the boots; studio_core.framing.check_framing holds it
 CAM_WIDE = CAM_CLOSE = CAM
 
 

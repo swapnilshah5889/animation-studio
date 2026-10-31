@@ -61,7 +61,7 @@ def test_the_clip_uses_one_continuous_camera_not_a_dissolve():
 
     assert rct.CAM["move"] == "track" and not hasattr(rct, "CUT")
     zooms = [k["zoom"] for k in rct.CAM["keys"]]
-    assert zooms == sorted(zooms) and zooms[-1] / zooms[0] > 1.4  # a real push-in
+    assert zooms == sorted(zooms) and zooms[-1] / zooms[0] > 1.25  # a real push-in
 
 
 # --- 2. neck
@@ -111,7 +111,7 @@ def test_fringe_is_unclipped_smooth_and_not_flat_topped(parts):
     # a flat clipped top would have a long run of identical top rows; a curved head does not
     longest = max(np.diff(np.nonzero(np.diff(np.r_[-1, top, -1]))[0]))
     assert longest < 0.12 * len(top)
-    edges = np.abs(np.diff(top[4:-4]))  # (the two vertical sides are not a step)
+    edges = np.abs(np.diff(top[12:-12]))  # (the dome's near-vertical sides are not a step)
     assert edges.max() <= 6  # no stair-step: the outline never jumps more than a few px per column
 
 
