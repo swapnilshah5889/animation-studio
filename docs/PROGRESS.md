@@ -2,9 +2,19 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** vertical slice task 2 has not passed its drawn-look gate. A whole-composite illustrative treatment
-was tried on 2026-10-31 and stopped: it reads as a generic softened/posterized filter, while Rain still reads 3D. No
-animation has started. Blender, Rain, and the original forest plate remain fixed.
+**Current step:** owner reopened the creative character-art source (D-105) while keeping Blender. Next is one
+design-only character proof with more visual detail, a normal face, and a style that belongs in the existing painted
+forest. No rigging or animation until independent review and owner approval.
+
+## 2026-10-31: owner reopened character-art source (D-105)
+
+After repeated NEEDS WORK reviews of the Rain look, the owner said the character art is underdeveloped and approved
+reopening its source. Rain and Snow remain technical rig baselines, not approved film characters. **Approved next task:**
+create one original, more detailed child-character concept in a drawn storybook style; show it against the existing forest
+without changing the background; review normal facial proportions, design detail and style coherence independently. Use
+only the existing local image model; no new downloads, no rigging and no animation. **Done when:** independent review has
+no blocker or major, the face is normal and readable, the detailing feels intentional rather than cluttered, and the image
+fits the forest. Then show the owner and wait for approval before rigging.
 
 ## 2026-10-31: whole-composite illustrative finish stopped
 

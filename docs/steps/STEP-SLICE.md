@@ -1,7 +1,8 @@
 # Step SLICE: one 30-second vertical slice
 
-Status: **owner-approved 2026-10-31, as amended by D-102.** The look gate has not passed, so animation is paused.
-Nothing else is active until the slice passes (ROADMAP "Reset").
+Status: **owner-approved 2026-10-31, as amended by D-102 and D-105.** The first Rain look gate failed; the owner
+reopened character-art source. A design-only proof now precedes rigging or animation. Nothing else is active until the
+slice passes (ROADMAP "Reset").
 
 ## Target look
 

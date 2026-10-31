@@ -1845,3 +1845,12 @@ art, or the image treatment reads as a generic filter. The last whole-composite 
 independently reviewed. No treatment is adopted and animation is paused. Recommendation: reopen the character-art source
 while keeping the Blender workflow, rather than accept a CG/paint mismatch or spend more time on filters. See
 `docs/spikes/rain-toon-look.md`.
+
+## D-105: Reopen the character-art source; Blender remains the engine (2026-10-31)
+After the Rain stills repeatedly failed independent visual review, the owner said the character art is underdeveloped and
+approved reopening its source. Rain and Snow remain available as technical rig baselines but are not approved film art.
+Next is a design-only proof of one original, detailed child character in a drawn storybook style, composed against the
+existing forest. Use the existing local image model only; do not download or install anything. The proof's done-when is:
+normal readable face; deliberate detail without clutter; coherent style with the forest; independent review with no blocker
+or major. No rigging or animation until the owner approves the concept. Blender remains the engine. See
+`docs/steps/STEP-CHARACTER-ART-PROOF.md`.
