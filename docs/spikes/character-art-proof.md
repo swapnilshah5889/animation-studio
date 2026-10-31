@@ -50,3 +50,26 @@ Output: `~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png` 
 **Independent review verdict: NEEDS WORK.** No blocker or major. Minor: the viewer-right eye is slightly higher and turned outward relative to the other. The watercolor linework, gentle shading, green/teal/ochre/rust palette, child proportions, detail and silhouette were judged promising. Style was compared against the forest reference image but not an exact composite; views, animation and rigging were not checked. The reviewer was separate from the image author and had not seen the author's notes.
 
 **Status:** candidate awaits owner approval. D-106 permits additional reference-conditioned views only after the owner approves this canonical design. No turnaround, rig or animation was created.
+
+## Stage 2: reference-conditioned turnarounds (2026-10-31)
+
+Owner approved the Stage 1 canonical image before these views were generated. Both use FLUX.2 Klein 4B distilled bf16, Qwen3-4B encoder and FLUX.2 VAE (Apache-2.0, local files; no download), 4 steps, with the canonical full-body image as primary reference and its face crop as a secondary reference. Output contact sheet: `~/ai-studio/scratch/character-art-proof/turnaround/rowan-all-views.png`; individual source renders and `run.json` files are kept in the same scratch directory.
+
+| View | Seed | Render time | Output |
+|---|---:|---:|---|
+| gentle three-quarter facing right | 614209731 | 240.89 s | `three_quarter_run/rowan-three-quarter.png` |
+| clear side profile facing right | 614209732 | 226.14 s | `side_profile_run/rowan-side-profile.png` |
+
+**Artist self-check:** both views retain the rust cap, chestnut hair, teal shirt, olive vest, deep teal pants and tall brown boots. The vest pocket/buttons drift slightly; the side view adds cap seams/top button and a ground shadow. This is not independent review. The current status is pending a separate identity review and owner approval; no rig or animation was made.
+
+### Prompt 1: gentle three-quarter facing right
+
+```text
+Reference image 1 is the approved full-body character design and is the source of truth. Reference image 2 is a close-up of that same face and is only a secondary face-identity reference. Redraw exactly one full-body view of the same child, about age 9, changing only the viewing angle to a gentle three-quarter view facing right, about 35 degrees. Keep the exact visible design, child proportions, face shape, small nose and mouth, two eyes, short rust-orange cap, chestnut wavy hair, pale teal long-sleeve shirt, olive buttoned pocket vest, deep teal pants, and tall brown lace-up boots, with the same watercolor storybook finish and muted colors. Keep both eyes visible in a natural three-quarter face, with the far eye smaller. Keep the clothing and all visible details exactly as in reference image 1; do not invent, remove, or add accessories or costume details. One standing child, full figure from cap to boot soles, arms relaxed close to the body, centered, on a simple warm off-white background. No other figures, no text, no labels, no diagrams, no panels.
+```
+
+### Prompt 2: clear side profile facing right
+
+```text
+Reference image 1 is the approved full-body character design and is the source of truth. Reference image 2 is a close-up of that same face and is only a secondary face-identity reference. Redraw exactly one full-body view of the same child, about age 9, changing only the viewing angle to a clear true side profile facing right, the head, shoulders, torso, hips, knees and feet all in profile. Keep the exact visible design, compact child proportions, face shape, small nose and mouth, short rust-orange cap, chestnut wavy hair, pale teal long-sleeve shirt, olive buttoned pocket vest, deep teal pants, and tall brown lace-up boots, with the same watercolor storybook finish and muted colors. Show the face in profile with one visible eye and a small natural nose and mouth. Keep clothing and all visible details exactly as in reference image 1; do not invent, remove, or add accessories or costume details. One standing child, full figure from cap to boot soles, arms relaxed close to the body, centered, on a simple warm off-white background. No other figures, no text, no labels, no diagrams, no panels.
+```

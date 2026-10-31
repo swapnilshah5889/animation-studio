@@ -2,9 +2,21 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the owner approved Rowan as the canonical design on 2026-10-31, accepting the independent review's
-minor eye-gaze note. Stage 2 is in progress: create reference-conditioned front/three-quarter/side views and independently
-review identity consistency. No rigging or animation has started.
+**Current step:** Rowan's owner-approved canonical design now has reference-conditioned three-quarter and side views.
+The independent identity review is in progress; turnaround approval is pending. No rigging or animation has started.
+
+## 2026-10-31: Rowan reference-conditioned views rendered (D-106)
+
+The owner approved Rowan's canonical front view, accepting the earlier independent review's minor eye-gaze note. Used
+the installed local FLUX.2 Klein 4B reference-edit workflow with the canonical image and face crop as references; no
+downloads or new dependencies. The 4-step three-quarter render used seed `614209731` (241 s), and the right-facing side
+profile used seed `614209732` (226 s). Full prompts and run records are in
+`~/ai-studio/scratch/character-art-proof/turnaround/`.
+
+**Output:** `rowan-all-views.png` is a contact sheet assembled from the approved canonical and the two new images. The
+artist reports the main palette/clothing stayed recognizable, with fine vest-detail drift; the side cap gained a seam
+and top button. This is not an independent assessment. A fresh reviewer is checking identity, face, view angle and style
+against the canonical. **No rigging or animation has started; owner approval of the reviewed turnaround sheet is pending.**
 
 ## 2026-10-31: canonical character candidate ready (D-106)
 
