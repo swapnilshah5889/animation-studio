@@ -2,9 +2,22 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the first Rowan turnaround review returned NEEDS WORK with two major identity mismatches (missing red back
-garment; side-view cap gained a brim). A focused correction pass is in progress. Turnaround approval is pending; no rigging
-or animation has started.
+**Current step:** Rowan's reference-conditioned turnaround failed the bounded correction pass and independent review.
+Generation is stopped; the turnaround is not approved. No rigging or animation has started. Next approach needs owner
+approval.
+
+## 2026-10-31: Rowan turnaround correction stopped after independent review (D-106)
+
+The bounded reference-edit correction did not preserve the approved character details reliably. A cap-only FLUX.2 Klein
+4B bf16 edit (seed `938271645`) retained a projecting visor and top button, changed the framing to a thigh-cropped
+close-up, and left the red back piece reading as a different backpack-like item. The independent reviewer returned
+**NEEDS WORK**: those identity/framing majors remain; cleaner contours and vest-detail drift were minor findings. The
+original three-view review had also found the red back garment missing and a brim added to the side-view cap. Details and
+artifact paths are in `docs/spikes/character-art-proof.md`.
+
+No further generations were started. The approved canonical Rowan illustration remains the source of truth, but the
+turnaround sheet is not approved. **No rigging or animation.** Recommend switching to a hand-authored/layered turnaround
+workflow; wait for owner approval before changing approach.
 
 ## 2026-10-31: Rowan reference-conditioned views rendered (D-106)
 

@@ -68,6 +68,31 @@ Owner approved the Stage 1 canonical image before these views were generated. Bo
 
 **Artist self-check:** both views retain the rust cap, chestnut hair, teal shirt, olive vest, deep teal pants and tall brown boots. The vest pocket/buttons drift slightly; the side view adds cap seams/top button and a ground shadow. This is not independent review. The current status is pending a separate identity review and owner approval; no rig or animation was made.
 
+### Bounded correction and cap-only edit (2026-10-31)
+
+The first independent review failed on the missing red back garment and the brim added to the side-view cap. A focused
+correction pass restored a red-brown back shape in the three-quarter view, but it still read as a backpack and the cap
+still gained a projecting brim and top button. The side view was not regenerated because the corrected three-quarter
+view still failed the cap requirement.
+
+A final local FLUX.2 Klein 4B bf16 edit (seed `938271645`, no downloads) targeted only the three-quarter cap, using the
+corrected view, approved canonical full-body image, and canonical cap/face crop as references. Run record:
+`~/ai-studio/scratch/character-art-proof/turnaround/cap-fix/run.json`; notes:
+`~/ai-studio/scratch/character-art-proof/turnaround/cap-fix/notes.md`; output:
+`~/ai-studio/scratch/character-art-proof/turnaround/cap-fix/rowan_cap_fix_7eebc6a3_00001_.png`.
+
+**Independent correction review: NEEDS WORK.** The edit retained a large projecting visor and top button, changed the
+full-body framing to a close-up cropped at the thighs, and did not make the red back piece read as the canonical garment.
+The face, palette and clothing remained broadly recognizable; contour/style and vest-detail drift were minor findings.
+That review covered the canonical, corrected three-quarter and cap-edit images, but not the side image due to an incorrect
+review attachment path. The earlier independent three-view review did inspect the original side image and found its cap
+and back-garment mismatches.
+
+**Conclusion:** stop image-edit generations for this turnaround. Reference conditioning did not preserve the defining
+cap and back garment through the bounded correction. The canonical illustration remains approved, but the turnaround is
+not; do not rig or animate Rowan from these views. A hand-authored/layered turnaround is a possible next approach, pending
+owner approval. All generated media remains in the scratch folder; nothing was added to the repository.
+
 ### Prompt 1: gentle three-quarter facing right
 
 ```text
