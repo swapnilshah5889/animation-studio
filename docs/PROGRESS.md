@@ -2,12 +2,22 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** choosing the animation engine and fixing the cut's quality. Done: director (D-080), engine bake-off (D-090),
-project data layer, servers on projects, acts and export (D-091), joint overlap (opt-in, plateaued, D-092). Running: a one-session
-spike on a single skinned mesh per character in Blender. Next: the engine pick by eye, the lifelike
-pass (the director now works on projects and acts, D-094), then the desktop app (Step 13). The owner signed off on the 2026-10-30 plan and leans towards Blender plus OpenToonz over
-Synfig. Owner preferences are in `AGENTS.md` ("Owner's standing preferences").
+**Current step:** the vertical slice (ROADMAP "Reset", D-101). Engine frozen on Blender, cast frozen on the Kenney
+Female person and Robot (D-100). Next: the owner picks a reference clip, then `docs/steps/STEP-SLICE.md` is written and
+approved, then one session builds the 30 s slice. Everything else is paused until the slice passes.
+Owner preferences and process rules are in `AGENTS.md`.
+
 ---
+
+## 2026-10-31: reset to one vertical slice (D-101)
+
+The owner asked for a review of direction. Finding: every picture shown failed (first film, bake-off, Mia rounds 1 to 3,
+Grease Pencil, Kenney clips) while work spread into projects, acts, storage and three engine adapters; the art and engine
+questions drifted for days; sessions started candidates nobody asked for and self-passed clips. The cause is a moving target
+and missing decisions, not the model. The owner accepted the reset: Blender only, Kenney cast frozen, a 30 s slice with a
+reference clip and a written done-when, everything else paused, one session at a time. Written into ROADMAP ("Reset"),
+DECISIONS (D-101) and AGENTS.md. Open for the owner: the reference clip.
+
 
 ## 2026-10-30 (late): the director works on projects and acts (D-094)
 

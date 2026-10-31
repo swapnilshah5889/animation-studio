@@ -1823,3 +1823,6 @@ Update (2026-10-31, spike `docs/spikes/new-character-engines.md`): rebuilt Kenne
 through Blender and OpenToonz; both clips FAILED the independent review for fixable reasons (leg gap, face choice, fist wave, walk),
 and the art is a real step up from Mia. The engines tie; keep both adapters. Two adapter bugs fixed (Blender unscaled rest armature,
 OpenToonz scale/camera/swaps/transparency).
+
+## D-101: Reset to one vertical slice; freeze engine and cast (2026-10-31)
+The owner asked why the project was not heading in one direction. Every picture shown had failed while work spread into breadth (projects, acts, storage, three engine adapters), the art-source and engine questions drifted for days, and sessions self-scoped and self-passed. Decision (owner accepted): Blender is the one engine (native arm64, Python API, fastest in D-090; OpenToonz parked for the hero tier, D-031 kept long-term; Synfig legacy). The cast is frozen on the Kenney Female person and Robot (D-100). The only active work is a 30 s vertical slice with an owner-picked reference clip and a written done-when (ROADMAP "Reset"); everything else is paused until it passes. Then the eval harness, the director loop, and a character LoRA, each as its own approved brief. Process: one session at a time, no self-directed pivots, one decision at a time with a recommendation.

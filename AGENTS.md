@@ -100,6 +100,12 @@ Read these before doing anything, in this order:
 
 ## Owner's standing preferences (learned; keep these across sessions)
 
+- **Reset (2026-10-31, D-101): one vertical slice first.** Read ROADMAP "Reset" before any work. Engine is Blender,
+  cast is the Kenney Female person and Robot; do not reopen either. One working session at a time, each with an
+  owner-approved "done when". A session never changes direction or builds unrequested candidates: it stops and asks.
+  Bring the owner one decision at a time, with a recommendation, and record it. A short owner message ("fix X") gets a
+  question about what "fixed" means before a large brief, not a guess.
+
 - **The end product decides, not the method.** The owner judges the film by eye. A weak-looking film is a
   failure even if the pipeline is clean. Look at the picture, not only at numbers.
 - **Test the foundation before building on it.** The first film was built on Synfig before any engine had been

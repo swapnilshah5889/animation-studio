@@ -29,6 +29,44 @@ the owner review it before starting.
 
 ---
 
+## Reset (2026-10-31, D-101): one vertical slice first
+
+**This section overrides the step order below until the slice passes.** Why: after 12 days (222 commits, about
+100 decisions) every picture shown to the owner failed: the first film, the bake-off, Mia rounds 1 to 3, Grease
+Pencil and the Kenney clips. Work went into breadth (projects, acts, storage, three engine adapters) on a
+foundation that had never passed, art and engine questions drifted instead of being decided, and sessions
+changed direction on their own.
+
+**Frozen choices (do not reopen without the owner):**
+- **Engine: Blender**, headless, native on Apple Silicon, Python API. OpenToonz is parked for the hero tier
+  (D-031 stays the long-term plan); Synfig is legacy. No more engine comparisons.
+- **Cast: Kenney Toon Characters 1** (CC0, D-100), the Female person and the Robot. No new character art until
+  the slice passes.
+- 2D with 2.5D staging (flat layers in depth, parallax, soft shadows). No 3D.
+
+**The slice (the only active work):** a 30-second film, 3 to 4 shots: a walk across the frame, a wave, two
+spoken lines with lip-sync, one camera move, one background with parallax, music and sound.
+
+**Done when:**
+1. The owner has picked a reference clip first (for their eye only; prompts and presets still describe styles
+   generically) and the slice brief (`docs/steps/STEP-SLICE.md`) is approved.
+2. The slice passes `skills/animation-review` with an independent reviewer (no blocker, no major).
+3. The owner watches it and says it passes.
+
+**Paused until the slice passes:** the desktop app (Step 13), storage and project features beyond what exists,
+director feature work, Step 5D beyond what the review skill already does, OpenToonz work, new engines or art
+routes.
+
+**After the slice** (in this order, each its own approved brief): the visual reviewer as an eval harness
+(Step 7; the owner may write it), the director's agent loop producing the slice from a prompt (Step 5; the
+owner may write the core), then a character LoRA for consistency (Step 9).
+
+**Process rules:** one working session at a time, each with a written "done when" the owner approved; a session
+never changes direction or starts candidates on its own, it stops and asks; the orchestrator brings the owner
+one decision at a time with a recommendation and records it here or in DECISIONS.md.
+
+---
+
 ## The production-grade bar
 
 What "production grade" means for a finished film. **Proposed targets, for the owner to confirm**
