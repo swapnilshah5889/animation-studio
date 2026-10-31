@@ -131,8 +131,9 @@ Read these before doing anything, in this order:
   sessions at once, give each a time box, and stop a session that keeps re-measuring or polishing. Finish one
   lever before starting the next. (The owner hit their usage limit on 2026-10-30 after three or more parallel
   sessions.)
-- **Always show progress** of background work, and write results down in the repo (PROGRESS, DECISIONS, spike
-  notes, `docs/learning/`). Chat is not storage: anything learned must be committed.
+- **Always show progress in a status table** with the categories **Done**, **In progress**, **Pending approval**, and
+  **Planned for future**. Keep it concise and update it whenever reporting project status or background work. Write
+  durable results in the repo (PROGRESS, DECISIONS, spike notes, `docs/learning/`); chat is not storage.
 
 ## Skills and rubrics are agent-agnostic
 
