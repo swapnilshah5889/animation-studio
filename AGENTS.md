@@ -28,7 +28,9 @@ Read these before doing anything, in this order:
 
 - **Fully local at runtime.** No paid APIs and no API keys. After models are downloaded, the whole
   pipeline must run offline. (A free Hugging Face token for gated *downloads* is fine.)
-- **2D only.** No 3D animation. Version 1 targets **children's cut-out (rigged puppet) animation**.
+- **Stylised 3D characters in a painterly 2.5D world (owner's decision 2026-10-31, D-102).** Characters may be
+  3D rigs rendered in a soft, painterly, toon-like way in Blender; backgrounds stay painted plates and layers.
+  No photoreal 3D. The earlier "2D only, cut-out puppets" rule is retired; the cut-out pipeline is legacy.
   Anime-style tiers come later (see ARCHITECTURE "Future tiers").
 - **Open-source apps first.** Wrap them through their file formats, command-line tools and APIs
   (level 1). Add in-app plugins (level 2) only when needed, and modify app source (level 3) only as a
@@ -101,7 +103,7 @@ Read these before doing anything, in this order:
 ## Owner's standing preferences (learned; keep these across sessions)
 
 - **Reset (2026-10-31, D-101): one vertical slice first.** Read ROADMAP "Reset" before any work. Engine is Blender,
-  cast is the Kenney Female person and Robot; do not reopen either. One working session at a time, each with an
+  cast is the Blender Studio rigs Rain and Snow (D-102); do not reopen either. One working session at a time, each with an
   owner-approved "done when". A session never changes direction or builds unrequested candidates: it stops and asks.
   Bring the owner one decision at a time, with a recommendation, and record it. A short owner message ("fix X") gets a
   question about what "fixed" means before a large brief, not a guess.

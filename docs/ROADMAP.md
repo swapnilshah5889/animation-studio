@@ -40,12 +40,15 @@ changed direction on their own.
 **Frozen choices (do not reopen without the owner):**
 - **Engine: Blender**, headless, native on Apple Silicon, Python API. OpenToonz is parked for the hero tier
   (D-031 stays the long-term plan); Synfig is legacy. No more engine comparisons.
-- **Cast: Kenney Toon Characters 1** (CC0, D-100), the Female person and the Robot. No new character art until
-  the slice passes.
-- 2D with 2.5D staging (flat layers in depth, parallax, soft shadows). No 3D.
+- **Cast: ready-made CC-BY 3D rigs from Blender Studio, Rain and Snow** (D-102; the Kenney cast is retired).
+  No new character art until the slice passes.
+- **Look:** stylised 3D characters, soft painterly lighting, painted backgrounds with depth (D-102). The owner's
+  references (2026-10-31) are a lush, softly lit painted 2D scene and a stylised 3D feature teaser; the
+  target is a short, well-lit cinematic children's scene, not feature-film quality.
 
-**The slice (the only active work):** a 30-second film, 3 to 4 shots: a walk across the frame, a wave, two
-spoken lines with lip-sync, one camera move, one background with parallax, music and sound.
+**The slice (the only active work):** a 30-second film, 4 shots: a walk across the frame, a wave, two spoken
+lines with lip-sync, camera moves, painted backgrounds with depth, music and sound. Brief:
+`docs/steps/STEP-SLICE.md`.
 
 **Done when:**
 1. The owner has picked a reference clip first (for their eye only; prompts and presets still describe styles

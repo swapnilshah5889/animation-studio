@@ -2,12 +2,19 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the vertical slice (ROADMAP "Reset", D-101). Engine frozen on Blender, cast frozen on the Kenney
-Female person and Robot (D-100). Next: the owner picks a reference clip, then `docs/steps/STEP-SLICE.md` is written and
-approved, then one session builds the 30 s slice. Everything else is paused until the slice passes.
-Owner preferences and process rules are in `AGENTS.md`.
+**Current step:** the vertical slice (ROADMAP "Reset", D-101, D-102). Blender only; stylised 3D characters (Blender
+Studio's Rain and Snow, CC-BY) in painted backgrounds. Next: the owner approves `docs/steps/STEP-SLICE.md`, then task 1
+(rig check on Blender 5.2.3). Everything else is paused. Owner preferences and process rules are in `AGENTS.md`.
 
 ---
+
+## 2026-10-31 (evening): reference clips and the move to 3D characters (D-102)
+
+The owner gave two references (a lush painted 2D scene; a stylised 3D feature teaser). Both are painterly and lit, which the
+flat Kenney cast cannot reach, so the D-101 cast freeze was premature. The owner allowed 3D characters. Recorded D-102,
+retired the 2D-only rule in AGENTS.md, updated ROADMAP "Reset", and drafted `docs/steps/STEP-SLICE.md` (4 shots, 30 s,
+Rain and Snow, a look still approved before animation). Licences checked on the Blender Studio pages (CC-BY, free; Rain
+64 MB, Snow 106 MB, Blender 4.1+); nothing downloaded yet. Open for the owner: approve the brief.
 
 ## 2026-10-31: reset to one vertical slice (D-101)
 
