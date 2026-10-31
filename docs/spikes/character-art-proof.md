@@ -51,6 +51,12 @@ Output: `~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png` 
 
 **Status:** candidate awaits owner approval. D-106 permits additional reference-conditioned views only after the owner approves this canonical design. No turnaround, rig or animation was created.
 
+### Independent Stage 2 review: first reference-edit pass
+
+**Verdict: NEEDS WORK**, no blocker. Two majors: (1) both generated views omit the distinctive red back garment visible in the approved canonical; (2) the side-profile view changes the canonical rounded cap into a cap with a projecting brim. Minor: the generated views have cleaner contours and less watercolor texture than the canonical. The face was judged normal/readable, and the three-quarter and right-facing profile angles were clear. The reviewer saw only the stills; it did not assess animation, rigging or hidden details.
+
+Correction pass is limited to regenerating these two views with explicit instructions to retain the red back garment and rounded no-brim cap. Turnaround remains unapproved.
+
 ## Stage 2: reference-conditioned turnarounds (2026-10-31)
 
 Owner approved the Stage 1 canonical image before these views were generated. Both use FLUX.2 Klein 4B distilled bf16, Qwen3-4B encoder and FLUX.2 VAE (Apache-2.0, local files; no download), 4 steps, with the canonical full-body image as primary reference and its face crop as a secondary reference. Output contact sheet: `~/ai-studio/scratch/character-art-proof/turnaround/rowan-all-views.png`; individual source renders and `run.json` files are kept in the same scratch directory.

@@ -2,8 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's owner-approved canonical design now has reference-conditioned three-quarter and side views.
-The independent identity review is in progress; turnaround approval is pending. No rigging or animation has started.
+**Current step:** the first Rowan turnaround review returned NEEDS WORK with two major identity mismatches (missing red back
+garment; side-view cap gained a brim). A focused correction pass is in progress. Turnaround approval is pending; no rigging
+or animation has started.
 
 ## 2026-10-31: Rowan reference-conditioned views rendered (D-106)
 
@@ -15,8 +16,13 @@ profile used seed `614209732` (226 s). Full prompts and run records are in
 
 **Output:** `rowan-all-views.png` is a contact sheet assembled from the approved canonical and the two new images. The
 artist reports the main palette/clothing stayed recognizable, with fine vest-detail drift; the side cap gained a seam
-and top button. This is not an independent assessment. A fresh reviewer is checking identity, face, view angle and style
-against the canonical. **No rigging or animation has started; owner approval of the reviewed turnaround sheet is pending.**
+and top button. **No rigging or animation has started; owner approval of the reviewed turnaround sheet is pending.**
+
+**Independent review:** NEEDS WORK, no blocker. Majors: the red back garment visible in the canonical is absent from both
+views; the side-profile cap has a forward brim while the approved cap is rounded without one. Minor: the new views have
+cleaner contours and less watercolor texture. The face and angles were otherwise judged normal/readable and clear.
+**Correction scope:** regenerate only the three-quarter and side views, explicitly preserving the red back garment and
+rounded no-brim cap. Review again before showing the sheet to the owner.
 
 ## 2026-10-31: canonical character candidate ready (D-106)
 
