@@ -1797,3 +1797,14 @@ most). Rules held by tests over yaw -1..1: features inside the skin, the head mo
 stays over the neck. The Blender harness swaps per-frame part images (`part_images`); the contract is engine-neutral (baked
 numbers, PNGs per frame). Independent review of a 3 s turn test: PASS with minors. Limit: beyond about yaw 0.6 the cheat shows;
 a turned part set is the real answer. Not changed: walk, framing, hair shape (round 3 not started).
+
+## D-098: Shot-level rules in code: framing and foot contact; the flat Mia gets longer legs and a round head (2026-10-31)
+
+The independent review of `clip_v2` named three majors. Two of them were measurable, so they became rules on the bake, not on the
+pictures: `framing.check_framing` (head, feet and sides stay inside every frame under that frame's camera, with margins) and
+`motions/gait.foot_report` (the lower sole touches the ground, the planted foot does not drift). Writing them found three real bugs
+the pictures hid (boot art with empty rows so Mia hovered 10 px, a torso lean that slid the planted feet, a walk that ended
+mid-swing). Mia: legs 140+160 px and thicker, wider arm swing; the head is an egg with an arched parted fringe and locks along the
+face contour. The walk stays lateral with the front-view puppet (no side-view set exists; building one is the next real step).
+The push-in ends as a full-body shot, because the rule forbids cropping head or feet. Independent review of the full clip: NEEDS
+WORK (the wave arm and the straight tube legs); framing fixed, walk and hair partly. Not production ready; remaining list in the spike note.

@@ -12,18 +12,16 @@ numbers first. List findings by severity (blocker, major, minor), give a verdict
 two majors = NEEDS WORK. Never fix while reviewing; say what you did not check.
 
 **Faces:** exactly two level eyes inside the face, about one eye-width apart, eye width 15 to 22 percent of the face
-width. Any other dark blob that is not an eye or mouth (ghost eye, brown dot, cheek mark; a painted face showing under a
-drawn one) is a blocker. Mouth small, below the nose, within 10 percent of the face width of its centre line, never wider
+width. Any other dark blob (ghost eye, brown dot, a painted face under a drawn one) is a blocker. Mouth small, below the nose, within 10 percent of the face width of its centre line, never wider
 than the eye pair. The face moves with the head and stays inside it; on a turn the features stay symmetric about the face
-centre line or shift and squash with the hair (a sliding sticker is major); a turn moves skin, hair and face together. Expression reads as intended (startled or
-angry when calm was meant is major); a talking mouth blends between shapes.
+centre line or shift and squash with the hair (sliding sticker: major); a turn moves skin, hair and face together. Expression reads as intended (startled or angry when calm was meant: major); a talking mouth blends shapes.
 
-**Anatomy and rig:** limbs attached, no pasted-looking shapes, gaps, detached strips or limbs through the body. Bends look
-like bends (no hinge snap, no smeared or stretched texture). Hair, tail and clothing leave no floating patches.
+**Anatomy and rig:** limbs attached, no pasted shapes, gaps, detached strips or limbs through the body. Bends look
+like bends (no hinge snap, no smeared or stretched texture). No floating patches.
 
 **Consistency:** the character matches its sheet in every shot (colours, proportions, line weight, face).
 Character and background share one style (line weight, shading, palette, detail); a painted plate behind a flat
-character, or the reverse, is a major finding. Plausible scale, ground contact.
+character, or the reverse, is a major finding. Plausible scale, ground contact. Head and feet stay in frame with margin on every frame (cropped: major).
 
 **Motion and transitions:** ease in and out, no pops or teleports, overlap and follow-through on hair, arms and tail, no
 foot sliding or jitter, blinks and mouth shapes blend. In the per-frame change numbers, one

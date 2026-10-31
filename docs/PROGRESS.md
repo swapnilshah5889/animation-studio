@@ -51,6 +51,22 @@ act, final is six stops for two acts), or should `first_shot` be dropped when ac
 
 ---
 
+## 2026-10-31: Mia round 3, framing, walk, head shape (D-098)
+
+**Done and verified:** `clip_v3.mp4`, `sheet_v3.png` in `~/ai-studio/scratch/rigged-character-test/`. Framing rule in code
+(`framing.check_framing`, head and feet inside the frame with margin on every frame; the old push-in fails it, the new one passes).
+Foot rules in code (`motions/gait.foot_report`: float, sink, slide of the planted foot) and the fixes they found: boot art with 10
+empty rows (Mia hovered 10 px), a torso lean sliding the planted feet (`smooth.ground_legs`), a walk that ended mid-swing; longer
+and thicker legs (35% of height), wider arm swing. Round head: arched parted fringe, locks along the face contour, round lobes.
+`tests/test_round3.py` (11 tests) plus the existing face, head-turn, smoothing and round-2 tests pass.
+**Independent review of the full clip: NEEDS WORK** (two majors: the wave arm reads as a hand growing out of the hair, with no
+shoulder or elbow shown; straight tube legs with no knees, crossing at the start, no settle at the stop). Framing FIXED, walk
+PARTLY, hair and face PARTLY (minor now). Not production ready. Remaining defects and the full verdict:
+`docs/spikes/rigged-character-test.md` "Round 3". Not done: the wave arm, knees, body motion while talking, mid-blink lids, the neck
+following a turn, the turn test on the new head, audio and lip sync by ear.
+
+---
+
 ## 2026-10-30 (night): head turn moves the whole head (D-097)
 
 **Done and verified:** the owner's bug (on a turn only the face moved). `face_layout.head_warp` turns the whole head about its

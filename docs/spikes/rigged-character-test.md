@@ -221,3 +221,47 @@ fringe; the neck stays centred while the head slides (no gap); the swing through
 is about 20 px from the frame top in this test (framing). Not checked by the reviewer: frames between the sheet times, the
 body (the coat looked slightly sheared on the small sheet, unverified), walking, audio. A turn up to about yaw 0.6 reads as a
 turn; beyond it a real turned part set is still needed.
+
+
+## Round 3 (D-098): framing, walk, head shape
+
+Owner: "fix mia". Scope: the three majors of the independent review of `clip_v2`, plus cheap minors. `clip_v3.mp4` and `sheet_v3.png` are in
+`~/ai-studio/scratch/rigged-character-test/`.
+
+**Framing (major 1).** `studio_core/framing.py`: per frame the character's box (hair top from the head bone, lowest sole, head width
+either side of the torso) goes through that frame's camera; `check_framing` fails under a margin (head 5%, feet 4%, sides 3% of
+the frame). The old push-in fails it (boots cut at the end); the new keys (zoom 1.0 to 1.3, Mia at scale 0.88) pass on all 144 frames.
+Choice: the end of the push-in is a full-body medium shot, not a close-up, because the rule forbids cropping head and feet.
+
+**Walk (major 2).** Choice, justified: a lateral walk with the front-view puppet (walk toward camera was rejected: the plate scrolls
+sideways with parallax, and a side-view part set does not exist; it is the right answer for a later round). Changes: legs 140+160 px
+and thicker (visible legs 28% to 35% of height, boots 9%); `walk_step` has a wider opposite arm swing (about 2.5x) with a following
+elbow; the first and last step are half steps that start and land at zero speed (the old walk ended mid-swing and the foot skidded
+in); a swung foot's height accounts for its tilt; `smooth.ground_legs` counter-rotates the thighs against the torso lean (legs hang
+from the torso, so a 5 degree lean slid both feet 26 px). Two bugs found by measuring: the boot art had 10 empty rows, so Mia
+hovered 10 px above the ground in every frame (now cropped at the sole); and the settle after the stop slid the feet 30 px. Rule in
+code, `motions/gait.foot_report` on the bake: float 1.3 px, sink about 5 px for two take-off frames, planted-run slide under 4 px
+(thresholds 4, 6 and 4; the old walk floated 9 to 14 px).
+
+**Head (major 3).** `puppet/flat._head_parts`: a rounder dome with a curl edge, a parted fringe (`hairline_y`, an arch that sweeps to
+the temples, no flat band or square skin corner), side locks placed along the face contour, two round bob lobes. Tests: silhouette
+solidity at least 0.93, the hairline is monotone and an arch, no step in the visible skin width.
+
+**Independent review of the FULL clip (a separate agent, `review_v3/review.md`): NEEDS WORK** (no blocker, two majors; my
+expectation was better, so this is the verdict):
+- Major, 2.0 to 3.0 s, wave: a short stub comes out from behind the hair, the forearm points horizontally and no shoulder or elbow
+  shows, so it reads as a hand growing from the head. (Not touched this round: I did not look at the wave arm.)
+- Major, 0.2 to 1.7 s, walk: straight tube legs with no knees, crossing at 0.2 and 0.5 s, small arm counter-swing, the shadow
+  gaps under the boots at 1.1 to 1.4 s (a small float), no settle at the stop. Leg lift and stride are real now.
+- Minors: hair is still a bonnet dome and the face a wide rounded rectangle; the neck is hidden under the collar; body frozen
+  while talking (change 0.27 mean); lids half closed at 0.5 and 3.25 s (sly or sleepy); slight scale growth in the walk.
+- Previous majors: framing FIXED; walk PARTLY; helmet hair and boxy face PARTLY (now minor).
+- The spikes at 0.88 and 0.92 s are a fast legitimate leg swing (2.84 against 2.73 to 2.77 around), not a pop.
+- Owner complaints: eyes and mouth wrong NO; motion not smooth PARTLY; head turns only inner face not testable (no turn in the clip;
+  the separate turn test passed, but its art is the old head, not rerun on the new one); production ready NO.
+- Not checked by the reviewer: foot sliding, neck, lip sync, audio, any head turn.
+
+**Remaining defects (honest):** wave arm in front of the hair with a visible shoulder-elbow chain; knees (a bend or a drawn knee
+shape on straight tube legs), crossing legs in the passing pose, a settle at the stop; body motion while talking; mid-blink lids;
+neck does not follow a turn; the turn test was not rerun on the round-3 head; a three-quarter part set; shadow gap in the walk
+(the code check says float 1.3 px, so the shadow position, not the foot, is the first suspect); lip sync and audio by ear.

@@ -33,3 +33,18 @@ should be faster than opening, and the mouth should lead the sound by about a fr
 Where two actions meet, keys jump. Smooth only around detected jumps (so real fast motion is untouched), then enforce
 a per-bone speed cap with alternating forward/backward slew limiting (each pass moves values toward their
 neighbours, so it converges). `Clip.max_speed_dps` declares a cap the same way `Clip.limits` declares a range.
+
+## Round 3: rules that look at the whole shot, not one frame
+
+- **Framing is a rule on the bake.** `framing.check_framing` pushes the character's box (hair top from the head bone, lowest
+  sole) through each frame's camera and fails when head room, foot room or side room drop under a margin. The first push-in was
+  chosen by eye and cropped the hair and the boots; no frame-by-frame look caught it until a reviewer did.
+- **Feet are measured, not eyeballed.** `motions/gait.foot_report` reads the shin joints from the bake: *float* (the lower sole
+  above the ground while walking), *sink*, and *slide* (x drift over a run of frames where a sole is planted). Three bugs were
+  hiding behind a plausible picture: the boot art had 10 empty rows (Mia hovered 10 px), a torso lean swung both planted feet
+  (the legs hang from the torso: `smooth.ground_legs` counter-rotates the thighs), and the walk ended mid-swing so the last foot
+  skidded in (first and last step are now half steps that start and land at zero speed).
+- **Gotcha:** a swinging foot's height depends on its leg tilt (`rise`), so a lift in the thigh's shift channel has to add the
+  planted foot's drop and subtract its own tilt rise, or the foot sinks at landing.
+- **Head shape is a function too.** `hairline_y(box, x)` (a parting that sweeps down to the temples) and side locks placed along
+  the face's contour replace a flat fringe over straight capsules, which is what made the face read as a rectangle.
