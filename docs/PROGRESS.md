@@ -8,6 +8,18 @@ Studio's Rain and Snow, CC-BY) in painted backgrounds. Next: the owner approves 
 
 ---
 
+## 2026-10-31 (night): slice task 1, rig check (Rain and Snow)
+
+**Verified:** both rigs downloaded without sign-in (Blender Studio direct zips, CC-BY 4.0, recorded in `docs/MODELS.md`),
+open and render headless in Blender 5.2.3 with EEVEE (`BLENDER_EEVEE`) on the Mac, with autoexec off: Rain 10.4 s, Snow
+6.6 s for the report plus two 960x540 stills (`scripts/spikes/rig_check.py`). Rain: CloudRig, 2,166 bones (1,520 face), mouth
+shape keys (`mouth_open`, `Smile.L/R`, `LipsWide`, ...) and lip controls (`ACT-Lip_Roll_*`, `ACT-Lips_Corner.*`), 1.65 m tall.
+Snow: CloudRig, 1,494 bones (570 face), 40 head shape keys, lip controls (`CON-Lip_*`), eye-mask face pose actions, 1.86 m.
+Both look like clean, appealing stylised young adults (not children or animals), fine for a children's film by the rubric.
+**Not checked yet:** posing or animating the rigs (only the rest T-pose was rendered), whether the rig UI script (needs
+autoexec) matters for driving controls from code, and the CMU bone map. **Next:** task 2, the look still, for the owner.
+Contact sheet: `~/ai-studio/scratch/rig-check-3d/sheet.png` (outside the repo).
+
 ## 2026-10-31 (evening): reference clips and the move to 3D characters (D-102)
 
 The owner gave two references (a lush painted 2D scene; a stylised 3D feature teaser). Both are painterly and lit, which the

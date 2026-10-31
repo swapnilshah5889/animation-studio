@@ -92,5 +92,6 @@ walking, waving and jumping to run it on; see docs/spikes/real-motion.md).
 | Asset | Source | License | Commercial use | Size | Location | Date |
 |---|---|---|---|---|---|---|
 | Kenney "Toon Characters 1": 6 characters (girl, boy, zombie, man, woman, robot), 45 poses each, separate parts (head with expression variants, back views, arm, hand, leg, bent leg, body), SVG source | [OpenGameArt](https://opengameart.org/content/toon-characters-1) (zip `kenney_toonCharacters1.zip`), also kenney.nl | CC0 (`License.txt` in the zip; credit optional) | Yes | 5.5 MB zip, 6.9 MB unpacked | `~/ai-studio/assets/kenney-toon-characters-1/src/` | 2026-10-31 |
+| Blender Studio **Rain** v3.3 (`rain_v3.2.blend`, CloudRig, 2,166 bones, face rig with mouth shape keys) and **Snow** v4 (`snow_v4.2.blend`, CloudRig, 1,494 bones, 40 head shape keys) | [Rain](https://studio.blender.org/characters/rain/v3/), [Snow](https://studio.blender.org/characters/snow/v4/) | CC-BY 4.0; credit "Rain Rig (CC) Blender Foundation \| studio.blender.org" and "Snow Rig (CC) Blender Foundation \| studio.blender.org" | Yes, with credit | 67.6 MB + 111.6 MB zips; 65 + 107 MB unpacked | `~/ai-studio/assets/blender-studio-rigs/{rain,snow}/` | 2026-10-31 |
 
-Chosen after the owner rejected Mia (D-100). Raster parts are small, so rebuild at full size from the SVG sources.
+Kenney was chosen after the owner rejected Mia (D-100) and retired by D-102. Rain and Snow are the slice cast (D-102); stylised young-adult characters. Raster parts are small, so rebuild at full size from the SVG sources.
