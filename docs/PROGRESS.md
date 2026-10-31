@@ -2,9 +2,9 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's canonical illustration is ready for owner review. Independent review found no blocker or major,
-but returned NEEDS WORK for one minor eye-gaze imbalance. The owner must approve this design before any reference-
-conditioned turnaround is generated. No rigging or animation has started.
+**Current step:** the owner approved Rowan as the canonical design on 2026-10-31, accepting the independent review's
+minor eye-gaze note. Stage 2 is in progress: create reference-conditioned front/three-quarter/side views and independently
+review identity consistency. No rigging or animation has started.
 
 ## 2026-10-31: canonical character candidate ready (D-106)
 
@@ -18,8 +18,9 @@ and more outward-looking. The reviewer compared style against the existing fores
 composite. The artist notes that the generated cap, vest/shirt, trousers and leafy setting differ from prompt details;
 the result is a visual candidate, not a locked design.
 
-**Next:** owner review and approval of the canonical character. Only after that may Stage 2 generate reference-conditioned
-views. Do not rig or animate yet.
+**Owner approval:** received 2026-10-31. The owner accepted Rowan despite the one minor eye-gaze finding.
+**Next:** generate reference-conditioned front/three-quarter/side views and have them independently reviewed. Do not rig or
+animate until the owner approves the turnaround sheet.
 
 ## 2026-10-31: owner approved staged character-art workflow (D-106)
 
