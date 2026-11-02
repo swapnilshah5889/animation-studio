@@ -8,6 +8,7 @@ so the watercolour keeps its exact colours; a perspective camera pushes in, so t
 Layer pixels map 1 px = 1 mm, with the canonical's top-left at x=0, z=0 and image y going down to -z.
 """
 
+import json
 import math
 import sys
 from pathlib import Path
@@ -76,6 +77,21 @@ def show(ob, keys: list[tuple[float, bool]]) -> None:
             kp.interpolation = "CONSTANT"
 
 
+POSES = {"rest": (0, 0), "low": (-40, -8), "horizontal": (-74, -16), "raised": (-139, -25)}
+
+
+def arm_keys() -> dict[str, list[tuple[float, float]]]:
+    """Arm chain rotations (seconds, radians) for the wave, eased by the default Bezier keys."""
+    r = math.radians
+    up = [(0, 0), (1.5, 0), (2.0, r(-145)), (2.12, r(-139)), (2.72, r(-139)), (3.22, 0), (6.0, 0)]
+    fore = [(0, 0), (1.5, 0), (1.75, r(-12)), (2.0, r(-25))]
+    for i, t in enumerate((2.2, 2.4, 2.6)):
+        fore.append((t, r(-25 + (14 if i % 2 == 0 else -14))))
+    fore += [(2.72, r(-25)), (3.0, r(-10)), (3.22, 0), (6.0, 0)]
+    hand = [(0, 0), (2.0, 0), (2.25, r(-8)), (2.45, r(8)), (2.65, r(-8)), (2.8, 0), (6.0, 0)]
+    return {"upper": up, "fore": fore, "hand": hand}
+
+
 def key(ob, path: str, index: int, items: list[tuple[float, float]]) -> None:
     for t, v in items:
         getattr(ob, path)[index] = v
@@ -110,10 +126,14 @@ def main() -> None:
     root = bpy.data.objects.new("rowan", None)
     sc.collection.objects.link(root)
     hip = (380, 700)  # breathing pivot (waist), in canonical px
-    # One body drawing with no hanging arm, and ONE arm part that is always shown and only rotates: any
-    # swap or cross-fade between two arm drawings read as a pop or a dissolve (reviews 4 and 5).
+    # One body drawing with no hanging arm, and one arm that is always shown and only rotates: any swap
+    # or cross-fade between arm drawings read as a pop or a dissolve (reviews 4 and 5). The arm is a
+    # rig-ready chain (repair brief): upper arm, forearm in front of it, hand tucked under the cuff.
     body_wave = plane("body_wave", lay / "body_wave.png", CANON_W, CANON_H, 0.0, root, hip)
-    arm = plane("arm_wave", lay / "arm_wave.png", CANON_W, CANON_H, -0.002, body_wave, (505, 425))
+    piv = json.loads((lay / "arm_pivots.json").read_text())
+    upper = plane("arm_upper", lay / "arm_upper.png", CANON_W, CANON_H, -0.002, body_wave, piv["shoulder"])
+    fore = plane("arm_fore", lay / "arm_fore.png", CANON_W, CANON_H, -0.0025, upper, piv["elbow"])
+    hand = plane("arm_hand", lay / "arm_hand.png", CANON_W, CANON_H, -0.0015, fore, piv["wrist"])
     neck = (345, 365)
     head = plane("head", lay / "head.png", CANON_W, CANON_H, -0.006, body_wave, neck)
     eyes = plane("eyes_closed", lay / "eyes_closed.png", CANON_W, CANON_H, -0.008, head)
@@ -180,15 +200,11 @@ def main() -> None:
         (5.8, 0),
     ]
     key(head, "rotation_euler", 1, tilt)
-    # Wave: the arm hangs at the side (turned 152 degrees clockwise, as seen from the camera, from its
-    # raised drawing), rises over 0.5 s with an ease and a small overshoot, waves at about 2 Hz, and
-    # lowers over 0.5 s back to the side.
-    down = math.radians(152)
-    swing = [(0, down), (1.5, down), (2.0, math.radians(-8)), (2.12, 0)]
-    for t, a in ((2.32, 9), (2.52, -9), (2.72, 0)):
-        swing.append((t, math.radians(a)))
-    swing += [(3.22, down), (6.0, down)]
-    key(arm, "rotation_euler", 1, swing)
+    # Wave: the upper arm turns about the shoulder from hanging (0) to raised (-139 degrees; negative is
+    # anticlockwise as seen from the camera) over 0.5 s, the elbow bends in a little on the way up, the
+    # forearm waves about the elbow at about 2 Hz with the hand trailing, then everything comes back down.
+    for ob, items in arm_keys().items():
+        key({"upper": upper, "fore": fore, "hand": hand}[ob], "rotation_euler", 1, items)
     # Blinks: closed lids for 3 frames.
     blinks = [1.1, 2.3, 4.7]
     vis = [(0, False)]
@@ -228,6 +244,17 @@ def main() -> None:
     ):
         for kp in fc.keyframe_points:
             kp.interpolation = "BEZIER"
+    if "--poses" in argv:  # repair brief T4: four stills of the arm chain at frame 1's framing
+        (out / "poses").mkdir(exist_ok=True)
+        for ob in (upper, fore, hand):
+            ob.animation_data_clear()
+        sc.frame_set(1)
+        for name, (u, f) in POSES.items():
+            upper.rotation_euler[1], fore.rotation_euler[1] = math.radians(u), math.radians(f)
+            sc.render.filepath = str(out / "poses" / f"{name}.png")
+            bpy.ops.render.render(write_still=True)
+        print("ROWAN_POSES_OK", out / "poses")
+        return
     if "--check" in argv:  # print where things are instead of rendering
         from mathutils import Vector
 

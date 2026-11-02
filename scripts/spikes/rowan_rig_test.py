@@ -71,13 +71,13 @@ def _model(g: Graph) -> tuple[str, str]:
 
 
 def inpaint_graph(
-    image: str, mask: str, prompt: str, seeds: list[int], denoise: float, prefix: str
+    image: str, mask: str, prompt: str, seeds: list[int], denoise: float, prefix: str, neg: str = ""
 ) -> dict:
     """Inpaint `mask` (white = repaint) and paste the result back onto the untouched image."""
     g = Graph()
     ck, lo = _model(g)
     pos = g.add("CLIPTextEncode", text=f"{STYLE}, {prompt}", clip=[lo, 1])
-    neg = g.add("CLIPTextEncode", text=NEG, clip=[lo, 1])
+    neg = g.add("CLIPTextEncode", text=f"{NEG}, {neg}" if neg else NEG, clip=[lo, 1])
     img = g.add("LoadImage", image=image)
     m = g.add("LoadImageMask", image=mask, channel="red")
     if denoise >= 1.0:
@@ -205,30 +205,75 @@ FACE_UP = 4
 
 
 def face_variant(
-    comfy: Comfy, job: str, mask: np.ndarray, text: str, seed: int, denoise: float
+    comfy: Comfy,
+    job: str,
+    mask: np.ndarray,
+    text: str,
+    seed: int | list[int],
+    denoise: float,
+    box: tuple[int, int, int, int] = FACE_BOX,
+    up: float = FACE_UP,
+    neg: str = "",
 ) -> None:
-    """Detailer-style inpaint: enlarge the face crop so the model has room, repaint, shrink, paste."""
-    x0, y0, x1, y1 = FACE_BOX
-    w, h = (x1 - x0) * FACE_UP, (y1 - y0) * FACE_UP
-    crop = Image.open(CANON).convert("RGB").crop(FACE_BOX).resize((w, h), Image.LANCZOS)
+    """Detailer-style inpaint: enlarge the crop so the model has room, repaint, shrink, paste.
+    One seed saves <job>_full.png; several save <job>_<seed>_full.png."""
+    seeds = seed if isinstance(seed, list) else [seed]
+    x0, y0, x1, y1 = box
+    w, h = round((x1 - x0) * up), round((y1 - y0) * up)
+    crop = Image.open(CANON).convert("RGB").crop(box).resize((w, h), Image.LANCZOS)
     crop_path = OUT / f"{job}_crop.png"
     crop.save(crop_path)
     m = Image.fromarray((mask[y0:y1, x0:x1] > 0).astype(np.uint8) * 255).resize((w, h))
     mask_path = OUT / f"{job}_cropmask.png"
     m.filter(ImageFilter.GaussianBlur(8)).convert("RGB").save(mask_path)
     g = inpaint_graph(
-        comfy.upload_image(crop_path), comfy.upload_image(mask_path), text, [seed], denoise, job
+        comfy.upload_image(crop_path), comfy.upload_image(mask_path), text, seeds, denoise, job, neg
     )
-    (big,) = run(comfy, job, g)
-    small = Image.open(big).convert("RGB").resize((x1 - x0, y1 - y0), Image.LANCZOS)
     alpha = Image.fromarray((mask[y0:y1, x0:x1] > 0).astype(np.uint8) * 255).filter(
         ImageFilter.GaussianBlur(2)
     )
-    full = Image.open(CANON).convert("RGB")
-    full.paste(small, (x0, y0), alpha)
-    full.save(big.with_name(f"{job}_full.png"))
+    for s, big in zip(seeds, sorted(run(comfy, job, g)), strict=True):
+        small = Image.open(big).convert("RGB").resize((x1 - x0, y1 - y0), Image.LANCZOS)
+        full = Image.open(CANON).convert("RGB")
+        full.paste(small, (x0, y0), alpha)
+        name = f"{job}_full.png" if len(seeds) == 1 else f"{job}_{s}_full.png"
+        full.save(big.with_name(name))
     crop_path.unlink()
     mask_path.unlink()
+
+
+ARM_NEG = (
+    "face, head, eyes, person, people, child, character, hat, cap, hair, shoulders, extra arm, feet, toes"
+)
+ARM_BOX = (424, 328, 680, 760)  # the far arm and the space beside it; 2.5x up is 640x1080
+
+
+ARM_TOP, ARM_WRIST = (510, 392), (598, 690)  # the sleeve's centre line in the arm mask
+
+
+def _arm_shape() -> np.ndarray:
+    """Try 2 filled a wide mask with a wide sleeve: the mask is a slim sleeve (about the near sleeve's
+    60 px) from the shoulder to the wrist, plus a hand-sized oval below it."""
+    img = Image.new("L", (832, 1216), 0)
+    d = ImageDraw.Draw(img)
+    d.line([ARM_TOP, ARM_WRIST], fill=255, width=62)
+    d.ellipse([(483, 368), (545, 420)], fill=255)  # rounded shoulder
+    d.ellipse([(570, 680), (640, 768)], fill=255)  # hand
+    return np.array(img)
+
+
+def arm_neutral(comfy: Comfy) -> None:
+    """The far arm redrawn rig-ready (repair brief T2): hanging relaxed a little away from the body,
+    a slim sleeve like the near one, a cuff, and an open hand, so SAM can cut it whole."""
+    # Try 2 filled a wide mask with a wide sleeve: the mask is now a slim sleeve (about the near sleeve's
+    # 60 px) from the shoulder to the wrist, plus a hand-sized oval below it.
+    # Try 1 described Rowan, and the model painted a whole small child in the mask: describe only the arm.
+    text = (
+        "close-up detail of one arm hanging straight down at the side, a slim pale teal shirt sleeve with soft "
+        "folds, a buttoned cuff at the wrist, a small simple storybook child's hand below the cuff, four "
+        "fingers together and a thumb, rounded mitten-like shape"
+    )
+    face_variant(comfy, "arm_neutral", _arm_shape(), text, [9105, 9106, 9107, 9108], 1.0, ARM_BOX, 2.5, ARM_NEG)
 
 
 def mouth(comfy: Comfy) -> None:
@@ -311,8 +356,26 @@ def waveseg(comfy: Comfy) -> None:
     )
 
 
+
+SLEEVE_PICK, HAND_PICK = 9107, 9105  # by eye: 9107 has a slim on-model sleeve with a cuff, 9105 a good hand
+
+
+def _arm_image(seed: int) -> Path:
+    return OUT / "gen" / "arm_neutral" / f"arm_neutral_{seed}_full.png"
+
+
+def armseg(comfy: Comfy) -> None:
+    """SAM masks for the sleeve (from one candidate) and the hand (from another)."""
+    pts = [(505, 400), (528, 494), (560, 580), (585, 645)]
+    up = comfy.upload_image(_arm_image(SLEEVE_PICK))
+    run(comfy, "arm_sleeve", sam_graph(up, [470, 355, 630, 672], pts, "arm_sleeve"))
+    up = comfy.upload_image(_arm_image(HAND_PICK))
+    run(comfy, "arm_hand", sam_graph(up, [545, 600, 625, 705], [(578, 634), (592, 665)], "arm_hand"))
+
 JOBS = {
     "figure": figure,
+    "arm_neutral": arm_neutral,
+    "armseg": armseg,
     "plate": plate,
     "mouth": mouth,
     "eyes": eyes,
@@ -362,7 +425,53 @@ def layers() -> None:
             3,
         )
     Image.open(next((OUT / "gen" / "plate").glob("*.png"))).convert("RGB").save(lay / "plate.png")
+    arm_pieces(lay)
     print("layers:", sorted(p.name for p in lay.glob("*.png")))
+
+
+def arm_pieces(lay: Path) -> None:
+    """Repair brief T3: the sleeve split at the elbow into upper arm and forearm (overlapping, with a
+    round elbow cap in the sleeve's own colour), and the hand moved under the cuff. Pivots go to
+    arm_pivots.json in canonical pixels."""
+    # The model painted the sleeve hugging the body, not along the mask's line, so the SAM sleeve is used
+    # whole and the arm's axis comes from it; the hand keeps only skin colours (SAM also took a leaf).
+    sleeve = _mask("arm_sleeve")
+    hrgb = np.array(Image.open(_arm_image(HAND_PICK)).convert("RGB")).astype(int)
+    r, g, b = hrgb[..., 0], hrgb[..., 1], hrgb[..., 2]
+    skin = (r > 150) & (r > g + 10) & (g > b) & (r - b < 120)
+    hand = clean(_mask("arm_hand") & skin)
+    sy, sx = np.nonzero(sleeve)
+    ax, ay = sx[sy <= sy.min() + 10].mean(), float(sy.min())
+    bx, by = sx[sy >= sy.max() - 6].mean(), float(sy.max())
+    ys, xs = np.mgrid[0:1216, 0:832]
+    t = ((xs - ax) * (bx - ax) + (ys - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)
+    elbow = (round(ax + 0.5 * (bx - ax)), round(ay + 0.5 * (by - ay)))
+    rgb = np.array(Image.open(_arm_image(SLEEVE_PICK)).convert("RGB"))
+    band = sleeve & (abs(t - 0.5) < 0.06)
+    colour = tuple(int(c) for c in np.median(rgb[band], axis=0))
+    cap = _ellipses((1216, 832), [(elbow[0], elbow[1], 26, 26)]).astype(bool) & ~sleeve
+    upper_rgb = rgb.copy()
+    upper_rgb[cap] = colour
+    Image.fromarray(upper_rgb).save(lay / "_upper_src.png")
+    _rgba(lay / "_upper_src.png", (sleeve & (t <= 0.56)) | cap, lay / "arm_upper.png")
+    _rgba(_arm_image(SLEEVE_PICK), sleeve & (t >= 0.44), lay / "arm_fore.png")
+    (lay / "_upper_src.png").unlink()
+    # The cuff's bottom centre (wrist) on the sleeve, and the hand's top centre: line them up, 8 px overlap.
+    wrist = (round(bx), round(by))
+    hy, hx = np.nonzero(hand)
+    top = (int(hx[hy <= hy.min() + 6].mean()), int(hy.min()))
+    dx, dy = wrist[0] - top[0], wrist[1] - 8 - top[1]
+    src = Image.open(_arm_image(HAND_PICK)).convert("RGB")
+    moved = Image.new("RGB", src.size)
+    moved.paste(src, (dx, dy))
+    hand_moved = np.zeros_like(hand)
+    hand_moved[max(dy, 0) :, max(dx, 0) :] = hand[: 1216 - max(dy, 0), : 832 - max(dx, 0)]
+    moved.save(lay / "_hand_src.png")
+    _rgba(lay / "_hand_src.png", hand_moved, lay / "arm_hand.png", feather=0.7)
+    (lay / "_hand_src.png").unlink()
+    pivots = {"shoulder": [round(ax), round(ay) + 18], "elbow": list(elbow), "wrist": list(wrist)}
+    (lay / "arm_pivots.json").write_text(json.dumps(pivots))
+    print("arm pivots", pivots, "elbow cap colour", colour, "hand moved by", (dx, dy))
 
 
 def main() -> None:
@@ -373,7 +482,7 @@ def main() -> None:
     if not args or args[0] != "gen":
         sys.exit(__doc__)
     comfy = Comfy()
-    for job in args[1:] or [j for j in JOBS if j != "waveseg"] + ["waveseg"]:
+    for job in args[1:] or [j for j in JOBS if j not in ("waveseg", "arm_neutral", "armseg")] + ["waveseg"]:
         JOBS[job](comfy)
     comfy.free_memory()
 

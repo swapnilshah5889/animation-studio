@@ -140,6 +140,14 @@ is a recommendation only; no further generation was started.
 design-only proof required more detail, a normal face, and a style that belongs in the existing painted forest. No
 rigging or animation until independent review and owner approval.
 
+## 2026-11-02 (evening): Rowan arm repair stopped at T4 (brief stop rule)
+
+Followed `docs/steps/STEP-ROWAN-ARM-REPAIR.md` as resumable tasks. T1 to T3 are done: the neutral arm was inpainted (three
+tries; a slim sleeve from seed 9107 and a hand from seed 9105) and cut into upper arm, forearm and hand with pivots.
+T4's four pose stills fail by eye: a gap at the shoulder, a bulky upper arm and a sliver hand. Cause: AI-inpainted arm art
+has no shoulder joint design to pivot under the torso. Stopped instead of polishing. The decision for the owner is in the
+brief's result section.
+
 ## 2026-11-02 (later): Rowan arm-raise fix, motion fixed, arm art blocks the gate
 
 After the focused review found a major snap, two fixes were each reviewed independently, frame by frame, on a crop. A

@@ -71,8 +71,8 @@ Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/r
 `scripts/spikes/rowan_rig_blend.py` (rig).
 
 - [x] **T1** Brief amended with this list, committed.
-- [ ] **T2** `gen arm_neutral`: the inpainted neutral arm, two seeds, picked by eye → `gen/arm_neutral/`.
-- [ ] **T3** `layers`: SAM cut, then split into `layers/arm_upper.png`, `arm_fore.png`, `arm_hand.png` with caps;
+- [x] **T2** `gen arm_neutral`: the inpainted neutral arm, two seeds, picked by eye → `gen/arm_neutral/`.
+- [x] **T3** `layers`: SAM cut, then split into `layers/arm_upper.png`, `arm_fore.png`, `arm_hand.png` with caps;
   pivots in `layers/arm_pivots.json`.
 - [ ] **T4** Rig: the 3-piece chain replaces `arm_wave`; `--poses` renders four stills (rest, 45 degrees, horizontal,
   raised) → `poses/`.
@@ -80,3 +80,18 @@ Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/r
 - [ ] **T6** A fresh independent reviewer (cropped frame-by-frame arm sequence plus the regression check) →
   `review-arm-repair.md`.
 - [ ] **T7** PROGRESS, the spike note and this list updated; committed and pushed; intermediates cleaned.
+
+## Result of this session (2026-11-02): stopped at T4 by the brief's stop rule
+
+- **T2** took three tries. Try 1 described Rowan in the prompt, and the model painted whole small children into the arm
+  area. Try 2, with an arm-only prompt, gave one usable arm (sleeve too wide and green, the hand read like toes). Try 3
+  used a slim mask and four seeds: seed 9107 has a slim, on-model sleeve with a cuff (its hand is green), and seed 9105
+  has a good skin-coloured open hand. The pieces were taken from both.
+- **T3:** the sleeve was split at the elbow with a colour-matched cap, and the hand was moved under the cuff. Two
+  cutting bugs were fixed on the way: the sleeve was clipped to the mask line, and SAM took a leaf with the hand.
+- **T4 fails by eye** (`~/ai-studio/scratch/rowan-rig-test/poses.png`). At low, horizontal and raised the sleeve swings
+  away from a gap at the shoulder, the upper arm reads as a bulky block, and the hand is a sliver. Why: the inpainted
+  sleeve hugs the body and has **no shoulder joint art**, meaning no round top that tucks under the vest. Its only pivot
+  is the sleeve's top edge, and the hand generation is unreliable. The fix needs real joint design (a round shoulder
+  cap overlapping under the torso, a pivot inside the body), and that is art authoring, not more rig code.
+- Not done: T5 and T6 (no clip, no review), since T4 failed by the author's own check.
