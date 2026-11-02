@@ -110,11 +110,12 @@ def main() -> None:
     root = bpy.data.objects.new("rowan", None)
     sc.collection.objects.link(root)
     hip = (380, 700)  # breathing pivot (waist), in canonical px
-    body_rest = plane("body_rest", lay / "body_rest.png", CANON_W, CANON_H, 0.0, root, hip)
+    # One body drawing with no hanging arm, and ONE arm part that is always shown and only rotates: any
+    # swap or cross-fade between two arm drawings read as a pop or a dissolve (reviews 4 and 5).
     body_wave = plane("body_wave", lay / "body_wave.png", CANON_W, CANON_H, 0.0, root, hip)
-    arm = plane("arm_wave", lay / "arm_wave.png", CANON_W, CANON_H, -0.004, body_wave, (505, 425))
+    arm = plane("arm_wave", lay / "arm_wave.png", CANON_W, CANON_H, -0.002, body_wave, (505, 425))
     neck = (345, 365)
-    head = plane("head", lay / "head.png", CANON_W, CANON_H, -0.006, body_rest, neck)
+    head = plane("head", lay / "head.png", CANON_W, CANON_H, -0.006, body_wave, neck)
     eyes = plane("eyes_closed", lay / "eyes_closed.png", CANON_W, CANON_H, -0.008, head)
     # Every overlay gets its own depth: coplanar patches z-fought into a black mouth (review 2).
     mouths = {
@@ -159,7 +160,7 @@ def main() -> None:
 
     # --- Acting (seconds) ---
     # Breathing: a slow, small stretch of the torso; the head rides on it.
-    for b in (body_rest, body_wave):
+    for b in (body_wave,):
         key(
             b,
             "scale",
@@ -179,35 +180,21 @@ def main() -> None:
         (5.8, 0),
     ]
     key(head, "rotation_euler", 1, tilt)
-    # Wave: swap to the raised-arm drawing; the arm comes up through two in-betweens (positive turns it
-    # down, as seen from the camera), swings about the shoulder at about 2 Hz, and goes back down the
-    # same way before the swap back (review 1: it popped in fully raised).
-    on, off = 1.5, 3.17
-    show(body_rest, [(0, True), (on, False), (off, True)])
-    show(body_wave, [(0, False), (on, True), (off, False)])
-    show(arm, [(0, False), (on, True), (off, False)])  # a hidden parent does not hide its children
-    swing = [(on, math.radians(110)), (1.58, math.radians(60)), (1.67, math.radians(18)), (1.75, math.radians(-6))]
-    t, s = 1.75, 1
-    while t < 2.75:
-        t += 0.25
-        s = -s
-        swing.append((t, math.radians(8 * s)))
-    swing += [(2.92, math.radians(18)), (3.0, math.radians(60)), (3.08, math.radians(110))]
+    # Wave: the arm hangs at the side (turned 152 degrees clockwise, as seen from the camera, from its
+    # raised drawing), rises over 0.5 s with an ease and a small overshoot, waves at about 2 Hz, and
+    # lowers over 0.5 s back to the side.
+    down = math.radians(152)
+    swing = [(0, down), (1.5, down), (2.0, math.radians(-8)), (2.12, 0)]
+    for t, a in ((2.32, 9), (2.52, -9), (2.72, 0)):
+        swing.append((t, math.radians(a)))
+    swing += [(3.22, down), (6.0, down)]
     key(arm, "rotation_euler", 1, swing)
-    # The head must follow whichever body drawing shows: re-parent is not animatable, so copy the swap
-    # and give both heads the same tilt curve (no jump at the swap).
-    head_w = plane("head_w", lay / "head.png", CANON_W, CANON_H, -0.006, body_wave, neck)
-    eyes_w = plane("eyes_closed_w", lay / "eyes_closed.png", CANON_W, CANON_H, -0.009, head_w)
-    show(head, [(0, True), (on, False), (off, True)])
-    show(head_w, [(0, False), (on, True), (off, False)])
-    key(head_w, "rotation_euler", 1, tilt)
     # Blinks: closed lids for 3 frames.
     blinks = [1.1, 2.3, 4.7]
     vis = [(0, False)]
     for b in blinks:
         vis += [(b, True), (b + 3 / FPS, False)]
     show(eyes, vis)
-    show(eyes_w, vis)
     # Talking, 3.2-4.6 s, mouth shapes held on twos and threes; a smile to finish.
     talk = [
         (3.2, "A"),
@@ -245,7 +232,7 @@ def main() -> None:
         from mathutils import Vector
 
         sc.frame_set(1)
-        for ob in (body_rest, head, plate, cam):
+        for ob in (body_wave, head, plate, cam):
             pts = (
                 [ob.matrix_world @ Vector(c) for c in ob.bound_box]
                 if ob.type == "MESH"

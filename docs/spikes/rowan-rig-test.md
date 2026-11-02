@@ -79,3 +79,22 @@ worried while waving, and the talking mouth is faint at full-frame scale. The pr
 appearance and a smooth camera, but not a walk, turn, three-quarter view, audio, or complete rig. Breathing and sway were
 not inspected in motion. The clip should not be presented as having cleared the D-107 no-major gate until the arm raise
 is corrected and independently reviewed; no fix has been started.
+
+## Arm-raise fix (2026-11-02, after the focused review)
+
+Owner approved the fix. Two attempts, each reviewed by a fresh independent reviewer frame by frame on a cropped interval
+(`skills/animation-review/README.md` now asks for this at every drawing swap or fast limb move):
+
+1. **Cross-fade:** the rest body faded out while the raised arm rose from behind the body over 0.5 s. **NEEDS WORK.**
+   The rise was smooth and the snap was fixed, but the cross-fade read as a dissolve. The sleeve went see-through, the
+   arm was missing for 2 to 4 frames, and on the way down it reappeared from nothing. Lesson: **never swap or fade
+   between two drawings of a moving limb; use one part that only rotates.**
+2. **One rotating arm part:** the raised-arm drawing hangs at the side as the rest pose and rotates continuously, with no
+   swap at all. **NEEDS WORK, one major.** The motion is fixed (steps of about 25 degrees, no pop, no spike), but the
+   arm drawing is off-model at rest. It has a puffy faceted shoulder cap about 1.5 times the other sleeve's width and a
+   washed-out forearm with a band at the elbow. It was repainted for the raised pose only and now shows for all 6 s.
+
+**Where it stands:** the motion method is proven (continuous rotation of painted parts, no pops). The no-major gate is
+still not met, and the blocker is now art: the rig needs a **rig-ready part set**, each limb drawn once in a neutral pose
+with its hand and matching the canonical (slim sleeve, an elbow, an open hand), not repainted per pose. That is an art
+task for the owner to decide on. Stopped here, without more polishing rounds.

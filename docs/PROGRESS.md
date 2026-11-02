@@ -117,6 +117,15 @@ is a recommendation only; no further generation was started.
 design-only proof required more detail, a normal face, and a style that belongs in the existing painted forest. No
 rigging or animation until independent review and owner approval.
 
+## 2026-11-02 (later): Rowan arm-raise fix, motion fixed, arm art blocks the gate
+
+After the focused review found a major snap, two fixes were each reviewed independently, frame by frame, on a crop. A
+cross-fade between rest and wave drawings got NEEDS WORK (it read as a dissolve). One always-visible rotating arm part
+got NEEDS WORK with one major: the motion is fixed, with no pops, but the repainted arm drawing is off-model at rest (puffy
+shoulder cap, washed-out forearm). Lesson: a moving limb is one part that only rotates; parts must be drawn rig-ready.
+Skill updated: crop the interval at every swap or fast limb move, and grade a snap as a major. Stopped instead of
+polishing further; the next step is an owner decision on making a rig-ready part set. See `docs/spikes/rowan-rig-test.md`.
+
 ## 2026-11-02: Rowan front-only rig test passes independent review (D-107)
 
 **Verified:** a 6 s front-facing clip of Rowan as a 2.5D cut-out in Blender 5.2.3 (painted layers in depth, swap

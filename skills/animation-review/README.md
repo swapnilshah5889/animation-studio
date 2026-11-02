@@ -35,4 +35,12 @@ Notes from the first review (2026-10-30):
 - If every panel of an engine comparison shows the same defect, the shared art or face code is at fault, not the engine.
 - Comparing with a reference sheet is optional when none is given; say you skipped it.
 
+Notes from the Rowan rig test (2026-11-02):
+- **Full-frame `motion.csv` misses a pop in a small part** (a limb is a few percent of the frame). For every drawing
+  swap, pose change or fast limb move, run `make_evidence.sh` again on just that interval with a `crop=` around the
+  part, and read the frames in order. A limb that jumps to a new position, or crosses more than about a third of its
+  path in one frame, is a **major** (a pop), however small it looks on the sheet.
+- Grade by the rubric, not by size: a reviewer saw "the arm thrown far out in one frame" and filed it as minor, and the
+  orchestrator passed it on. Ask "does this read as a snap at normal speed?" If yes, it is a major.
+
 Calibration: the 2026-10-30 bake-off clip (`docs/spikes/owner-review-bakeoff.md`, Mia at 5 to 8 s) must come out FAIL.
