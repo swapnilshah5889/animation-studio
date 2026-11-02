@@ -2,9 +2,22 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The independent round-3 review
-passed, but a focused orchestrator review found a major arm-raise snap at 1.5–1.62 s. No fix has been started. The
-turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise now moves continuously
+without a drawing swap or visible snap, but the single arm drawing is off-model: its shoulder is puffy and its forearm
+is washed out. Independent review and orchestrator re-review both say **NEEDS WORK, one major**. The turnaround and full
+slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+
+## 2026-11-02: Rowan arm-fix re-review confirms the art major
+
+I inspected the current 6-second `clip.mp4`, including the arm at rest and raised. The continuous single-arm rotation
+does remove the prior snap, cross-fade and missing-frame defects. I confirm **one major remains**: the viewer-right
+shoulder/sleeve is visibly too broad and puffy (about 1.5x the other sleeve), with a washed-out forearm and elbow band.
+This is an art/model mismatch, not a motion discontinuity. Verdict: **NEEDS WORK; D-107's no-major gate is not met.**
+
+Evidence: `~/ai-studio/scratch/rowan-rig-test/review-current/` (full sheet and arm-rest/arm-raised crops). The independent
+review report is `~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`. This was a visual review and documentation
+update; no code, art, tests or engine settings were changed. Next is a bounded rig-ready arm-art correction, then a fresh
+independent review; no further fix was started in this review.
 
 ## 2026-11-02: focused review finds the Rowan arm raise snaps
 

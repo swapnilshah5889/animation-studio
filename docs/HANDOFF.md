@@ -1,6 +1,6 @@
 # Project handoff
 
-**As of:** 2026-11-02 (updated after D-107)
+**As of:** 2026-11-02 (updated after Rowan arm-fix re-review)
 **Purpose:** concise, agent-neutral continuation brief. This is for Claude Code, Codex, and any other agent using this
 repository. `AGENTS.md`, the roadmap, decision log, progress log, and current step brief remain authoritative; this file
 points to the current state and next gate rather than replacing those sources.
@@ -20,16 +20,18 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 - **Turnaround:** not approved. The reference-conditioned three-quarter and side views changed the canonical red back
   garment and rounded cap. Bounded corrections did not resolve those details; the final cap edit retained a visor and
   top button and cropped Rowan at the thighs. Independent review returned **NEEDS WORK**.
-- **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. Independent review
-  passed round 3 with three minors, but the orchestrator's focused review found a major arm-raise snap at 1.5–1.62 s.
-  The no-major gate is not met; no correction has started.
+- **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. The arm raise now uses
+  one continuously rotating arm image, with no drawing swap, fade, snap or missing frames. Independent review and the
+  orchestrator's re-review both say **NEEDS WORK, one major**: the arm artwork is off-model (puffy shoulder, washed-out
+  forearm and elbow band). The motion-foundation no-major gate is not met.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
-  the independent reviewer's PASS as approval of the 30-second slice. Focused review found a major that remains open.
+  its review as approval of the 30-second slice. The arm-art major remains open.
 - **Generation:** stopped. No image-generation process should be assumed to be running.
-- **Pending:** owner watches `~/ai-studio/scratch/rowan-rig-test/clip.mp4` and decides whether the motion foundation is
-  acceptable. The turnaround remains unapproved.
-- **Latest verified repository state before this review update:** local `main` was at `d5fe2b7`. The Rowan test and
-  focused arm review are recorded in `docs/PROGRESS.md`, `docs/spikes/rowan-rig-test.md`, and D-107.
+- **Pending:** a bounded correction to the arm drawing is needed before the owner reviews the motion foundation. Keep
+  the limb a single continuous part; redraw its neutral/rest artwork to match the canonical slim sleeve, elbow and open
+  hand. Then get an independent review. The turnaround remains unapproved.
+- **Latest verified repository state before this documentation update:** `main` was at `56753dd`. The arm motion fix,
+  review findings and current art blocker are recorded in `docs/PROGRESS.md` and `docs/spikes/rowan-rig-test.md`.
 
 The detailed evidence, model/settings, seeds, reviewer scope, and scratch artifact paths are in
 `docs/spikes/character-art-proof.md`. The chronological project record is `docs/PROGRESS.md`; older entries describe
@@ -45,24 +47,25 @@ Treat them as existing code/history, not permission to expand scope now. The res
 
 ## Next decision and recommended path
 
-**Result 2026-11-02:** the independent reviewer returned round-3 PASS, but a focused orchestrator review found a major
-arm-raise snap (down at 1.48 s, almost horizontal at 1.52 s, near vertical by 1.62 s). The global motion statistic missed
-it because the arm is a small part of the image. The no-major gate is not met. See `docs/spikes/rowan-rig-test.md` and
-the sequence evidence under `~/ai-studio/scratch/rowan-rig-test/wave-sequence-review/`.
+**Result 2026-11-02:** the first focused review found a snap; the attempted cross-fade caused ghosting and missing arm
+frames. The current single-arm version fixes that motion defect. The independent reviewer and orchestrator both found
+one major in the current clip: the arm is off-model, with an oversized puffy shoulder and washed-out forearm. The
+no-major gate is still not met. Current evidence is under `~/ai-studio/scratch/rowan-rig-test/review-current/` and the
+independent report is `~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`.
 
 **D-107:** the owner approved testing Rowan's front-view painted art as a 2.5D cut-out rig before doing more turnaround
 work. That test is complete. The AI turnaround remains on hold. A manual/layered turnaround has not been approved.
 
-**What the prototype actually contains:** a SAM-cut full-body drawing, a separate head, one repainted wave-arm overlay,
-eye/mouth swap patches, and a painted background. Blender stacks them as image planes; it uses a body drawing swap for
-the wave, a rigid rotation of the raised-arm plane, a small head tilt, a slight body scale change, and a camera push-in.
-It does **not** have independently rigged upper/lower arms, separate legs, elbow/knee mesh deformation, or a walk cycle.
+**What the prototype actually contains:** a SAM-cut full-body drawing, a separate head, one arm image part, eye/mouth
+swap patches, and a painted background. Blender stacks them as image planes; the arm rotates continuously from rest to
+wave without a drawing swap, with a small head tilt, a slight body scale change, and a camera push-in. It does **not**
+have independently rigged upper/lower arms, separate legs, elbow/knee mesh deformation, or a walk cycle.
 See `docs/spikes/rowan-rig-test.md` and `scripts/spikes/rowan_rig_blend.py` for exact details.
 
-**Gate now:** the independent review's pass is superseded for gate purposes by the orchestrator's focused major finding.
-Do not ask the owner to approve this as a sound motion foundation yet. The arm raise needs a bounded correction and
-fresh independent review. Do not start that correction until its done-when is agreed; do not start the slice or more
-turnaround generation meanwhile.
+**Gate now:** the arm motion is continuous, but the arm art remains a major mismatch. Do not treat this as a pass or
+start the slice or more turnaround generation yet. The next bounded task is to redraw the single neutral arm part to
+match the canonical (slim sleeve, elbow, open hand), keep it as the only rotating arm drawing, and obtain a fresh
+independent review. The turnaround remains on hold.
 
 The current `docs/steps/STEP-SLICE.md` still contains legacy Rain/Snow task descriptions below its D-107 gate. Reconcile
 those before implementation. The current direction is storybook-style limited animation: use cuts instead of full

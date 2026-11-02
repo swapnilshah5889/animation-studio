@@ -52,9 +52,10 @@ Scripts: `scripts/spikes/rowan_rig_test.py` (`gen` jobs, then `layers`) and `scr
 
 ## What this means for the slice
 
-The storybook limited-animation plan holds: drawing swaps plus rotations on painted layers read well when the
-camera and acting stay gentle. A wave or any new pose costs one repainted drawing and its in-betweens. The open risks
-for the 30 s film are a walk (shot 1 and shot 4) and the three-quarter views (the AI turnaround failed before).
+The storybook limited-animation plan still looks promising for gentle camera and acting, but this test changed the arm
+lesson: use one neutral, on-model arm drawing that rotates continuously; a pose-specific repaint used as the rest pose
+creates a persistent art mismatch. The open risks for the 30 s film are a walk (shot 1 and shot 4) and the three-quarter
+views (the AI turnaround failed before).
 
 ## Orchestrator visual review (2026-11-02; focused follow-up supersedes gate verdict)
 
@@ -98,3 +99,12 @@ Owner approved the fix. Two attempts, each reviewed by a fresh independent revie
 still not met, and the blocker is now art: the rig needs a **rig-ready part set**, each limb drawn once in a neutral pose
 with its hand and matching the canonical (slim sleeve, an elbow, an open hand), not repainted per pose. That is an art
 task for the owner to decide on. Stopped here, without more polishing rounds.
+
+### Orchestrator re-review of the single-arm version (2026-11-02)
+
+I independently inspected the current clip and the rest/raised arm crops in
+`~/ai-studio/scratch/rowan-rig-test/review-current/`. I confirm the arm remains visible and moves continuously, with no
+swap or snap. I also confirm the same **one major**: the shoulder/sleeve is conspicuously puffy and about 1.5x the
+opposite sleeve's width; the forearm is lighter than the shirt and has a visible elbow band. Final verdict remains
+**NEEDS WORK**. No code or art changes were made during this review. The arm-art blocker is recorded in
+`docs/PROGRESS.md` and `docs/HANDOFF.md`.
