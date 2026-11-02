@@ -3,8 +3,16 @@
 Update this at the end of every working session. Newest entry at the top.
 
 **Current step:** Rowan's reference-conditioned turnaround failed the bounded correction pass and independent review.
-Generation is stopped; the turnaround is not approved. No rigging or animation has started. Next approach needs owner
-approval.
+Generation is stopped; the turnaround is not approved. No rigging or animation has started. The recommended hand-authored,
+layered turnaround needs owner approval. See `docs/HANDOFF.md` for the concise, agent-neutral continuation brief.
+
+## 2026-11-02: agent-neutral project handoff prepared
+
+Added `docs/HANDOFF.md` as the concise current-state and continuation guide for any coding agent. Updated `AGENTS.md` to
+point to that shared handoff, and corrected the character-art brief to show Stage 1 complete and Stage 2 failed review.
+The handoff distinguishes historical systems from the active vertical-slice reset and records the Rowan evidence,
+approval gate, next recommendation, and workspace caveats. Verified Markdown changes with `git diff --check`; no code
+or tests were run because this was a documentation-only update.
 
 ## 2026-10-31: Rowan turnaround correction stopped after independent review (D-106)
 

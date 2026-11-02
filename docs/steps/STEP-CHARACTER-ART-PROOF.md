@@ -1,10 +1,11 @@
 # Character-art proof: canonical design, then reference-conditioned turnaround
 
-**Status: owner-approved 2026-10-31 (D-105, amended by D-106).** This is a design-only prerequisite to the vertical
-slice, not an animation step. Blender remains the engine. Rain and Snow remain technical rig baselines, not approved
-film characters.
+**Status (2026-11-02): Stage 1 canonical Rowan approved; Stage 2 reference-conditioned turnaround failed its bounded
+correction and independent review.** The turnaround is not approved. Do not rig or animate from it. Wait for the owner to
+approve the next art approach. This is a design-only prerequisite to the vertical slice, not an animation step. Blender
+remains the engine. Rain and Snow remain technical rig baselines, not approved film characters.
 
-## Stage 1: one canonical illustration (current task)
+## Stage 1: one canonical illustration (complete)
 
 Create one original, age-appropriate child character around 8–10 years old in a detailed drawn storybook style that fits
 the painted forest. The first multi-view attempt failed because the model generated several different characters. Do not
@@ -23,6 +24,11 @@ ask it for a turnaround sheet yet.
 Use the approved canonical image as the visual reference for additional front, three-quarter and side views. Review
 whether face, hair, proportions, colors, clothing and motifs remain the same. The independent reviewer and owner must
 approve the turnaround sheet before rigging begins.
+
+**Attempt outcome:** the reference-conditioned views and bounded cap/back-garment corrections did not preserve the
+canonical details; independent review returned NEEDS WORK. Generation is stopped. The hand-authored/layered turnaround
+alternative is only a recommendation, not approved work. See `docs/HANDOFF.md` and
+`docs/spikes/character-art-proof.md`.
 
 ## Scope and limits
 

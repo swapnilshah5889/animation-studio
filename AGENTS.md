@@ -12,7 +12,8 @@ Read these before doing anything, in this order:
 2. `docs/ROADMAP.md`: the steps, each with a "done when" definition
 3. `docs/DECISIONS.md`: decisions already made, and why. Don't relitigate them without a reason.
 4. `docs/PROGRESS.md`: where the last session stopped
-5. `docs/steps/STEP-<n>-*.md`: the detailed brief for the current step, if one exists
+5. `docs/HANDOFF.md`: concise current state, blockers, and continuation instructions shared by all agents
+6. `docs/steps/STEP-<n>-*.md`: the detailed brief for the current step, if one exists
 
 ## About the owner
 
