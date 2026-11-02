@@ -54,3 +54,17 @@ Scripts: `scripts/spikes/rowan_rig_test.py` (`gen` jobs, then `layers`) and `scr
 The storybook limited-animation plan holds: drawing swaps plus rotations on painted layers read well when the
 camera and acting stay gentle. A wave or any new pose costs one repainted drawing and its in-betweens. The open risks
 for the 30 s film are a walk (shot 1 and shot 4) and the three-quarter views (the AI turnaround failed before).
+
+## Orchestrator visual review (2026-11-02)
+
+I independently inspected the final `clip.mp4` using `skills/animation-review/`: the 12-frame sheet, motion data, and
+three crops (face, wave, mouth). Verdict: **PASS for the narrow feasibility question**, not for production readiness.
+Rowan stays recognizable; the painted plate is visually compatible; the head/face remain together; framing holds; and
+the camera push is smooth. Measured frame change: median 2.015, maximum 3.94, with no 5x-median spikes.
+
+I agree with the independent review's three minor findings: the first wave in-between reaches far outward and has a puffy
+sleeve, the face stays worried while waving, and the talking mouth is faint at full-frame scale. The clip demonstrates a
+small plane-and-swap motion prototype; it does not demonstrate locomotion, a turn, a three-quarter view, audio, or a
+complete rig. Breathing and sway were not inspected in motion. The owner still needs to watch the clip and decide whether
+this is an acceptable foundation for the slice. My evidence files are outside the repository at
+`~/ai-studio/scratch/rowan-rig-test/orchestrator-review/`.

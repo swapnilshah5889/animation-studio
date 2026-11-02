@@ -20,10 +20,15 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 - **Turnaround:** not approved. The reference-conditioned three-quarter and side views changed the canonical red back
   garment and rounded cap. Bounded corrections did not resolve those details; the final cap edit retained a visor and
   top button and cropped Rowan at the thighs. Independent review returned **NEEDS WORK**.
-- **Rigging/animation:** not started for Rowan. Do not rig from the failed turnaround.
+- **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. Independent review passed
+  round 3 with three minors; the orchestrator reviewed the actual clip and agrees it passes this narrow test.
+- **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
+  its PASS as approval of the 30-second slice.
 - **Generation:** stopped. No image-generation process should be assumed to be running.
-- **Latest verified repository state before this handoff:** local `main` was at `27e230f`, with the turnaround failure
-  recorded in `docs/PROGRESS.md` and `docs/spikes/character-art-proof.md`.
+- **Pending:** owner watches `~/ai-studio/scratch/rowan-rig-test/clip.mp4` and decides whether the motion foundation is
+  acceptable. The turnaround remains unapproved.
+- **Latest verified repository state before this handoff:** local `main` was at `226fc69`. The Rowan test and review are
+  recorded in `docs/PROGRESS.md`, `docs/spikes/rowan-rig-test.md`, and D-107.
 
 The detailed evidence, model/settings, seeds, reviewer scope, and scratch artifact paths are in
 `docs/spikes/character-art-proof.md`. The chronological project record is `docs/PROGRESS.md`; older entries describe
@@ -39,15 +44,14 @@ Treat them as existing code/history, not permission to expand scope now. The res
 
 ## Next decision and recommended path
 
-**Result 2026-11-02:** the rig test passed independent review (round 3 PASS, three minors), see
-`docs/spikes/rowan-rig-test.md`. Waiting for the owner to watch the clip.
+**Result 2026-11-02:** the front-only rig test passed independent review (round 3 PASS, three minors); the orchestrator
+also inspected the contact sheet and three crops and agrees it passes the limited feasibility question. The owner still
+needs to watch the clip and accept the foundation.
 
-**Decided 2026-11-02 (D-107):** before any more turnaround work, run a **front-only rig test** of Rowan. The risky
-question is whether this painted watercolour art can move well as a 2.5D cut-out rig in Blender (painted cut-outs failed
-in the first film and the engine bake-off), so it is tested first and cheaply. The hand-authored turnaround is on hold
-until the rig test passes.
+**D-107:** the owner approved testing Rowan's front-view painted art as a 2.5D cut-out rig before doing more turnaround
+work. That test is complete. The AI turnaround remains on hold. A manual/layered turnaround has not been approved.
 
-**Rig test (one bounded task, about 90 min):**
+**Completed rig test:**
 1. Cut the approved canonical (`~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png`) into layers:
    head, hair, cap, torso with the red back garment, upper and lower arms, hands, legs. Fill areas hidden behind parts
    with local inpainting in the same model and style (SDXL Base 1.0 + StorybookRedmondV2, settings in
@@ -56,12 +60,13 @@ until the rig test passes.
    blink, talk, a small head tilt, a wave, and a slow camera push-in over a painted background.
 3. Independent review (`skills/animation-review/README.md`, `docs/craft/visual-review.md`), then the owner watches it.
 
-**Done when:** no blocker or major in the independent review, and the owner says the art moves well enough to build the
-slice on. If it fails, record why and bring the owner one recommendation; do not try a new art or engine route alone.
+**Gate now:** independent review has no blocker or major, but the owner has not yet said the art moves well enough to
+build the slice on. Ask the owner to watch the clip. Do not start the slice or more turnaround generation until that
+decision and a bounded next-task brief are recorded.
 
-If it passes: make the other views (hand-authored layered turnaround, only as many views as the slice needs), then
-continue `docs/steps/STEP-SLICE.md`. The slice favours storybook-style limited animation: front and three-quarter
-views, cuts between shots instead of full turns, a short walk with feet hidden by grass or one simple side-view cycle.
+The current `docs/steps/STEP-SLICE.md` still contains legacy Rain/Snow task descriptions below its D-107 gate. Reconcile
+those before implementation. The current direction is storybook-style limited animation: use cuts instead of full
+turns; only add views that the story needs. Choose and approve a turnaround method before producing it.
 
 ## Working rules for the next agent
 

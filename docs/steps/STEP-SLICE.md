@@ -44,10 +44,12 @@ crowds, cloth or hair simulation, or complex acting.
 
 ## Current gate (D-107, 2026-11-02)
 
-Cast is Rowan (D-105, D-106). Before any more turnaround art, a **front-only rig test** (see `docs/HANDOFF.md`) proves the
-painted art can move as a 2.5D cut-out rig in Blender. The film stays as below, but in a storybook limited-animation
-style: front and three-quarter views, cuts instead of full turns, shot 1's walk short with feet hidden or one side-view
-cycle, shot 4 ends on a walk away. Tasks 1 to 2 below describe the earlier Rain route and are kept as history.
+Cast is Rowan (D-105, D-106). The **front-only rig test** in `docs/spikes/rowan-rig-test.md` is complete and passed
+independent review; the owner still needs to watch the clip and accept this motion foundation. Do not begin the 30-second
+slice or more turnaround work until that decision and a bounded task brief are recorded. The film direction is
+storybook limited animation: front and three-quarter views, cuts instead of full turns, a short walk with feet hidden or
+one simple side-view cycle, and a walk-away ending. Tasks below still include legacy Rain/Snow instructions and must be
+reconciled before implementation.
 
 ## Tasks (one session at a time, each with a time box)
 

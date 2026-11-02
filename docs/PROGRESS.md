@@ -2,9 +2,28 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's reference-conditioned turnaround failed the bounded correction pass and independent review.
-Generation is stopped; the turnaround is not approved. No rigging or animation has started. The recommended hand-authored,
-layered turnaround needs owner approval. See `docs/HANDOFF.md` for the concise, agent-neutral continuation brief.
+**Current step:** Rowan's approved canonical art now has a 6-second front-only Blender feasibility rig. Independent review
+passed after two failed rounds; the orchestrator also reviewed the render. Waiting for the owner to watch and accept this
+narrow test. The turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+
+## 2026-11-02: orchestrator visual review of Rowan front-only rig
+
+Reviewed the actual 1080p24 clip using the agent-neutral procedure: 12-frame contact sheet, frame-change measurements,
+and three crops (face, wave, mouth). I agree with **PASS for the narrow feasibility question**: Rowan remains
+recognizable, head/face stay together, the plate and character share a watercolor look, framing holds, and the camera
+push is smooth. No frame-change spike exceeded 5x the median (median 2.015, max 3.94).
+
+Limits remain visible: the wave reaches almost horizontally outward in an awkward in-between, with a puffy sleeve and
+small hand; the face remains worried while waving; the talking mouth is faint at film scale. I classify these as minors
+for this six-second feasibility test, consistent with the independent reviewer, but they need attention before a
+production slice. This is a cut-out plane-and-swap prototype, not a complete articulated body: it has no walk, turn,
+three-quarter view, dialogue audio, or full-film coverage. Breathing/sway were not reviewed from moving frames. Evidence
+is in `~/ai-studio/scratch/rowan-rig-test/orchestrator-review/`; full notes are in
+`docs/spikes/rowan-rig-test.md`.
+
+**Next:** owner watches `~/ai-studio/scratch/rowan-rig-test/clip.mp4` and decides whether this is a sound motion
+foundation. Before implementation of the 30-second slice, reconcile the remaining legacy Rain/Snow task descriptions in
+`docs/steps/STEP-SLICE.md` with D-107 and write the next bounded brief.
 
 ## 2026-11-02: agent-neutral project handoff prepared
 
