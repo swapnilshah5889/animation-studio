@@ -96,6 +96,17 @@ is a recommendation only; no further generation was started.
 design-only proof required more detail, a normal face, and a style that belongs in the existing painted forest. No
 rigging or animation until independent review and owner approval.
 
+## 2026-11-02: Rowan front-only rig test passes independent review (D-107)
+
+**Verified:** a 6 s front-facing clip of Rowan as a 2.5D cut-out in Blender 5.2.3 (painted layers in depth, swap
+patches for blinks and mouths, a repainted wave drawing with in-betweens, perspective push-in over a new painted plate),
+all made locally with the canonical's model and style. The independent reviewer reported round 1 NEEDS WORK (3 majors),
+round 2 FAIL (black mouth blocker, majors fixed) and round 3 **PASS** (3 minors: faint talk shapes, one wide wave
+in-between with a puffy sleeve, worried face while waving). Answer to the test question: yes, the art moves well enough
+for the slice. Details and gotchas: `docs/spikes/rowan-rig-test.md`. Clip: `~/ai-studio/scratch/rowan-rig-test/clip.mp4`.
+**Not checked:** breathing and sway were seen only in stills. The new scripts have long-line lint warnings only (like the
+other spikes). **Next:** the owner watches the clip; if it passes, the three-quarter view, then the slice.
+
 ## 2026-11-02: plan after the Codex handoff (D-107)
 
 Read `docs/HANDOFF.md` and D-103 to D-106. The owner approved Rowan's front view (first approved picture); his AI

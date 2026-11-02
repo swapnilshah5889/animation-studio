@@ -39,6 +39,9 @@ Treat them as existing code/history, not permission to expand scope now. The res
 
 ## Next decision and recommended path
 
+**Result 2026-11-02:** the rig test passed independent review (round 3 PASS, three minors), see
+`docs/spikes/rowan-rig-test.md`. Waiting for the owner to watch the clip.
+
 **Decided 2026-11-02 (D-107):** before any more turnaround work, run a **front-only rig test** of Rowan. The risky
 question is whether this painted watercolour art can move well as a 2.5D cut-out rig in Blender (painted cut-outs failed
 in the first film and the engine bake-off), so it is tested first and cheaply. The hand-authored turnaround is on hold
