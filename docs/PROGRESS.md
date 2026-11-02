@@ -2,10 +2,16 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise moves continuously
-without a drawing swap or visible snap, but the sleeve reads as a detached puffy mass at the shoulder and the narrow,
-pale forearm reads as a separate strip. Independent review and orchestrator re-review both say **NEEDS WORK, one major**.
-The turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise moves continuously,
+but the shoulder/sleeve reads as detached and puffy, and the forearm/hand are too thin and small. The owner authorized a
+focused art-and-joint repair; no implementation has started. See `docs/steps/STEP-ROWAN-ARM-REPAIR.md` and
+`docs/HANDOFF.md`.
+
+## 2026-11-02: owner authorizes Rowan arm, shoulder and hand repair
+
+Prepared `docs/steps/STEP-ROWAN-ARM-REPAIR.md` for Claude Code. Recommended a neutral on-model arm first, then layered
+upper arm, forearm and readable open hand with overlapping shoulder/elbow/wrist pivots; prove four poses before a full
+clip; finish with a fresh independent visual review. This is a handoff only: no art, rig, or render changes have begun.
 
 ## 2026-11-02: Rowan shoulder sequence re-review confirms the anatomy/art major
 

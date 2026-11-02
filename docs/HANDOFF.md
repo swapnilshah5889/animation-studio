@@ -28,11 +28,11 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
   its review as approval of the 30-second slice. The arm-art major remains open.
 - **Generation:** stopped. No image-generation process should be assumed to be running.
-- **Pending:** a bounded correction to the neutral arm and shoulder artwork is needed before the owner reviews the
-  motion foundation. Keep the limb a single continuously moving part, but redraw the neutral sleeve/shoulder attachment
-  to match the canonical's slim sleeve, with a plausible elbow and open hand. Then get an independent review. The
-  turnaround remains unapproved.
-- **Latest verified repository state before this documentation update:** `main` was at `56753dd`. The arm motion fix,
+- **Next, owner-authorized:** a focused arm/shoulder/hand repair. Follow
+  `docs/steps/STEP-ROWAN-ARM-REPAIR.md`: match the neutral art to the canonical, build overlapping upper-arm, forearm
+  and hand pieces with pivots, prove four still poses, then render and independently review the clip. The turnaround
+  remains unapproved.
+- **Latest verified code baseline before this handoff task:** `main` was at `f5425e1`. The arm motion fix,
   review findings and current art blocker are recorded in `docs/PROGRESS.md` and `docs/spikes/rowan-rig-test.md`.
 
 The detailed evidence, model/settings, seeds, reviewer scope, and scratch artifact paths are in
