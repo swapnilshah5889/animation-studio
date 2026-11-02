@@ -42,6 +42,13 @@ crowds, cloth or hair simulation, or complex acting.
 | 3 | 14 to 24 s | Rain: "Want to see the fireflies?" Snow: "Yes! Let's go!" Lip-sync, blinks and small gestures. | Over-the-shoulder close-ups, soft depth of field |
 | 4 | 24 to 30 s | Both turn and walk towards the trees; fireflies (glowing particles) appear. Music swells, then fades. | Wide, gentle crane up |
 
+## Current gate (D-107, 2026-11-02)
+
+Cast is Rowan (D-105, D-106). Before any more turnaround art, a **front-only rig test** (see `docs/HANDOFF.md`) proves the
+painted art can move as a 2.5D cut-out rig in Blender. The film stays as below, but in a storybook limited-animation
+style: front and three-quarter views, cuts instead of full turns, shot 1's walk short with feet hidden or one side-view
+cycle, shot 4 ends on a walk away. Tasks 1 to 2 below describe the earlier Rain route and are kept as history.
+
 ## Tasks (one session at a time, each with a time box)
 
 1. **Rig check (30 min):** download, open Rain and Snow in Blender 5.2.3 headless, render a turntable and a

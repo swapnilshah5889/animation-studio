@@ -96,6 +96,13 @@ is a recommendation only; no further generation was started.
 design-only proof required more detail, a normal face, and a style that belongs in the existing painted forest. No
 rigging or animation until independent review and owner approval.
 
+## 2026-11-02: plan after the Codex handoff (D-107)
+
+Read `docs/HANDOFF.md` and D-103 to D-106. The owner approved Rowan's front view (first approved picture); his AI
+turnaround failed review. Risk found: how Rowan will move was still undecided, and the planned route (views, then a
+cut-out rig) leads back to the method that failed before. Owner approved D-107: a front-only rig test first, turnaround
+on hold. Written into HANDOFF, STEP-SLICE (current gate) and DECISIONS.
+
 ## 2026-10-31: owner reopened character-art source (D-105)
 
 After repeated NEEDS WORK reviews of the Rain look, the owner said the character art is underdeveloped and approved

@@ -1,6 +1,6 @@
 # Project handoff
 
-**As of:** 2026-11-02
+**As of:** 2026-11-02 (updated after D-107)
 **Purpose:** concise, agent-neutral continuation brief. This is for Claude Code, Codex, and any other agent using this
 repository. `AGENTS.md`, the roadmap, decision log, progress log, and current step brief remain authoritative; this file
 points to the current state and next gate rather than replacing those sources.
@@ -39,21 +39,26 @@ Treat them as existing code/history, not permission to expand scope now. The res
 
 ## Next decision and recommended path
 
-**Pending owner approval:** switch to a hand-authored, layered turnaround for Rowan. This is the recommendation because
-the local reference-edit workflow repeatedly altered the same defining costume details. Do not begin this alternative
-until the owner approves it and its done-when is agreed.
+**Decided 2026-11-02 (D-107):** before any more turnaround work, run a **front-only rig test** of Rowan. The risky
+question is whether this painted watercolour art can move well as a 2.5D cut-out rig in Blender (painted cut-outs failed
+in the first film and the engine bake-off), so it is tested first and cheaply. The hand-authored turnaround is on hold
+until the rig test passes.
 
-If approved, the next task should be one bounded art task, not rigging: create matching full-body front, three-quarter,
-and side views from the approved canonical, preserving the cap without a projecting brim, the same red back garment,
-face, proportions, palette, clothing, and motifs. Keep all views fully framed. Have an independent reviewer compare each
-view against the canonical, record issues and evidence, and stop if there is a blocker or major. Show the reviewed sheet
-to the owner and wait for explicit approval before rigging. Use the agent-neutral procedure in
-`skills/animation-review/README.md` and rubric in `docs/craft/visual-review.md`.
+**Rig test (one bounded task, about 90 min):**
+1. Cut the approved canonical (`~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png`) into layers:
+   head, hair, cap, torso with the red back garment, upper and lower arms, hands, legs. Fill areas hidden behind parts
+   with local inpainting in the same model and style (SDXL Base 1.0 + StorybookRedmondV2, settings in
+   `rowan-notes.json`). Add 3 to 4 mouth shapes and open/closed eyes in the same style.
+2. Rig in Blender (flat layers in depth, bones, mesh bending at elbows and knees) and render 6 s, front-facing: breathe,
+   blink, talk, a small head tilt, a wave, and a slow camera push-in over a painted background.
+3. Independent review (`skills/animation-review/README.md`, `docs/craft/visual-review.md`), then the owner watches it.
 
-After a turnaround is both independently reviewed and owner-approved, continue the vertical slice in
-`docs/steps/STEP-SLICE.md`: rig and verify the character in Blender, pass the 2D/2.5D drawn-look gate, then build and
-review the 30-second four-shot film. The slice is complete only when the independent review has no blocker or major and
-the owner says the film passes. Only then propose the next roadmap brief.
+**Done when:** no blocker or major in the independent review, and the owner says the art moves well enough to build the
+slice on. If it fails, record why and bring the owner one recommendation; do not try a new art or engine route alone.
+
+If it passes: make the other views (hand-authored layered turnaround, only as many views as the slice needs), then
+continue `docs/steps/STEP-SLICE.md`. The slice favours storybook-style limited animation: front and three-quarter
+views, cuts between shots instead of full turns, a short walk with feet hidden by grass or one simple side-view cycle.
 
 ## Working rules for the next agent
 

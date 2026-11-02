@@ -1862,3 +1862,6 @@ it to the owner for approval. Only after that approval may a focused task genera
 image as a reference. Review identity across views independently and get owner approval of the turnaround sheet before
 rigging. This isolates art direction from view-consistency problems and prevents unapproved designs from becoming rigged
 production assets. See `docs/steps/STEP-CHARACTER-ART-PROOF.md`.
+
+## D-107: Front-only rig test of Rowan before more turnaround work (2026-11-02)
+Codex's handoff recommended a hand-authored layered turnaround after the AI turnaround failed review. The orchestrator recommended, and the owner approved, testing the risky piece first: can Rowan's approved painted watercolour art move well as a 2.5D cut-out rig in Blender? Painted art cut into rigid parts failed in the first film and the bake-off (no hidden-limb art, baked shading, turns), and 3D under a painted look failed in D-104, so the motion method is the open risk, not more views. The test cuts the canonical front view into layers with inpainted hidden areas and renders a 6 s front-facing acting clip (breathe, blink, talk, head tilt, wave, push-in) for independent review and the owner. The turnaround waits until it passes. The slice moves to storybook-style limited animation (front and three-quarter views, cuts instead of turns).
