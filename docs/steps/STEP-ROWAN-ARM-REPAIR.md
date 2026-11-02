@@ -52,3 +52,31 @@ best stills. Do not expand into a new character, turnaround, engine change or fu
 - Read `AGENTS.md`, `docs/HANDOFF.md`, `docs/spikes/rowan-rig-test.md` and the review rubric before editing.
 - Do not delete unrelated files. Run focused tests/lint if code changes. Record verification in `docs/PROGRESS.md`,
   then commit and push only this task's verified changes.
+
+## Additions (orchestrator review, 2026-11-02)
+
+- **How the arm art is made:** an agent cannot hand-draw. Inpaint a new arm on the canonical (same SDXL + StorybookRedmondV2
+  settings), hanging relaxed a little away from the body with an open hand, so it sits mostly outside the torso and can
+  be cut with SAM. Then split it at the elbow and wrist with rounded overlap caps (see `add_caps` and `cut_limb` in
+  `studio_core/src/studio_core/puppet/build.py`) so no seam shows when the joints turn.
+- **No canonical hand exists:** one hand is in a pocket and the other is behind the backpack. The open hand is a new
+  design, so the reviewer judges it on style and readability, not on matching the reference.
+- **Elbow bend stays moderate** (under about 60 degrees), because the shading is baked into the paint.
+- **Regression check in the review:** blinks (1.1, 2.3, 4.7 s), talking (3.2 to 4.6 s), smile (from 4.9 s), headroom at
+  the end, and no black or stray patch on the face.
+
+## Resumable task list (tick each when its output exists; resume from the first unticked task)
+
+Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/rowan_rig_test.py` (jobs) and
+`scripts/spikes/rowan_rig_blend.py` (rig).
+
+- [x] **T1** Brief amended with this list, committed.
+- [ ] **T2** `gen arm_neutral`: the inpainted neutral arm, two seeds, picked by eye → `gen/arm_neutral/`.
+- [ ] **T3** `layers`: SAM cut, then split into `layers/arm_upper.png`, `arm_fore.png`, `arm_hand.png` with caps;
+  pivots in `layers/arm_pivots.json`.
+- [ ] **T4** Rig: the 3-piece chain replaces `arm_wave`; `--poses` renders four stills (rest, 45 degrees, horizontal,
+  raised) → `poses/`.
+- [ ] **T5** The author checks the four stills (shoulder, elbow, hand), then renders `clip.mp4`.
+- [ ] **T6** A fresh independent reviewer (cropped frame-by-frame arm sequence plus the regression check) →
+  `review-arm-repair.md`.
+- [ ] **T7** PROGRESS, the spike note and this list updated; committed and pushed; intermediates cleaned.
