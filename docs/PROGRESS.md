@@ -2,22 +2,26 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise now moves continuously
-without a drawing swap or visible snap, but the single arm drawing is off-model: its shoulder is puffy and its forearm
-is washed out. Independent review and orchestrator re-review both say **NEEDS WORK, one major**. The turnaround and full
-slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise moves continuously
+without a drawing swap or visible snap, but the sleeve reads as a detached puffy mass at the shoulder and the narrow,
+pale forearm reads as a separate strip. Independent review and orchestrator re-review both say **NEEDS WORK, one major**.
+The turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
 
-## 2026-11-02: Rowan arm-fix re-review confirms the art major
+## 2026-11-02: Rowan shoulder sequence re-review confirms the anatomy/art major
 
-I inspected the current 6-second `clip.mp4`, including the arm at rest and raised. The continuous single-arm rotation
-does remove the prior snap, cross-fade and missing-frame defects. I confirm **one major remains**: the viewer-right
-shoulder/sleeve is visibly too broad and puffy (about 1.5x the other sleeve), with a washed-out forearm and elbow band.
-This is an art/model mismatch, not a motion discontinuity. Verdict: **NEEDS WORK; D-107's no-major gate is not met.**
+I inspected the current 6-second `clip.mp4` with a 12-frame crop sequence over 1.3–3.3 s, plus rest/raised crops and the
+canonical. A fresh **Independent Animation Reviewer** separately reviewed the 12-frame sequence and reference. The
+continuous single-arm rotation removes the prior snap, cross-fade and missing-frame defects. But **one major remains**:
+as the arm lifts, its puffed sleeve projects like a detached block from the shoulder and its outer contour changes
+awkwardly; the narrow, pale forearm reads as a separate strip. At rest the shoulder is about 1.5x the opposite sleeve's
+width. This is a broken-looking shoulder/arm integration as well as an off-model art mismatch, not a timing snap.
+Both reviews say **NEEDS WORK; D-107's no-major gate is not met**. No separate second major was found in the sampled
+sequence.
 
-Evidence: `~/ai-studio/scratch/rowan-rig-test/review-current/` (full sheet and arm-rest/arm-raised crops). The independent
-review report is `~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`. This was a visual review and documentation
-update; no code, art, tests or engine settings were changed. Next is a bounded rig-ready arm-art correction, then a fresh
-independent review; no further fix was started in this review.
+Evidence: `~/ai-studio/scratch/rowan-rig-test/review-current/shoulder-sequence/` (cropped 12-frame sheet and motion
+data), plus `arm-rest.png` and `arm-raised.png`. The independent review report is
+`~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`. No code, art, tests or engine settings were changed. Next is a
+bounded redraw of the neutral arm/shoulder attachment, then a fresh independent review; no fix was started here.
 
 ## 2026-11-02: focused review finds the Rowan arm raise snaps
 

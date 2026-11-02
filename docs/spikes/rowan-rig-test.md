@@ -100,11 +100,14 @@ still not met, and the blocker is now art: the rig needs a **rig-ready part set*
 with its hand and matching the canonical (slim sleeve, an elbow, an open hand), not repainted per pose. That is an art
 task for the owner to decide on. Stopped here, without more polishing rounds.
 
-### Orchestrator re-review of the single-arm version (2026-11-02)
+### Orchestrator and independent shoulder-sequence re-review (2026-11-02)
 
-I independently inspected the current clip and the rest/raised arm crops in
-`~/ai-studio/scratch/rowan-rig-test/review-current/`. I confirm the arm remains visible and moves continuously, with no
-swap or snap. I also confirm the same **one major**: the shoulder/sleeve is conspicuously puffy and about 1.5x the
-opposite sleeve's width; the forearm is lighter than the shirt and has a visible elbow band. Final verdict remains
-**NEEDS WORK**. No code or art changes were made during this review. The arm-art blocker is recorded in
-`docs/PROGRESS.md` and `docs/HANDOFF.md`.
+I inspected the current clip with a cropped 12-frame shoulder sequence from 1.3–3.3 s, the rest/raised crops, and the
+canonical reference, under `~/ai-studio/scratch/rowan-rig-test/review-current/`. A fresh Independent Animation Reviewer
+also checked the sequence sheet against the canonical. Both confirm the arm remains visible and moves continuously, with
+no swap or snap. Both find **one major**: the sleeve projects as a detached-looking puffy block at the shoulder and its
+contour changes awkwardly as it lifts/lowers; the pale narrow forearm reads as a separate strip. At rest, the shoulder
+is about 1.5x the opposite sleeve's width. Final verdict remains **NEEDS WORK**; the issue is shoulder/arm anatomy and
+model matching. The independent reviewer saw no second major in the sampled sheet, but did not review playback or
+full-resolution crops. No code or art changes were made. The blocker and path forward are recorded in `PROGRESS.md` and
+`HANDOFF.md`.

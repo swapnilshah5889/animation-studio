@@ -22,14 +22,16 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
   top button and cropped Rowan at the thighs. Independent review returned **NEEDS WORK**.
 - **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. The arm raise now uses
   one continuously rotating arm image, with no drawing swap, fade, snap or missing frames. Independent review and the
-  orchestrator's re-review both say **NEEDS WORK, one major**: the arm artwork is off-model (puffy shoulder, washed-out
-  forearm and elbow band). The motion-foundation no-major gate is not met.
+  orchestrator's re-review both say **NEEDS WORK, one major**: in the raise, the puffy sleeve reads as a detached block
+  at the shoulder and changes contour awkwardly; the pale, narrow forearm reads as a separate strip. It is off-model
+  and the shoulder/arm integration looks broken. The motion-foundation no-major gate is not met.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
   its review as approval of the 30-second slice. The arm-art major remains open.
 - **Generation:** stopped. No image-generation process should be assumed to be running.
-- **Pending:** a bounded correction to the arm drawing is needed before the owner reviews the motion foundation. Keep
-  the limb a single continuous part; redraw its neutral/rest artwork to match the canonical slim sleeve, elbow and open
-  hand. Then get an independent review. The turnaround remains unapproved.
+- **Pending:** a bounded correction to the neutral arm and shoulder artwork is needed before the owner reviews the
+  motion foundation. Keep the limb a single continuously moving part, but redraw the neutral sleeve/shoulder attachment
+  to match the canonical's slim sleeve, with a plausible elbow and open hand. Then get an independent review. The
+  turnaround remains unapproved.
 - **Latest verified repository state before this documentation update:** `main` was at `56753dd`. The arm motion fix,
   review findings and current art blocker are recorded in `docs/PROGRESS.md` and `docs/spikes/rowan-rig-test.md`.
 
@@ -48,10 +50,11 @@ Treat them as existing code/history, not permission to expand scope now. The res
 ## Next decision and recommended path
 
 **Result 2026-11-02:** the first focused review found a snap; the attempted cross-fade caused ghosting and missing arm
-frames. The current single-arm version fixes that motion defect. The independent reviewer and orchestrator both found
-one major in the current clip: the arm is off-model, with an oversized puffy shoulder and washed-out forearm. The
-no-major gate is still not met. Current evidence is under `~/ai-studio/scratch/rowan-rig-test/review-current/` and the
-independent report is `~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`.
+frames. The current single-arm version fixes that motion defect. A fresh independent reviewer and the orchestrator
+both found one major in the current clip: the sleeve reads as a detached puffy block at the shoulder through the raise,
+and the pale narrow forearm reads as a separate strip. The no-major gate is still not met. The focused sequence is under
+`~/ai-studio/scratch/rowan-rig-test/review-current/shoulder-sequence/`; the independent report is
+`~/ai-studio/scratch/rowan-rig-test/review-arm-fix.md`.
 
 **D-107:** the owner approved testing Rowan's front-view painted art as a 2.5D cut-out rig before doing more turnaround
 work. That test is complete. The AI turnaround remains on hold. A manual/layered turnaround has not been approved.
@@ -62,10 +65,10 @@ wave without a drawing swap, with a small head tilt, a slight body scale change,
 have independently rigged upper/lower arms, separate legs, elbow/knee mesh deformation, or a walk cycle.
 See `docs/spikes/rowan-rig-test.md` and `scripts/spikes/rowan_rig_blend.py` for exact details.
 
-**Gate now:** the arm motion is continuous, but the arm art remains a major mismatch. Do not treat this as a pass or
-start the slice or more turnaround generation yet. The next bounded task is to redraw the single neutral arm part to
-match the canonical (slim sleeve, elbow, open hand), keep it as the only rotating arm drawing, and obtain a fresh
-independent review. The turnaround remains on hold.
+**Gate now:** the arm motion is continuous, but the shoulder/arm attachment still looks broken and off-model. Do not
+treat this as a pass or start the slice or more turnaround generation yet. The next bounded task is to redraw the neutral
+arm and shoulder attachment to match the canonical (slim sleeve, plausible elbow, open hand), keep one continuous arm
+drawing through the move, and obtain a fresh independent review. The turnaround remains on hold.
 
 The current `docs/steps/STEP-SLICE.md` still contains legacy Rain/Snow task descriptions below its D-107 gate. Reconcile
 those before implementation. The current direction is storybook-style limited animation: use cuts instead of full
