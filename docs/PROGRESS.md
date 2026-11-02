@@ -2,28 +2,30 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's approved canonical art now has a 6-second front-only Blender feasibility rig. Independent review
-passed after two failed rounds; the orchestrator also reviewed the render. Waiting for the owner to watch and accept this
-narrow test. The turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
+**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The independent round-3 review
+passed, but a focused orchestrator review found a major arm-raise snap at 1.5–1.62 s. No fix has been started. The
+turnaround and full slice remain unapproved/unbuilt. See `docs/HANDOFF.md`.
 
-## 2026-11-02: orchestrator visual review of Rowan front-only rig
+## 2026-11-02: focused review finds the Rowan arm raise snaps
 
-Reviewed the actual 1080p24 clip using the agent-neutral procedure: 12-frame contact sheet, frame-change measurements,
-and three crops (face, wave, mouth). I agree with **PASS for the narrow feasibility question**: Rowan remains
-recognizable, head/face stay together, the plate and character share a watercolor look, framing holds, and the camera
-push is smooth. No frame-change spike exceeded 5x the median (median 2.015, max 3.94).
+Re-reviewed the actual 1080p24 clip with a 12-frame sequence sheet focused on 1.3–1.9 s and read the Blender arm keys.
+The original independent reviewer returned round-3 PASS, but the closer sequence reveals a **major motion defect**: the
+arm is down at 1.48 s, the raised-arm drawing and nearly horizontal arm appear at 1.52 s, and it is already near vertical
+at 1.62 s. The hard body/drawing visibility swap plus the rapid rotation reads as a snap, not a smooth raise. This
+means D-107's no-major done-when is not met yet.
 
-Limits remain visible: the wave reaches almost horizontally outward in an awkward in-between, with a puffy sleeve and
-small hand; the face remains worried while waving; the talking mouth is faint at film scale. I classify these as minors
-for this six-second feasibility test, consistent with the independent reviewer, but they need attention before a
-production slice. This is a cut-out plane-and-swap prototype, not a complete articulated body: it has no walk, turn,
-three-quarter view, dialogue audio, or full-film coverage. Breathing/sway were not reviewed from moving frames. Evidence
-is in `~/ai-studio/scratch/rowan-rig-test/orchestrator-review/`; full notes are in
-`docs/spikes/rowan-rig-test.md`.
+The un-cropped global frame-change statistic reported no 5x-median spike (median 2.015, max 3.94), but dilutes a
+localized arm change across the full image and did not flag this defect. Other observed issues remain: puffy sleeve and
+small hand, worried expression while waving, and faint talk mouth at film scale. Rowan remains on-model, the face moves
+with the head, framing holds, and the camera push is smooth.
 
-**Next:** owner watches `~/ai-studio/scratch/rowan-rig-test/clip.mp4` and decides whether this is a sound motion
-foundation. Before implementation of the 30-second slice, reconcile the remaining legacy Rain/Snow task descriptions in
-`docs/steps/STEP-SLICE.md` with D-107 and write the next bounded brief.
+**Scope:** this is a plane-and-swap prototype, not a complete articulated body. It has no walk, turn, three-quarter view,
+dialogue audio, or full-film coverage; breathing/sway were not reviewed in motion. Review evidence is in
+`~/ai-studio/scratch/rowan-rig-test/wave-sequence-review/`; review notes are in `docs/spikes/rowan-rig-test.md`.
+
+**Next:** no code fix has been started. Propose a bounded arm-raise correction and independent re-review before asking the
+owner to judge the motion foundation. Reconcile the remaining legacy Rain/Snow task descriptions in
+`docs/steps/STEP-SLICE.md` before slice implementation.
 
 ## 2026-11-02: agent-neutral project handoff prepared
 
@@ -120,11 +122,12 @@ rigging or animation until independent review and owner approval.
 **Verified:** a 6 s front-facing clip of Rowan as a 2.5D cut-out in Blender 5.2.3 (painted layers in depth, swap
 patches for blinks and mouths, a repainted wave drawing with in-betweens, perspective push-in over a new painted plate),
 all made locally with the canonical's model and style. The independent reviewer reported round 1 NEEDS WORK (3 majors),
-round 2 FAIL (black mouth blocker, majors fixed) and round 3 **PASS** (3 minors: faint talk shapes, one wide wave
-in-between with a puffy sleeve, worried face while waving). Answer to the test question: yes, the art moves well enough
-for the slice. Details and gotchas: `docs/spikes/rowan-rig-test.md`. Clip: `~/ai-studio/scratch/rowan-rig-test/clip.mp4`.
+round 2 FAIL (black mouth blocker, majors fixed) and round 3 **PASS** (3 minors). The later focused orchestrator review
+found a major arm-raise snap (see the newer entry at the top); D-107's no-major gate is therefore **not met**. Details
+and gotchas: `docs/spikes/rowan-rig-test.md`. Clip: `~/ai-studio/scratch/rowan-rig-test/clip.mp4`.
 **Not checked:** breathing and sway were seen only in stills. The new scripts have long-line lint warnings only (like the
-other spikes). **Next:** the owner watches the clip; if it passes, the three-quarter view, then the slice.
+other spikes). **Next:** correct the arm raise and have it independently reviewed; then ask the owner to judge the motion
+foundation. The earlier next-step sentence is superseded by the focused finding above.
 
 ## 2026-11-02: plan after the Codex handoff (D-107)
 

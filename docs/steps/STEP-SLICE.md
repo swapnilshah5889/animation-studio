@@ -44,9 +44,10 @@ crowds, cloth or hair simulation, or complex acting.
 
 ## Current gate (D-107, 2026-11-02)
 
-Cast is Rowan (D-105, D-106). The **front-only rig test** in `docs/spikes/rowan-rig-test.md` is complete and passed
-independent review; the owner still needs to watch the clip and accept this motion foundation. Do not begin the 30-second
-slice or more turnaround work until that decision and a bounded task brief are recorded. The film direction is
+Cast is Rowan (D-105, D-106). The **front-only rig test** in `docs/spikes/rowan-rig-test.md` has a round-3 independent
+PASS, but a focused orchestrator review found a major arm-raise snap. Its no-major gate is not met. Do not begin the
+30-second slice or more turnaround work until the arm motion is corrected, independently reviewed, and the owner accepts
+the motion foundation. The film direction is
 storybook limited animation: front and three-quarter views, cuts instead of full turns, a short walk with feet hidden or
 one simple side-view cycle, and a walk-away ending. Tasks below still include legacy Rain/Snow instructions and must be
 reconciled before implementation.

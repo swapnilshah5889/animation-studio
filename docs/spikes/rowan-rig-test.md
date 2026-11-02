@@ -3,9 +3,10 @@
 **Question:** can Rowan's approved painted watercolour art (D-106) move well as a 2.5D cut-out rig in Blender,
 before we spend more on turnaround views?
 
-**Answer: yes.** After three review rounds by an independent reviewer (a separate agent that did not build the clip),
-the verdict is **PASS** with three minors. The art stays on-model, matches the painted plate, and survives a camera
-push-in, a head tilt, blinks, talking, a smile and a wave. Waiting for the owner to watch it.
+**Initial answer: yes, after review round 3. Current answer: not yet.** The independent reviewer passed round 3 with three
+minors, but a focused orchestrator review found a major snap in the arm raise. The no-major feasibility gate is not met
+until that motion is corrected and reviewed again. The artwork remains on-model and the camera/head motion work, but this
+is not production-ready.
 
 ## What was built
 
@@ -55,16 +56,26 @@ The storybook limited-animation plan holds: drawing swaps plus rotations on pain
 camera and acting stay gentle. A wave or any new pose costs one repainted drawing and its in-betweens. The open risks
 for the 30 s film are a walk (shot 1 and shot 4) and the three-quarter views (the AI turnaround failed before).
 
-## Orchestrator visual review (2026-11-02)
+## Orchestrator visual review (2026-11-02; focused follow-up supersedes gate verdict)
 
-I independently inspected the final `clip.mp4` using `skills/animation-review/`: the 12-frame sheet, motion data, and
-three crops (face, wave, mouth). Verdict: **PASS for the narrow feasibility question**, not for production readiness.
+I inspected the final `clip.mp4` using `skills/animation-review/`: a 12-frame sheet, motion data, and three crops (face,
+wave, mouth). On the first pass, I recorded **PASS for the narrow feasibility question**, not production readiness.
 Rowan stays recognizable; the painted plate is visually compatible; the head/face remain together; framing holds; and
-the camera push is smooth. Measured frame change: median 2.015, maximum 3.94, with no 5x-median spikes.
+the camera push is smooth. The full-frame difference statistic was median 2.015, maximum 3.94, with no 5x-median spikes.
 
-I agree with the independent review's three minor findings: the first wave in-between reaches far outward and has a puffy
-sleeve, the face stays worried while waving, and the talking mouth is faint at full-frame scale. The clip demonstrates a
-small plane-and-swap motion prototype; it does not demonstrate locomotion, a turn, a three-quarter view, audio, or a
-complete rig. Breathing and sway were not inspected in motion. The owner still needs to watch the clip and decide whether
-this is an acceptable foundation for the slice. My evidence files are outside the repository at
-`~/ai-studio/scratch/rowan-rig-test/orchestrator-review/`.
+### Focused wave-sequence follow-up
+
+After the owner questioned the arm raise, I generated a 12-frame sheet of 1.3–1.9 s and re-read the arm keys in
+`scripts/spikes/rowan_rig_blend.py`. Revised verdict: **NEEDS WORK for the motion-foundation gate**. The arm is down at
+1.48 s; the replacement body/arm drawing appears at 1.52 s with the arm nearly horizontal; by 1.62 s the arm is near
+vertical. The hard visibility swap combined with rapid rotations reads as a snap, a major motion defect. The global
+frame-change statistic missed it because the arm occupies a small share of the frame. Sequence evidence is in
+`~/ai-studio/scratch/rowan-rig-test/wave-sequence-review/`.
+
+Focused review file: `~/ai-studio/scratch/rowan-rig-test/wave-sequence-review/review.md`.
+
+I retain the independent review's other three findings: the in-between sleeve is puffy and hand small, the face stays
+worried while waving, and the talking mouth is faint at full-frame scale. The prototype still demonstrates consistent
+appearance and a smooth camera, but not a walk, turn, three-quarter view, audio, or complete rig. Breathing and sway were
+not inspected in motion. The clip should not be presented as having cleared the D-107 no-major gate until the arm raise
+is corrected and independently reviewed; no fix has been started.

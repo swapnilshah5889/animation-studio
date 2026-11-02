@@ -20,15 +20,16 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 - **Turnaround:** not approved. The reference-conditioned three-quarter and side views changed the canonical red back
   garment and rounded cap. Bounded corrections did not resolve those details; the final cap edit retained a visor and
   top button and cropped Rowan at the thighs. Independent review returned **NEEDS WORK**.
-- **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. Independent review passed
-  round 3 with three minors; the orchestrator reviewed the actual clip and agrees it passes this narrow test.
+- **Front-only feasibility rig:** built as a six-second, 1080p24 2.5D plane-and-swap prototype. Independent review
+  passed round 3 with three minors, but the orchestrator's focused review found a major arm-raise snap at 1.5–1.62 s.
+  The no-major gate is not met; no correction has started.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
-  its PASS as approval of the 30-second slice.
+  the independent reviewer's PASS as approval of the 30-second slice. Focused review found a major that remains open.
 - **Generation:** stopped. No image-generation process should be assumed to be running.
 - **Pending:** owner watches `~/ai-studio/scratch/rowan-rig-test/clip.mp4` and decides whether the motion foundation is
   acceptable. The turnaround remains unapproved.
-- **Latest verified repository state before this handoff:** local `main` was at `226fc69`. The Rowan test and review are
-  recorded in `docs/PROGRESS.md`, `docs/spikes/rowan-rig-test.md`, and D-107.
+- **Latest verified repository state before this review update:** local `main` was at `d5fe2b7`. The Rowan test and
+  focused arm review are recorded in `docs/PROGRESS.md`, `docs/spikes/rowan-rig-test.md`, and D-107.
 
 The detailed evidence, model/settings, seeds, reviewer scope, and scratch artifact paths are in
 `docs/spikes/character-art-proof.md`. The chronological project record is `docs/PROGRESS.md`; older entries describe
@@ -44,25 +45,24 @@ Treat them as existing code/history, not permission to expand scope now. The res
 
 ## Next decision and recommended path
 
-**Result 2026-11-02:** the front-only rig test passed independent review (round 3 PASS, three minors); the orchestrator
-also inspected the contact sheet and three crops and agrees it passes the limited feasibility question. The owner still
-needs to watch the clip and accept the foundation.
+**Result 2026-11-02:** the independent reviewer returned round-3 PASS, but a focused orchestrator review found a major
+arm-raise snap (down at 1.48 s, almost horizontal at 1.52 s, near vertical by 1.62 s). The global motion statistic missed
+it because the arm is a small part of the image. The no-major gate is not met. See `docs/spikes/rowan-rig-test.md` and
+the sequence evidence under `~/ai-studio/scratch/rowan-rig-test/wave-sequence-review/`.
 
 **D-107:** the owner approved testing Rowan's front-view painted art as a 2.5D cut-out rig before doing more turnaround
 work. That test is complete. The AI turnaround remains on hold. A manual/layered turnaround has not been approved.
 
-**Completed rig test:**
-1. Cut the approved canonical (`~/ai-studio/scratch/character-art-proof/canonical/rowan-canonical.png`) into layers:
-   head, hair, cap, torso with the red back garment, upper and lower arms, hands, legs. Fill areas hidden behind parts
-   with local inpainting in the same model and style (SDXL Base 1.0 + StorybookRedmondV2, settings in
-   `rowan-notes.json`). Add 3 to 4 mouth shapes and open/closed eyes in the same style.
-2. Rig in Blender (flat layers in depth, bones, mesh bending at elbows and knees) and render 6 s, front-facing: breathe,
-   blink, talk, a small head tilt, a wave, and a slow camera push-in over a painted background.
-3. Independent review (`skills/animation-review/README.md`, `docs/craft/visual-review.md`), then the owner watches it.
+**What the prototype actually contains:** a SAM-cut full-body drawing, a separate head, one repainted wave-arm overlay,
+eye/mouth swap patches, and a painted background. Blender stacks them as image planes; it uses a body drawing swap for
+the wave, a rigid rotation of the raised-arm plane, a small head tilt, a slight body scale change, and a camera push-in.
+It does **not** have independently rigged upper/lower arms, separate legs, elbow/knee mesh deformation, or a walk cycle.
+See `docs/spikes/rowan-rig-test.md` and `scripts/spikes/rowan_rig_blend.py` for exact details.
 
-**Gate now:** independent review has no blocker or major, but the owner has not yet said the art moves well enough to
-build the slice on. Ask the owner to watch the clip. Do not start the slice or more turnaround generation until that
-decision and a bounded next-task brief are recorded.
+**Gate now:** the independent review's pass is superseded for gate purposes by the orchestrator's focused major finding.
+Do not ask the owner to approve this as a sound motion foundation yet. The arm raise needs a bounded correction and
+fresh independent review. Do not start that correction until its done-when is agreed; do not start the slice or more
+turnaround generation meanwhile.
 
 The current `docs/steps/STEP-SLICE.md` still contains legacy Rain/Snow task descriptions below its D-107 gate. Reconcile
 those before implementation. The current direction is storybook-style limited animation: use cuts instead of full
