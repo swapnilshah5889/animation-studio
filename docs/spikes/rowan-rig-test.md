@@ -111,3 +111,25 @@ is about 1.5x the opposite sleeve's width. Final verdict remains **NEEDS WORK**;
 model matching. The independent reviewer saw no second major in the sampled sheet, but did not review playback or
 full-resolution crops. No code or art changes were made. The blocker and path forward are recorded in `PROGRESS.md` and
 `HANDOFF.md`.
+
+## Rowan arm replacement and five-pose gate (2026-11-03)
+
+The approved canonical's far arm is partly hidden by the vest and backpack; the visible sleeve alone is not a complete
+moving limb. One bounded replacement attempt used a local inpaint (arm seed 9201), a SAM mask, and one torso-restoration
+inpaint (seed 9301), then split the arm into overlapping upper-arm, forearm, and hand planes. Generated media stayed
+outside the repository.
+
+The first five-pose render showed a solid black upper arm. A separate read-only code diagnosis found a Blender depth
+bug: `plane()` baked depth into mesh coordinates and then assigned the same depth to the pivoted object's location,
+placing the upper arm coplanar with its shoulder occluder. A paired depth correction removed that artifact in the rerender.
+
+The depth-corrected stills were independently reviewed with the repository visual rubric. Verdict: **NEEDS WORK**.
+Two majors remain: the hand is a thin pink streak/spike with no readable palm, and the arm lift reveals a vivid lime-green
+patch between the vest and backpack. At rest, the hand/cuff blends into the pack. The canonical face and costume remain
+recognizable. Motion between poses, timing, audio, and a full clip were not reviewed. The pose gate is not met; do not
+render a clip from these layers.
+
+Evidence: `~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/` and the independent report at
+`~/ai-studio/scratch/rowan-arm-candidate-v3/render/review.md`. The depth correction is a verified narrow technical fix,
+but the broader candidate code remains uncommitted because the art gate fails. Further pivot or mask tweaks will not
+solve the missing hand silhouette or hidden garment art; resume at the rig-ready-art gate, not with animation polish.

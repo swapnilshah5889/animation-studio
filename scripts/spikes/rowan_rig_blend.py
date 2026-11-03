@@ -55,8 +55,8 @@ def plane(name: str, image: Path, w_px: int, h_px: int, depth: float, parent=Non
     ob.data.materials.append(mat)
     if pivot is not None:  # move the origin to the pivot without moving the picture
         px, pz = pivot[0] * PX, -pivot[1] * PX
-        ob.data.transform(__import__("mathutils").Matrix.Translation((-px, 0, -pz)))
-        ob.location = (px, 0, pz)
+        ob.data.transform(__import__("mathutils").Matrix.Translation((-px, -depth, -pz)))
+        ob.location = (px, depth, pz)
     if parent is not None:
         bpy.context.view_layer.update()  # matrix_world is stale until the depsgraph updates
         world = ob.matrix_world.copy()

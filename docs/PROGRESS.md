@@ -2,14 +2,78 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's 6-second front-only Blender rig test is **not yet a pass**. The arm raise moves continuously,
-but the shoulder/sleeve reads as detached and puffy, and the forearm/hand are too thin and small. The owner authorized a
-focused art-and-joint repair; no implementation has started. See `docs/steps/STEP-ROWAN-ARM-REPAIR.md` and
-`docs/HANDOFF.md`.
+**Current step:** Rowan's updated arm candidate **fails the five-pose gate** and is no-go for a clip. A verified Blender
+depth correction removed the black upper arm; the lime-green exposed torso patch and unreadable thin hand remain. The
+art/layer candidate remains uncommitted.
+
+## 2026-11-03: Depth correction verified; Rowan art gate still fails
+
+A read-only code audit traced the black upper arm to a duplicated depth offset in the pivoted plane transform. A paired
+transform correction moves the depth from the mesh origin to the object location, so it is applied once. Rebuilt the same five
+poses in Blender 5.2.3; the sleeve is now teal instead of black. This fixes the technical artifact but does not pass
+the pose gate.
+
+A fresh independent reviewer, given only the updated sheet, Rowan's canonical and the repo visual-review rubric,
+returned **NEEDS WORK**. The reviewer found two majors: a thin pink streak/spike instead of a readable palm in the four
+raised poses, and a vivid lime-green wedge exposed between the vest and backpack in those same poses. At rest the wrist
+is hard to locate against the pack. The sheet shows the face/costume remain recognizable and keeps head/feet framed.
+Motion between poses, timing, audio and the full clip were not checked.
+
+Evidence: `~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/poses-sheet.png` and independent
+`review.md`. The five pose renders were run; no full clip, full test suite, or new image generation followed. The depth
+fix is independently verified as a narrow rendering correction. Do not continue animation polish on this art; next
+work should repair the hand silhouette and hidden garment underlay at the art-design stage, then repeat the still gate.
+The art/layer code remains uncommitted while the visual gate fails; only the depth correction may be isolated from it.
+
+## 2026-11-03: Initial Rowan arm candidate fails independent pose review
+
+Continued the bounded repair after the local torso-restoration job completed. One inpaint (seed 9301) completed in
+239 seconds. Its visible result has a conspicuous lime-green area where the sleeve was removed. Built layers to a new
+scratch directory and rendered five still poses in Blender 5.2.3: rest, low, horizontal, raised, and horizontal with a
+small head tilt. The independent reviewer returned **FAIL**:
+
+- **Blocker, all poses:** the screen-right upper sleeve is solid black instead of continuous teal watercolor.
+- **Major, lifted poses:** a pointed lime-green patch appears between vest and backpack.
+- **Major, low/horizontal poses:** the hand is a thin pink streak; the palm does not read.
+
+My visual review confirms those defects. No five-second clip, full film, or test suite was run. The five-pose sheet and
+independent report are at `~/ai-studio/scratch/rowan-arm-candidate-v2/render/poses/`; torso restoration is at
+`~/ai-studio/scratch/rowan-rig-test/gen/torso_restore/torso_restore_full.png`. The independent reviewer did not assess
+timing, audio, or rig internals.
+
+The unverified art/layer changes in `scripts/spikes/rowan_rig_test.py` and `scripts/spikes/rowan_rig_blend.py` remain
+uncommitted because the visual gate failed. It replaces the earlier arm implementation and includes torso restoration, SAM-derived
+arm pieces, overlapping pivots, and a torso-owned shoulder occluder. Do not polish animation on top of this output. A
+The depth bug was later fixed and visually verified on the same five poses. The remaining defects are art: the hand has
+no clear palm and the exposed garment patch is lime-green. Further pivot tuning will not fix them. No further generation
+is planned for this candidate; return to the rig-ready-art gate before any clip.
+
+A separate five-second acting planner supplied a target beat only (shoulder-led lift, two small wrist-led waves,
+controlled lower, coordinated weight and gaze); it made no code or asset changes.
+
+`scripts/run_first_shot.py`, `.claude/`, and `.codex/` were preserved as unrelated working-tree changes. At the time of
+the initial report, no commit or push was made.
+
+## 2026-11-03: Rowan Arm Asset Integrator — initial pre-validation report
+
+The arm integrator implemented a bounded candidate path: seed 9201 combined with canonical visible sleeve pixels and
+the existing SAM mask; garment exclusion from the moving matte; three overlapping joint pieces with shoulder
+(495,410), elbow (505,539), wrist (520,670); restored body source instead of a darkened stationary sleeve;
+torso-owned shoulder occlusion; preserved image-plane depths when assigning pivots; and five `--poses` stills
+including horizontal with -3° head tilt. At the time of the report, these changes had not been exercised; the
+subsequent layer build and failed independent review are recorded above.
+
+The only generation in that report was torso restoration, seed 9301, using installed SDXL Base + StorybookRedmondV2:
+`uv run --offline --python 3.12 --project studio_core python scripts/spikes/rowan_rig_test.py gen torso_restore`.
+It exited 0 and reported `torso_restore: 1 image(s) in 239 s`. A pre-queue NameError from registration order was
+corrected before the single generation was queued; no second mask/seed was run. No downloads, installs, full tests, or
+full clip.
+
+The initial report did not include layer or pose validation. See the newer entry above.
 
 ## 2026-11-02: owner authorizes Rowan arm, shoulder and hand repair
 
-Prepared `docs/steps/STEP-ROWAN-ARM-REPAIR.md` for Claude Code. Recommended a neutral on-model arm first, then layered
+Prepared `docs/steps/STEP-ROWAN-ARM-REPAIR.md` as an agent-neutral repair brief. Recommended a neutral on-model arm first, then layered
 upper arm, forearm and readable open hand with overlapping shoulder/elbow/wrist pivots; prove four poses before a full
 clip; finish with a fresh independent visual review. This is a handoff only: no art, rig, or render changes have begun.
 

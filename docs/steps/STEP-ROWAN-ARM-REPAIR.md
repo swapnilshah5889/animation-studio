@@ -1,7 +1,8 @@
-# Rowan arm and shoulder repair — Claude Code handoff
+# Rowan arm and shoulder repair
 
-**Status:** owner-authorized focused repair. Start from `main` after `f5425e1`.
-**Owner-visible role:** Rowan Arm-Rig Artist. One time-boxed work session (90 minutes), then independent review.
+**Status:** focused repair in progress; current candidate is **NEEDS WORK** after independent review. No production clip is
+authorized from the current candidate.
+**Owner-visible role:** Rowan Arm Art Integrator, followed by an independent animation reviewer.
 
 ## Goal
 
@@ -31,7 +32,9 @@ Treat this as a small art and joint-layout repair, not another timing pass:
    both the raise and lower.
 
 If a clean layered arm cannot be made from the approved art within the time box, stop and report the limitation with the
-best stills. Do not expand into a new character, turnaround, engine change or full film.
+best stills. Do not expand into a new character, turnaround, engine change or full film. Do not start repeated image
+generation rounds. The current failure points to missing/poor arm and underlay art; pivot changes alone cannot make
+the hand or exposed vest/backpack patch look correct.
 
 ## Done when
 
@@ -65,23 +68,24 @@ best stills. Do not expand into a new character, turnaround, engine change or fu
 - **Regression check in the review:** blinks (1.1, 2.3, 4.7 s), talking (3.2 to 4.6 s), smile (from 4.9 s), headroom at
   the end, and no black or stray patch on the face.
 
-## Resumable task list (tick each when its output exists; resume from the first unticked task)
+## Resumable task list (resume from the first open gate)
 
 Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/rowan_rig_test.py` (jobs) and
 `scripts/spikes/rowan_rig_blend.py` (rig).
 
-- [x] **T1** Brief amended with this list, committed.
-- [x] **T2** `gen arm_neutral`: the inpainted neutral arm, two seeds, picked by eye → `gen/arm_neutral/`.
-- [x] **T3** `layers`: SAM cut, then split into `layers/arm_upper.png`, `arm_fore.png`, `arm_hand.png` with caps;
-  pivots in `layers/arm_pivots.json`.
-- [ ] **T4** Rig: the 3-piece chain replaces `arm_wave`; `--poses` renders four stills (rest, 45 degrees, horizontal,
-  raised) → `poses/`.
-- [ ] **T5** The author checks the four stills (shoulder, elbow, hand), then renders `clip.mp4`.
-- [ ] **T6** A fresh independent reviewer (cropped frame-by-frame arm sequence plus the regression check) →
-  `review-arm-repair.md`.
-- [ ] **T7** PROGRESS, the spike note and this list updated; committed and pushed; intermediates cleaned.
+- [x] **T1** Bounded repair brief and done-when written.
+- [x] **T2 (rejected)** Earlier `arm_neutral` generated several poor candidates; none supplied a usable neutral arm.
+- [x] **T3 (rejected)** The earlier cutout rig rendered, but independent review found detached shoulder and off-model sleeve.
+- [x] **T4 (failed)** Replacement arm/underlay candidate rendered to five still poses. A doubled Blender depth offset
+  made the arm black; the deterministic depth correction removed the black arm.
+- [x] **T5 (failed gate)** Independent review of the depth-corrected five-pose sheet returned **NEEDS WORK**: the hand
+  is a thin streak and the exposed vest/backpack area is lime green. No full clip was rendered.
+- [ ] **T6 (open)** Resolve the two art defects with a coherent arm/hand and garment underlay, then rerender only the
+  five still poses. Do not run another seed search or clip before this gate passes.
+- [ ] **T7 (open)** After the pose gate passes, render the short arm sequence, inspect it independently, update the
+  spike and progress notes, and commit only verified task files.
 
-## Result of this session (2026-11-02): stopped at T4 by the brief's stop rule
+## Historical result (2026-11-02): the first layered arm candidate failed
 
 - **T2** took three tries. Try 1 described Rowan in the prompt, and the model painted whole small children into the arm
   area. Try 2, with an arm-only prompt, gave one usable arm (sleeve too wide and green, the hand read like toes). Try 3
@@ -94,4 +98,23 @@ Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/r
   sleeve hugs the body and has **no shoulder joint art**, meaning no round top that tucks under the vest. Its only pivot
   is the sleeve's top edge, and the hand generation is unreliable. The fix needs real joint design (a round shoulder
   cap overlapping under the torso, a pivot inside the body), and that is art authoring, not more rig code.
-- Not done: T5 and T6 (no clip, no review), since T4 failed by the author's own check.
+- Not done then: the clip gate was blocked by the failed still poses. A later independent review and the second
+  candidate's result are recorded above and in `docs/PROGRESS.md`.
+
+## Latest result (2026-11-03): depth fixed, art gate still fails
+
+The second candidate used local seed 9201 arm art, SAM masking, and one torso restoration (seed 9301). A five-pose
+render initially showed a black upper arm. Independent code diagnosis found that `plane()` baked the depth into the
+mesh and then assigned it again to the pivoted object's location, making the upper arm coplanar with the shoulder
+occluder. The paired depth correction in `scripts/spikes/rowan_rig_blend.py` was rerendered; the sleeve is now teal.
+
+A fresh independent reviewer saw the updated five-pose sheet and returned **NEEDS WORK**. Two majors remain:
+
+- The hand reads as a pink streak or spike, with no palm silhouette.
+- Lifting the arm exposes a vivid lime-green patch between vest and backpack.
+
+The cuff/hand also blends into the backpack at rest. Evidence is under
+`~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/`; the independent report is
+`~/ai-studio/scratch/rowan-arm-candidate-v3/render/review.md`. No motion timing, full clip, audio, or production rig was
+reviewed. Keep the incomplete art/layer candidate uncommitted. The narrowly scoped depth correction may be isolated in
+its own commit; it does not make the candidate pass.
