@@ -2,9 +2,26 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's updated arm candidate **fails the five-pose gate** and is no-go for a clip. A verified Blender
-depth correction removed the black upper arm; the lime-green exposed torso patch and unreadable thin hand remain. The
-art/layer candidate remains uncommitted.
+**Current step:** Rowan's arm-art gate remains **blocked**. The depth correction is verified, but both the layered
+repair and one owner-approved generated-art candidate failed independent review. No animation or integration is
+authorized from these candidates. The next change in art approach needs an owner decision.
+
+## 2026-11-03: One Rowan arm-art candidate rejected
+
+Following the owner's approval, one tightly masked, scratch-only art candidate was generated using the installed local
+ComfyUI workflow (SDXL Base + StorybookRedmondV2, seed 9401, one image; 295 s). No retries or seed search were run.
+The candidate is at `~/ai-studio/scratch/rowan-arm-art-v1/rowan-arm-art-v1.png`; its comparison and run provenance are
+in the same folder. The generation changed no pixels outside its mask, and no canonical art, rig, or repository code
+was changed.
+
+The independent reviewer returned **FAIL** for integration. At full-character scale the arm reads as a hanging olive
+garment panel; no readable cuff, wrist, palm, or thumb establishes a hand. The sleeve color no longer matches Rowan's
+mint shirt, and a rust sliver is detached beside the arm. The face, cap, collar, opposite arm, and foliage remain
+consistent. The reviewer assessed two stills only; it did not assess layer separation, hidden underlay, rigging, or
+motion. The candidate is rejected and must not be integrated or presented as approved art.
+
+This was the single candidate explicitly approved for this pass. No further generation, retry, rigging, or clip work is
+planned automatically. The Rowan arm-art gate remains open; choose a different art-authoring route before continuing.
 
 ## 2026-11-03: Depth correction verified; Rowan art gate still fails
 

@@ -1,6 +1,6 @@
 # Project handoff
 
-**As of:** 2026-11-03 (updated after the Rowan five-pose arm gate)
+**As of:** 2026-11-03 (updated after the Rowan arm-art candidate review)
 **Purpose:** concise, agent-neutral continuation brief for any coding agent using this repository. `AGENTS.md`, the
 roadmap, decision log, progress log, and current step brief remain authoritative; this file
 points to the current state and next gate rather than replacing those sources.
@@ -22,13 +22,14 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
   top button and cropped Rowan at the thighs. Independent review returned **NEEDS WORK**.
 - **Front-only feasibility rig:** the existing six-second, 1080p24 Blender prototype remains a technical experiment,
   not an approved film. The continuous arm rotation fixed the earlier snap, but the shoulder/sleeve still looked off-model.
-  A bounded replacement-arm attempt then failed its five-pose review. A depth bug initially made the new upper arm render
-  black; the paired depth correction removes that black. The current result is **NEEDS WORK**: lifted poses expose a
-  conspicuous lime-green patch between vest and backpack, and the hand remains a thin unreadable streak. The arm/art
-  gate is still blocked.
+  A bounded replacement-arm attempt failed its five-pose review. The depth correction removes a black upper arm, but
+  the exposed vest/backpack patch and hand still failed. One owner-approved, scratch-only generated arm-art candidate
+  was then independently rejected: its arm reads as an olive garment panel, with no readable hand, and its color is
+  off-model. Neither failed candidate is integrated or approved.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
   its review as approval of the 30-second slice. The arm-art major remains open.
-- **Generation:** stopped. Do not start another seed search or full clip. All generation and renders so far are local;
+- **Generation:** stopped after the one explicitly approved art candidate. Do not start another seed search, reroll, or
+  full clip without a new owner decision. All generation and renders so far are local;
   none is a production asset.
 - **Latest pose proof:** five stills (`rest`, `low`, `horizontal`, `raised`, `horizontal_head_tilt`) were built from the
   current uncommitted candidate, then independently reviewed. The black-arm issue was depth ordering, not black pixel
@@ -36,12 +37,19 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
   and the thin unreadable hand. Neither is fixed by the depth change. Evidence is under
   `~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/` and the reviewer report is
   `~/ai-studio/scratch/rowan-arm-candidate-v3/render/review.md`.
+- **Latest art-only test:** one approved local generated candidate (seed 9401) was independently rejected; it is not
+  integrated. At full-figure scale the arm reads as an olive garment panel with no recognizable hand, its color is
+  off-model, and a rust sliver is detached. The reviewer saw two stills only. Candidate and generation provenance are
+  under `~/ai-studio/scratch/rowan-arm-art-v1/`.
 - **Next:** treat the pose gate as failed. Do not build a clip from this candidate. The next art pass needs to supply a
-  convincing open hand and a coherent vest/backpack/armhole underlay before the limb is rigged. One deterministic depth
-  correction is verified visually; the remaining art failures are not solved by more pivot tweaks.
+  convincing on-model arm, readable open hand, and coherent vest/backpack/armhole underlay before the limb is rigged.
+  One deterministic depth correction is verified visually; the remaining art failures are not solved by more pivot
+  tweaks. The one approved generated-art candidate also failed; select a different art-authoring route before any more
+  work.
   `docs/steps/STEP-ROWAN-ARM-REPAIR.md` is the current task brief.
-- **Latest committed code baseline before this repair attempt:** `main` was at `2eda645`. The arm motion fix,
-  review findings and current art blocker are recorded in `docs/PROGRESS.md` and `docs/spikes/rowan-rig-test.md`.
+- **Latest verified code fix:** the depth correction is committed as `ef50721`; the subsequent progress clarification is
+  `c7459b2`. Art experiments remain scratch-only. The current arm-art blocker is recorded in `docs/PROGRESS.md`,
+  `docs/steps/STEP-ROWAN-ARM-REPAIR.md`, and `docs/spikes/rowan-rig-test.md`.
 
 The detailed evidence, model/settings, seeds, reviewer scope, and scratch artifact paths are in
 `docs/spikes/character-art-proof.md`. The chronological project record is `docs/PROGRESS.md`; older entries describe

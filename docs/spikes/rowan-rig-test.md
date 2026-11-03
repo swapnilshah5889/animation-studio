@@ -1,5 +1,17 @@
 # Spike: Rowan front-only rig test (D-107, 2026-11-02)
 
+## Follow-up: single generated arm-art candidate rejected (2026-11-03)
+
+After the owner approved one scratch-only art candidate, one local ComfyUI generation ran (SDXL Base +
+StorybookRedmondV2, seed 9401, batch 1, 295 s; no retries or seed search). Output and provenance are under
+`~/ai-studio/scratch/rowan-arm-art-v1/`. No canonical image, rig, or repository code was changed.
+
+The independent reviewer returned **FAIL for integration** after reviewing two stills. At full-character scale the
+left arm reads as a hanging olive garment panel, not a limb. No cuff, wrist, palm, or thumb makes the open hand
+recognizable. The sleeve color is off-model relative to Rowan's mint shirt, and a detached rust sliver sits beside it.
+Face, cap, collar, opposite arm and foliage remain consistent. Layer separation, hidden pixels, rigging and motion were
+not assessed. This candidate is rejected; do not integrate it or generate another without a new owner decision.
+
 **Question:** can Rowan's approved painted watercolour art (D-106) move well as a 2.5D cut-out rig in Blender,
 before we spend more on turnaround views?
 

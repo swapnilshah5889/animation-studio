@@ -1,7 +1,8 @@
 # Rowan arm and shoulder repair
 
-**Status:** focused repair in progress; current candidate is **NEEDS WORK** after independent review. No production clip is
-authorized from the current candidate.
+**Status:** blocked after two failed art approaches. The single owner-approved scratch-only generated-art candidate
+received an independent **FAIL**. No current candidate is authorized for integration or production animation; await a
+new art-authoring direction.
 **Owner-visible role:** Rowan Arm Art Integrator, followed by an independent animation reviewer.
 
 ## Goal
@@ -80,10 +81,19 @@ Outputs live in `~/ai-studio/scratch/rowan-rig-test/`. Script: `scripts/spikes/r
   made the arm black; the deterministic depth correction removed the black arm.
 - [x] **T5 (failed gate)** Independent review of the depth-corrected five-pose sheet returned **NEEDS WORK**: the hand
   is a thin streak and the exposed vest/backpack area is lime green. No full clip was rendered.
-- [ ] **T6 (open)** Resolve the two art defects with a coherent arm/hand and garment underlay, then rerender only the
+- [ ] **T6 (blocked)** Resolve the two art defects with a coherent arm/hand and garment underlay, then rerender only the
   five still poses. Do not run another seed search or clip before this gate passes.
-- [ ] **T7 (open)** After the pose gate passes, render the short arm sequence, inspect it independently, update the
+- [ ] **T7 (blocked)** After the pose gate passes, render the short arm sequence, inspect it independently, update the
   spike and progress notes, and commit only verified task files.
+
+### One approved generated-art candidate (2026-11-03): rejected
+
+The owner approved one scratch-only candidate using the installed local model, with no retries. Independent review
+returned **FAIL**: the arm reads as an olive garment panel, with no recognizable cuff, wrist, palm, or thumb; the sleeve
+is off-model (olive rather than mint); a rust-colored sliver is detached beside it. The reviewer saw two stills only and
+did not assess rigging, hidden underlay, or motion. Evidence and provenance are under
+`~/ai-studio/scratch/rowan-arm-art-v1/`. Do not integrate, reroll, or proceed to a clip. T6 remains blocked until the
+owner chooses a different art-authoring route.
 
 ## Historical result (2026-11-02): the first layered arm candidate failed
 
