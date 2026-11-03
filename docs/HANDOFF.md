@@ -23,7 +23,9 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
   so the wave reads as fist-shaking, and the result reads as a cel-shaded 3D game asset rather than drawn 2D. The
   head turn, arm attachment and walk contact were judged good. Not approved. Do not iterate, switch assets or adopt it
   without an owner decision; the options are in `docs/PROGRESS.md` (2026-11-03 entry). Asset and render live only in
-  scratch; the asset is not yet recorded in `docs/MODELS.md`.
+  scratch. **D-108:** the owner adopted this route. The fix brief `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` is
+  PROPOSED and awaits owner approval and the hand-route choice; do not implement before then. The asset is recorded
+  in `docs/MODELS.md`.
 - **Canonical art:** Rowan's single front-view illustration is approved by the owner. The independent reviewer found one
   minor eye-gaze imbalance; the owner accepted it. The image and face crop are outside the repository at
   `~/ai-studio/scratch/character-art-proof/canonical/`.

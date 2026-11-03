@@ -5,6 +5,9 @@ Update this at the end of every working session. Newest entry at the top.
 **Current step:** Rowan's arm-art gate remains **blocked**. A separate foundation test of an openly licensed rigged
 asset (KayKit Rogue, CC0) rendered but received independent **NEEDS WORK** (3 majors). Neither route is approved. The
 next art/rig foundation direction needs an owner decision.
+**Update (2026-11-03, D-108):** the owner adopted the KayKit rig-and-action route. A bounded fix brief,
+`docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md`, is PROPOSED and awaits approval, including the owner's choice of hand
+route (A or B). Nothing has been implemented.
 
 ## 2026-11-03: Character foundation test (open rigged asset): NEEDS WORK
 

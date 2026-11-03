@@ -1865,3 +1865,12 @@ production assets. See `docs/steps/STEP-CHARACTER-ART-PROOF.md`.
 
 ## D-107: Front-only rig test of Rowan before more turnaround work (2026-11-02)
 Codex's handoff recommended a hand-authored layered turnaround after the AI turnaround failed review. The orchestrator recommended, and the owner approved, testing the risky piece first: can Rowan's approved painted watercolour art move well as a 2.5D cut-out rig in Blender? Painted art cut into rigid parts failed in the first film and the bake-off (no hidden-limb art, baked shading, turns), and 3D under a painted look failed in D-104, so the motion method is the open risk, not more views. The test cuts the canonical front view into layers with inpainted hidden areas and renders a 6 s front-facing acting clip (breathe, blink, talk, head tilt, wave, push-in) for independent review and the owner. The turnaround waits until it passes. The slice moves to storybook-style limited animation (front and three-quarter views, cuts instead of turns).
+
+## D-108: Adopt the KayKit rig-and-action route as the foundation candidate (2026-11-03)
+The open-asset foundation test (KayKit Adventurers 2.0 Rogue with the KayKit Character Animations 1.1 actions, both
+CC0 1.0) received an independent **NEEDS WORK** with three majors: a foot pop at the walk-to-stop, a fist hand, and a
+look that reads as a cel-shaded 3D game asset. It still solved the problems that blocked Rowan: limb attachment, foot
+contact, and a coherent whole-head turn. The owner chose to adopt this route and asked for a bounded fix brief before
+any implementation: `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` (status PROPOSED). Rowan's art route is paused, not
+deleted. Evidence: `docs/PROGRESS.md` (2026-11-03 foundation test entry).
+
