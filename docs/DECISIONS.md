@@ -1874,3 +1874,13 @@ contact, and a coherent whole-head turn. The owner chose to adopt this route and
 any implementation: `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` (status PROPOSED). Rowan's art route is paused, not
 deleted. Evidence: `docs/PROGRESS.md` (2026-11-03 foundation test entry).
 
+## D-109: Characters are drawn 2D only (2026-11-03)
+After the KayKit fix pass, the owner asked why the project had moved to 2.5D. The history: D-102 allowed 3D
+character rigs rendered to look drawn, and D-104 delegated the 2D/2.5D choice, which became painterly 2.5D. Every
+3D-rendered character (Rain, KayKit) has since been judged to read as CG. The owner decided that characters are drawn
+2D only. 3D rigs may serve as motion or pose reference, never as the rendered character. Painted backgrounds in depth
+layers remain allowed. The owner also set the process: lay out the character thoroughly first, then animate only once
+the character is complete. This means a model sheet and rig-ready layered parts with hidden underlay, approved before
+any rigging or animation. Supersedes the 3D-rig allowance in D-102 and the 2.5D selection in D-104. D-108 (KayKit
+route) is narrowed to motion reference only. `AGENTS.md` is updated to match.
+

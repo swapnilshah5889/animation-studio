@@ -7,8 +7,10 @@ points to the current state and next gate rather than replacing those sources.
 
 ## Current direction
 
-The project is pursuing one owner-reviewed vertical slice before resuming the broader studio roadmap. The end product
-should look like drawn 2D/2.5D children's animation. Blender is the active engine; OpenToonz is parked for a later hero
+The project is pursuing one owner-reviewed vertical slice before resuming the broader studio roadmap. **Characters are
+drawn 2D only (D-109, 2026-11-03)**: no 3D character rigs; a 3D rig may serve only as motion reference. Each character
+is designed and built completely (model sheet and rig-ready layered parts with hidden underlay) and approved before
+animation. The end product should look like drawn 2D children's animation. Blender is the active engine; OpenToonz is parked for a later hero
 tier and Synfig is legacy. Rain and Snow are technical rig baselines, not approved film characters. See D-101 through
 D-106 and the Reset section of `docs/ROADMAP.md`.
 

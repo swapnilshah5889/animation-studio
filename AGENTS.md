@@ -29,11 +29,11 @@ Read these before doing anything, in this order:
 
 - **Fully local at runtime.** No paid APIs and no API keys. After models are downloaded, the whole
   pipeline must run offline. (A free Hugging Face token for gated *downloads* is fine.)
-- **The finished films look 2D or 2.5D (owner, 2026-10-31, D-102).** To get there, characters may be 3D rigs
-  rendered to look drawn (cel shading, line outlines, painted textures, optionally animated on twos) in Blender,
-  in front of painted backgrounds in depth. 3D is a production means, not the look: no photoreal or obviously
-  CG-looking renders. The cut-out puppet pipeline is legacy; hand-drawn 2D (Grease Pencil, OpenToonz) stays the
-  long-term hero tier.
+- **Characters are drawn 2D only (owner, 2026-11-03, D-109; supersedes the 3D-rig allowance in D-102).** No 3D
+  character rigs, toon-shaded or otherwise. A 3D rig may still serve as motion or pose reference, never as the
+  rendered character. Backgrounds may be painted plates arranged in depth (camera parallax), which is still 2D.
+  Character art is designed and built completely (model sheet and rig-ready layered parts, including hidden
+  underlay) and approved before any animation. Hand-drawn 2D (Grease Pencil, OpenToonz) stays the long-term hero tier.
   Anime-style tiers come later (see ARCHITECTURE "Future tiers").
 - **Open-source apps first.** Wrap them through their file formats, command-line tools and APIs
   (level 1). Add in-app plugins (level 2) only when needed, and modify app source (level 3) only as a
