@@ -2,9 +2,37 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** the KayKit foundation fix pass (D-108) ran once and received an independent **NEEDS WORK**
-(2 majors, both about the look). The motion majors are fixed: the stop pop and the fist hand. The look gate is still
-open; the next step needs an owner decision. Rowan's arm-art gate stays paused.
+**Current step:** owner-approved Rowan art creation from the canonical reference (D-110 amendment). The first
+direct-generated torso/arm component draft received independent **NEEDS WORK**; no new part is accepted, and the
+character-build-spec gates remain open. No rigging or animation.
+
+## 2026-11-03: Direct-generated Rowan parts need another art pass
+
+The owner asked why components should not be generated directly instead of cutting them from a flattened image, then
+authorized completing Rowan's art with agent help. The rationale is that a crop can preserve only visible pixels; it
+cannot invent the chest, shoulder or limb paint hidden under overlapping parts. Direct component generation can supply
+that missing art, but it does not guarantee identity, layer boundaries, shared canvas registration or clean alpha.
+
+Generated a torso-underlay candidate and a separate three-piece arm sheet using the built-in image generator with the
+approved Rowan canonical as reference. Outputs and derived previews are scratch-only under
+`~/ai-studio/scratch/character-art-proof/rowan-arm-parts-v1/`. The sheet was cropped into upper-arm, forearm and open-hand
+files; this isolates already generated components and is not a cut-up of the full character. A 40% alpha threshold and
+5 px erosion were used for the preview crops. The generated hand reads as an open palm. The torso still combines several
+garment layers, its vest/details drift from the canonical, the sleeve parts are not a coherent neutral limb set, and
+small edge protrusions remain. The images are not at the required full-view registered canvas size, and no assembly,
+joint-limit or pose proof was made.
+
+**Independent review: NEEDS WORK; no parts accepted for assembly.** The reviewer found a brighter/more patterned vest,
+uncertain joint registration and underlap, and only one oversized hand pose. It did not inspect source alpha channels or
+dimensions; direct inspection confirms RGBA files exist, but the full package's alpha and registration gates remain
+unverified. The cream-board preview is only a visual comparison. No code, rig, or animation changed, no tests were run,
+and no art was committed to the repository. Detailed evidence is in `docs/spikes/character-art-proof.md` and the scratch
+folder above.
+
+**Next:** continue with direct generation from the canonical, one part at a time, preserving exact outfit colors and
+watercolor marks. First make a registered torso layer and a neutral arm set that can be composited without visible
+shoulder pads or color drift. Review the assembled rest and raised stills before creating the remaining character
+parts. Do not treat the current components as approved or begin animation.
 
 ## 2026-11-03: KayKit foundation fix pass: motion fixed, look still NEEDS WORK
 

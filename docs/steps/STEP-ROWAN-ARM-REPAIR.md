@@ -1,8 +1,8 @@
 # Rowan arm and shoulder repair
 
-**Status:** blocked after two failed art approaches. The single owner-approved scratch-only generated-art candidate
-received an independent **FAIL**. No current candidate is authorized for integration or production animation; await a
-new art-authoring direction.
+**Status:** active, owner-authorized art creation from Rowan's approved canonical (D-110 amendment). The first
+direct-generated torso/arm draft received independent **NEEDS WORK**; no current component is approved for integration
+or animation. Continue only within the bounded component-art and pose-proof gates below.
 **Owner-visible role:** Rowan Arm Art Integrator, followed by an independent animation reviewer.
 
 ## Goal
@@ -92,8 +92,9 @@ The owner approved one scratch-only candidate using the installed local model, w
 returned **FAIL**: the arm reads as an olive garment panel, with no recognizable cuff, wrist, palm, or thumb; the sleeve
 is off-model (olive rather than mint); a rust-colored sliver is detached beside it. The reviewer saw two stills only and
 did not assess rigging, hidden underlay, or motion. Evidence and provenance are under
-`~/ai-studio/scratch/rowan-arm-art-v1/`. Do not integrate, reroll, or proceed to a clip. T6 remains blocked until the
-owner chooses a different art-authoring route.
+`~/ai-studio/scratch/rowan-arm-art-v1/`. This candidate remains rejected and must not be integrated. The former pause on
+all generation was superseded on 2026-11-03 by the owner's D-110 amendment authorizing a bounded, direct component-art
+route. See `docs/spikes/character-art-proof.md` for the first attempt and its independent NEEDS WORK review.
 
 ## Historical result (2026-11-02): the first layered arm candidate failed
 

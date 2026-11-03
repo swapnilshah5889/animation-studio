@@ -4,6 +4,34 @@
 **Decision:** D-105
 **Outcome:** FAIL; no rig approved.
 
+## 2026-11-03: direct-generated torso and arm parts
+
+Following the owner's approval to help create Rowan's art, used the built-in image generator with the approved canonical
+as a visual reference. This generation is a design experiment outside the local runtime pipeline; it was not made with
+the installed ComfyUI models, and its generator/license details are not yet suitable for a production provenance
+manifest. No model files were downloaded.
+
+Scratch outputs are under `~/ai-studio/scratch/character-art-proof/rowan-arm-parts-v1/`:
+
+- `torso-underlay-direct-v1.png` and `torso-underlay-direct-v2.png`: torso/clothing candidates with alpha; v2 still
+  combines the torso, vest, backpack and shoulder forms rather than delivering separately registered layers.
+- `arm-parts-direct-v3.png`: a generated sheet containing an upper sleeve, forearm and open palm. The sheet was
+  cropped into `upper_arm-v3.png`, `forearm-v3.png` and `open_hand-v3.png` for inspection. They are not registered on
+  a shared full-character canvas and are only component drafts.
+- `parts-board-v3.png` and `torso-underlay-v2-preview.png`: cream-background review previews, not transparent source
+  assets.
+
+The authoring route is promising for inventing hidden art that a crop of the canonical cannot provide. It did not pass
+the art gate: the vest and decorative marks drift, the torso does not separate into the required moving layers, the arm
+set is not demonstrated at neutral full-character scale, and small edge protrusions remain. The hand reads as an open
+palm in isolation, but its scale/style fit is unproven. A separate **Rowan Art Gate Reviewer** returned **NEEDS WORK**
+and found no component ready for assembly. That review saw the canonical and the two cream-background previews; it did
+not inspect source alpha, dimensions or posed assemblies. No rig, pose render, or animation was made.
+
+The next art step is still direct generation from the canonical, with one registered component at a time and a visual
+comparison to the canonical before accepting it. Keep all outputs scratch-only until the character package and pose
+proof pass `docs/craft/character-build-spec.md`.
+
 ## Setup
 
 Two local ComfyUI generations with SDXL Base 1.0 and StorybookRedmondV2 LoRA. No downloads or installs. The first image used 30 steps, CFG 6, DPM++ 2M Karras, seed 418027351. The second used the same model/settings with seed 731904286. Final scratch images and JSON run records are in `~/ai-studio/scratch/character-art-proof/`.

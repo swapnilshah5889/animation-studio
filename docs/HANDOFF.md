@@ -16,9 +16,12 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 
 ## Current stop point
 
-- **Next gate (D-110, 2026-11-03):** the owner is arranging a fully built 2D character to
-  `docs/craft/character-build-spec.md`. When it arrives, agents run the spec's four acceptance gates in order
-  (package, underlay, independently reviewed pose proof, owner approval). Do not rig or animate before then.
+- **Next gate (D-110 amendment, 2026-11-03):** agents are helping create Rowan's art from the approved canonical.
+  Use direct generation for individual parts and hidden underpainting instead of extracting moving parts from the
+  flattened full-body picture. The first torso/arm draft received independent **NEEDS WORK**; no new part is approved.
+  Continue from the detailed review in `docs/PROGRESS.md` and scratch folder
+  `~/ai-studio/scratch/character-art-proof/rowan-arm-parts-v1/`. Each part and view must still pass the four gates in
+  `docs/craft/character-build-spec.md`. Do not rig or animate before they pass.
 - **KayKit fix pass (latest, 2026-11-03):** ran once under `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` (hand A) with
   `scripts/spikes/kaykit_foundation_test.py`. Clip: `~/ai-studio/scratch/character-foundation-test/fix/foundation_fix.mp4`.
   Independent verdict: **NEEDS WORK** with 2 look majors (polygon wedges on the face and outlines along low-poly hair
@@ -51,9 +54,9 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
   off-model. Neither failed candidate is integrated or approved.
 - **Production rig/film:** not started. The prototype does not provide a walk, turn, or three-quarter view; do not treat
   its review as approval of the 30-second slice. The arm-art major remains open.
-- **Generation:** stopped after the one explicitly approved art candidate. Do not start another seed search, reroll, or
-  full clip without a new owner decision. All generation and renders so far are local;
-  none is a production asset.
+- **Generation:** the owner has since authorized AI-assisted creation of Rowan's separate parts. The latest direct-
+  generated torso/arm draft failed independent review and remains scratch-only; it is not a production asset. Continue
+  one bounded component-art task at a time from the canonical; do not start a seed search or render a full clip.
 - **Latest pose proof:** five stills (`rest`, `low`, `horizontal`, `raised`, `horizontal_head_tilt`) were built from the
   current uncommitted candidate, then independently reviewed. The black-arm issue was depth ordering, not black pixel
   data. After correcting depth, the independent verdict is **NEEDS WORK**, with two majors: the lime-green exposed patch

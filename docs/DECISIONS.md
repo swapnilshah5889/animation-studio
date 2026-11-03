@@ -1892,3 +1892,13 @@ with `character.json`, provenance, and four gates: package check, underlay check
 proof, and owner approval. No rigging or animation starts until all four gates pass. The spec has two tiers: a slice
 minimum (front, three-quarter, side) and full.
 
+### D-110 amendment (2026-11-03): owner-directed, AI-assisted art creation
+The owner asked the project agents to help create Rowan's art from the already approved canonical illustration. The
+first route is direct generation of individual character components and hidden underpainting from the canonical as a
+locked reference, rather than cutting moving parts out of the flattened full-body image. Cropping a generated sheet to
+isolate components is acceptable, but it does not prove the parts are registered, cleanly transparent, complete under
+overlaps, or animation-ready. Every component still has to pass the character-build-spec gates. The first torso/arm
+draft received independent **NEEDS WORK** and is not approved for assembly or animation; see the 2026-11-03 progress
+entry and scratch evidence. This amendment supersedes D-110's assumption that the owner must arrange the art, while
+preserving its quality gates.
+
