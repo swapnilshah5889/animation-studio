@@ -2,12 +2,68 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's arm-art gate remains **blocked**. A separate foundation test of an openly licensed rigged
-asset (KayKit Rogue, CC0) rendered but received independent **NEEDS WORK** (3 majors). Neither route is approved. The
-next art/rig foundation direction needs an owner decision.
-**Update (2026-11-03, D-108):** the owner adopted the KayKit rig-and-action route. A bounded fix brief,
-`docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md`, is PROPOSED and awaits approval, including the owner's choice of hand
-route (A or B). Nothing has been implemented.
+**Current step:** the KayKit foundation fix pass (D-108) ran once and received an independent **NEEDS WORK**
+(2 majors, both about the look). The motion majors are fixed: the stop pop and the fist hand. The look gate is still
+open; the next step needs an owner decision. Rowan's arm-art gate stays paused.
+
+## 2026-11-03: KayKit foundation fix pass: motion fixed, look still NEEDS WORK
+
+Brief: `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md`, approved by the owner with hand route A. One pass, stopped under the
+stop rule. Code: `scripts/spikes/kaykit_foundation_test.py` (ruff clean). Clip:
+`~/ai-studio/scratch/character-foundation-test/fix/foundation_fix.mp4` (1920x1080, 24 fps, 126 frames, 5.25 s).
+Review: `fix/review.md`, with evidence in `fix/evidence-review/`.
+
+**Root cause of the old stop pop (new finding):** `Walking_A` and `Idle_A` store 66 leg quaternion keys in opposite
+hemispheres (q and -q are the same rotation). The NLA blends quaternion components linearly, so the blend passed
+near a zero quaternion and the leg flipped for a frame (the probe showed the right foot jumping 0.46-0.59 u). The
+first clip's wave strip also overlapped the walk blend. Fixes, all in code with no hand-keyed bones:
+- align each quaternion key to the previous key's hemisphere, the first to Idle_A's (poses unchanged);
+- pin `Walking_A`'s authored range, which is 25.6 frames at 24 fps, and time-scale the strip to an exact 25-frame cycle;
+- pick the walk exit phase whose feet best match the idle stance (phase 20);
+- fade the walk out with an eased animated influence over 10 frames (a strip's own influence curve; enabling it
+  auto-keys 0 at the current frame, so the script replaces those keys);
+- start the wave only after the walk has faded;
+- layer an upper-body-only copy of `Waving` (root, hips and leg channels removed) so idle keeps the feet;
+- when both feet are down in the stop window, lock root motion to their average.
+
+**Gate checks (numbers):**
+- Planted-foot drift is at most 0.0038 u/frame (limit 0.007).
+- The probe shows no foot jumps over the whole clip.
+- Left-right foot/toe separation is 0.342 in the stop window, equal to the walk's own minimum. Deviation, said
+  plainly: the brief's threshold (idle stance 0.408 minus 10% = 0.367) is unreachable, because the authored walk
+  itself never goes wider than 0.342; I compared against the walk minimum instead.
+- Feet-crop motion over f35-70: max/median is 8.3, so the brief's "3x median" check fails as written. The median
+  there is set by the still idle frames. Against the walk, the stop-window peak (4.5) is 1.2x the walk-only peak (3.67).
+  The frame-by-frame feet tile (f34-49) shows no crossing or snap, and the independent reviewer confirmed it.
+
+**Hand A:** the 182 fist vertices are hidden by an inverted mask on a new vertex group. A 96-vertex beveled
+open mitten (palm, mitten fingers, thumb), coloured from the fist's own skin texel, is weighted 100% to `hand.r`.
+My own four-still check (rest, raise, peak, lower) found the hand readable, attached and blocky.
+
+**Look pass:** smooth shading; head normals from a fitted sphere (Data Transfer, mix 0.85); Freestyle on silhouette,
+contour, external contour and material boundary only (crease and border off) with a calligraphy thickness modifier;
+sun shadow angle 0.5 degrees; camera lowered for feet margin.
+
+**Independent review: NEEDS WORK, 0 blockers, 2 majors, 3 minors.**
+- Fixed: (a) the stop pop (the last step lands around f40, and the feet stay planted from f44); (b) the hand reads as
+  open.
+- Major (look, not fixed): the face still shows hard polygon light/shadow wedges, and outlines still follow low-poly
+  edges inside the hair. It still reads as a cel-shaded 3D game asset.
+- Major (new grading): the flat sky and ground with a ruled horizon line do not match the shaded, outlined character.
+  The first review graded the same background as a minor; this reviewer graded it major.
+- Minors: the arm swings nearly rigidly with short holds; the open hand is blocky, paler than the face, and partly
+  behind the hair at the top of the wave; a thin outline shows under the boot soles at f35-38.
+- Good: on-model with the sample; the walk settles cleanly; the raise and lower ease; the head turn moves hair, face
+  and ears together; margins are fine on every frame; no pops (no frame above 3x the median).
+
+**What this shows:** the motion problems were rig and blend bugs, and the code fixed them deterministically. The
+remaining failures are about how a low-poly 3D asset renders. Settings-level toon tweaks did not reach a drawn 2D
+look. Per the stop rule, no second pass was made. This is not production readiness.
+
+**Next gate (owner decision):** (1) a dedicated look pass on this rig: hand-painted or flat texture treatment for
+the face and hair, outline from an inverted hull or Line Art instead of Freestyle, and a painted background plate in a
+matching style; or (2) accept the motion foundation and pursue a drawn-character route on top of it, for example by
+using this rig's motion as reference for 2D drawings. Usage telemetry is in the session report.
 
 ## 2026-11-03: Character foundation test (open rigged asset): NEEDS WORK
 

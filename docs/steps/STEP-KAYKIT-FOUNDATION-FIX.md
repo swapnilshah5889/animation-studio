@@ -1,6 +1,8 @@
 # KayKit foundation fix pass
 
-**Status:** PROPOSED. Awaiting owner approval; do not implement before then.
+**Status:** APPROVED by the owner 2026-11-03 with hand route **A** (one authored open-mitten hand).
+**Result (2026-11-03):** ran once; independent **NEEDS WORK** (2 look majors). Stopped per the stop rules; see
+`docs/PROGRESS.md`.
 **Decision:** D-108 (owner, 2026-11-03): adopt the KayKit rig-and-action route as the foundation candidate.
 **Roles:** Foundation Fixer (one session), then an Independent Animation Reviewer (a different agent).
 **Time box:** one working session. Stop early under the stop rules below.

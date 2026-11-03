@@ -1,6 +1,6 @@
 # Project handoff
 
-**As of:** 2026-11-03 (updated after the open-asset character foundation test)
+**As of:** 2026-11-03 (updated after the KayKit foundation fix pass)
 **Purpose:** concise, agent-neutral continuation brief for any coding agent using this repository. `AGENTS.md`, the
 roadmap, decision log, progress log, and current step brief remain authoritative; this file
 points to the current state and next gate rather than replacing those sources.
@@ -14,6 +14,12 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 
 ## Current stop point
 
+- **KayKit fix pass (latest, 2026-11-03):** ran once under `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` (hand A) with
+  `scripts/spikes/kaykit_foundation_test.py`. Clip: `~/ai-studio/scratch/character-foundation-test/fix/foundation_fix.mp4`.
+  Independent verdict: **NEEDS WORK** with 2 look majors (polygon wedges on the face and outlines along low-poly hair
+  edges, so it still reads as a cel-shaded 3D asset; and the flat background does not match the character). The stop
+  pop is fixed (cause: quaternion hemisphere mismatch between Walking_A and Idle_A), and the hand now reads as open.
+  Stopped per the stop rule. The next look direction needs an owner decision (options in `docs/PROGRESS.md`).
 - **Open-asset foundation test (latest, 2026-11-03):** KayKit Adventurers 2.0 Rogue plus KayKit Character
   Animations 1.1 (both CC0 1.0, commercial use and modification allowed, attribution optional; verified on
   https://kaylousberg.itch.io/kaykit-adventurers, https://kaylousberg.itch.io/kaykit-character-animations and the
