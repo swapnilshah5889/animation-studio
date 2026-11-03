@@ -1884,3 +1884,11 @@ the character is complete. This means a model sheet and rig-ready layered parts 
 any rigging or animation. Supersedes the 3D-rig allowance in D-102 and the 2.5D selection in D-104. D-108 (KayKit
 route) is narrowed to motion reference only. `AGENTS.md` is updated to match.
 
+## D-110: The owner supplies fully built characters; the spec decides "fully built" (2026-11-03)
+Building a character is a one-time task per character, so the owner will arrange it, using AI or an artist. Agents
+provide and maintain the build spec and run its acceptance gates. The spec is `docs/craft/character-build-spec.md`. It
+covers views, the parts list, hidden underlay and overlapping joints, pivots, hands, mouth and eye sets, packaging
+with `character.json`, provenance, and four gates: package check, underlay check, an independently reviewed pose
+proof, and owner approval. No rigging or animation starts until all four gates pass. The spec has two tiers: a slice
+minimum (front, three-quarter, side) and full.
+

@@ -16,6 +16,9 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 
 ## Current stop point
 
+- **Next gate (D-110, 2026-11-03):** the owner is arranging a fully built 2D character to
+  `docs/craft/character-build-spec.md`. When it arrives, agents run the spec's four acceptance gates in order
+  (package, underlay, independently reviewed pose proof, owner approval). Do not rig or animate before then.
 - **KayKit fix pass (latest, 2026-11-03):** ran once under `docs/steps/STEP-KAYKIT-FOUNDATION-FIX.md` (hand A) with
   `scripts/spikes/kaykit_foundation_test.py`. Clip: `~/ai-studio/scratch/character-foundation-test/fix/foundation_fix.mp4`.
   Independent verdict: **NEEDS WORK** with 2 look majors (polygon wedges on the face and outlines along low-poly hair
