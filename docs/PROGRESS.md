@@ -23,7 +23,8 @@ Evidence: `~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/poses-sheet.p
 `review.md`. The five pose renders were run; no full clip, full test suite, or new image generation followed. The depth
 fix is independently verified as a narrow rendering correction. Do not continue animation polish on this art; next
 work should repair the hand silhouette and hidden garment underlay at the art-design stage, then repeat the still gate.
-The art/layer code remains uncommitted while the visual gate fails; only the depth correction may be isolated from it.
+The depth correction and updated repair record are committed and pushed as `ef50721`; the broader art/layer candidate
+remains uncommitted while the visual gate fails.
 
 ## 2026-11-03: Initial Rowan arm candidate fails independent pose review
 

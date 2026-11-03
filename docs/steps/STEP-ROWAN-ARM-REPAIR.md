@@ -116,5 +116,5 @@ A fresh independent reviewer saw the updated five-pose sheet and returned **NEED
 The cuff/hand also blends into the backpack at rest. Evidence is under
 `~/ai-studio/scratch/rowan-arm-candidate-v3/render/poses/`; the independent report is
 `~/ai-studio/scratch/rowan-arm-candidate-v3/render/review.md`. No motion timing, full clip, audio, or production rig was
-reviewed. Keep the incomplete art/layer candidate uncommitted. The narrowly scoped depth correction may be isolated in
-its own commit; it does not make the candidate pass.
+reviewed. Keep the incomplete art/layer candidate uncommitted. The narrowly scoped depth correction is committed in
+`ef50721`; it does not make the candidate pass.
