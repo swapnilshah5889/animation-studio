@@ -2,9 +2,66 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** Rowan's arm-art gate remains **blocked**. The depth correction is verified, but both the layered
-repair and one owner-approved generated-art candidate failed independent review. No animation or integration is
-authorized from these candidates. The next change in art approach needs an owner decision.
+**Current step:** Rowan's arm-art gate remains **blocked**. A separate foundation test of an openly licensed rigged
+asset (KayKit Rogue, CC0) rendered but received independent **NEEDS WORK** (3 majors). Neither route is approved. The
+next art/rig foundation direction needs an owner decision.
+
+## 2026-11-03: Character foundation test (open rigged asset): NEEDS WORK
+
+**Why:** test whether an existing, openly licensed character with a real rig and authored actions gives a stronger
+art-and-rig foundation than Rowan's painted cut-out. No Rowan files, rig scripts or project code were changed.
+
+**Asset and license (verified on the creator's pages and in the bundled `License.txt`):**
+- KayKit *Character Pack: Adventurers* 2.0, Free tier, by Kay Lousberg: https://kaylousberg.itch.io/kaykit-adventurers
+- KayKit *Character Animations* 1.1, Free tier: https://kaylousberg.itch.io/kaykit-character-animations
+- Both pages: "Asset license: Creative Commons Zero v1.0 Universal" and "Free for personal and commercial use, no
+  attribution required. (CC0 Licensed)". `License.txt` in both zips: "License: (Creative Commons Zero, CC0)
+  http://creativecommons.org/publicdomain/zero/1.0/". Modification: yes. Commercial use: yes. Attribution: optional.
+  The pages ask, but the license does not require, that you not resell unmodified copies.
+- Downloaded at $0 ("No thanks, just take me to the downloads"); no account, key or install. Adventurers zip 13.0 MB
+  (sha256 `abe48f47…c479`), Animations zip 14.9 MB (sha256 `65882f31…be20f`). These are not in `docs/MODELS.md` yet;
+  record them there if the owner adopts the asset.
+- Location (outside the repo): `~/ai-studio/scratch/character-foundation-test/` (`source/zip/`, `asset/`, `PLAN.md`,
+  `project/build_test.py`, `project/foundation_test.blend`, `render/`).
+
+**Structure:** glTF characters skinned to the 23-bone KayKit `Rig_Medium`; the animation pack's actions target the same
+rig (no retargeting). Used `Rogue.glb` (2.14 u tall). The Mage was dropped before any clip render because its hat brim
+hid the waving hand in stills. Actions used: `Walking_A` (in-place, 25 f), `Idle_A`, `Waving` (51 f loop that starts
+raised). No head-turn action exists.
+
+**What was rendered** (Blender 5.2.3, EEVEE, 1920x1080, 24 fps, 132 frames = 5.5 s, 203 s render):
+`~/ai-studio/scratch/character-foundation-test/render/foundation_test.mp4`. NLA strips: Idle base, Walk x2 blending out
+at about f46-58, Waving f54-105 (10 f blend-in = raise, 10 f blend-out = lower), and an additive head layer with 4 eased
+keys on the existing `head` bone (0, 40, 40, 0 degrees yaw, f104-130). The walk's travel is extracted from the planted
+foot each frame (object translation only; measured planted-foot drift is no more than 0.0064 u/frame). Look: a 2-step
+toon ramp times the texture, emission, Freestyle outlines, a flat ground with a cast shadow, a flat sky, and a slow 4%
+push-in. No mesh, vertex or stroke edits and no per-frame bone angles.
+
+**Independent review** (separate agent, repo `animation-review` skill): **NEEDS WORK**, 0 blockers, 3 majors, 4 minors.
+Report: `render/review.md`; evidence: `render/evidence-review/`.
+- Major, f50-55: walk-to-idle stop. The feet scissor and overlap mid-stride, then snap to a planted stand in about 2
+  frames (a pop; the feet-crop motion spikes 3.9x at f54). The orchestrator confirmed this on the feet tile. Likely
+  cause: the linear NLA blend from mid-stride to idle.
+- Major, f60-100: the hand is a closed mitten fist throughout, so the wave reads as fist-shaking.
+- Major, whole clip: it reads as a cel-shaded 3D game asset, not drawn 2D. Outlines trace low-poly edges inside the
+  hair, the face has hard polygon shadow splits, and the cast shadow is soft.
+- Minors: the arm never bends at the elbow and the fist goes behind the hair at the top; short shuffling steps; a
+  placeholder flat background; the boots sit only about 4% above the bottom edge at the end.
+- Good: the whole-head turn is coherent (hair, face, ear and earring move together and smoothly). The arm stays attached,
+  with no gaps or snaps, and eases. The walk shows no visible foot sliding. The character matches the asset's sample image.
+- Not checked by the reviewer: pixel-level foot sliding, every frame of the arm, and hair/cape follow-through. The clip
+  has no audio.
+
+**Result:** gate not passed. Per the brief, no iteration, asset switch or second candidate was made. This is a short
+technical test, not evidence of production readiness. What it shows: an authored rig plus actions solves the
+attachment, walk-contact and head-turn problems that blocked Rowan. The open problems are the asset's fist hands, its
+low-poly 3D look, and a proper walk-to-stop transition.
+
+**Next gate (owner decision):** choose one of (a) adopt this rig/action route and approve one bounded fix pass (a stop
+transition authored on a planted foot, a smoothed-normal or face-shadow treatment, and outline settings), accepting
+mitten hands or adding an open-hand pose; (b) look for a different open asset with open hands and a drawn look;
+(c) return to the Rowan art route. Usage: the asset scout used 63,059 subagent tokens and the reviewer 77,350;
+main-session telemetry is not available here.
 
 ## 2026-11-03: One Rowan arm-art candidate rejected
 

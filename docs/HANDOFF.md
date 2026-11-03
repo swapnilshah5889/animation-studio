@@ -1,6 +1,6 @@
 # Project handoff
 
-**As of:** 2026-11-03 (updated after the Rowan arm-art candidate review)
+**As of:** 2026-11-03 (updated after the open-asset character foundation test)
 **Purpose:** concise, agent-neutral continuation brief for any coding agent using this repository. `AGENTS.md`, the
 roadmap, decision log, progress log, and current step brief remain authoritative; this file
 points to the current state and next gate rather than replacing those sources.
@@ -14,6 +14,16 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 
 ## Current stop point
 
+- **Open-asset foundation test (latest, 2026-11-03):** KayKit Adventurers 2.0 Rogue plus KayKit Character
+  Animations 1.1 (both CC0 1.0, commercial use and modification allowed, attribution optional; verified on
+  https://kaylousberg.itch.io/kaykit-adventurers, https://kaylousberg.itch.io/kaykit-character-animations and the
+  bundled `License.txt`). The test is a 5.5 s 1080p24 Blender clip driven only by the asset's NLA actions (walk, idle,
+  wave) plus a 4-key head layer: `~/ai-studio/scratch/character-foundation-test/render/foundation_test.mp4`. The
+  independent review is **NEEDS WORK** with 3 majors: a feet pop at the walk-to-idle stop (f50-55), a mitten-fist hand
+  so the wave reads as fist-shaking, and the result reads as a cel-shaded 3D game asset rather than drawn 2D. The
+  head turn, arm attachment and walk contact were judged good. Not approved. Do not iterate, switch assets or adopt it
+  without an owner decision; the options are in `docs/PROGRESS.md` (2026-11-03 entry). Asset and render live only in
+  scratch; the asset is not yet recorded in `docs/MODELS.md`.
 - **Canonical art:** Rowan's single front-view illustration is approved by the owner. The independent reviewer found one
   minor eye-gaze imbalance; the owner accepted it. The image and face crop are outside the repository at
   `~/ai-studio/scratch/character-art-proof/canonical/`.
