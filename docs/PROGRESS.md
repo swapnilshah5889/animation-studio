@@ -3,8 +3,9 @@
 Update this at the end of every working session. Newest entry at the top.
 
 **Current step:** Rowan assembled front-view concept v3 is owner-approved and independently reviewed. Four bounded
-component-motion proofs (head/face, arm/shoulder, leg/foot, torso) are authorized in parallel with independent reviews.
-No full animation test until all four pass. A complete rig-ready package is still not done.
+component-motion proofs are authorized with independent reviews. Two builders are active (head/face and arm/shoulder);
+leg/foot and torso are queued because the subagent service caps concurrency at two. No full animation test until all
+four pass. A complete rig-ready package is still not done.
 
 ## 2026-11-03: Owner approves Rowan v3 and four component-motion proofs
 

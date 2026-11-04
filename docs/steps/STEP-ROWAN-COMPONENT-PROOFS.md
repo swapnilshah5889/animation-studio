@@ -1,7 +1,8 @@
 # Rowan component-motion proofs
 
-**Status:** owner-approved 2026-11-03 (D-111). Four bounded proofs may run in parallel after approval of Rowan's
-assembled front concept v3. This is a feasibility gate before any full animation test; it is not a production rig.
+**Status:** owner-approved 2026-11-03 (D-111). Four bounded proofs run in parallel up to the agent service's hard cap
+of two active subagents; remaining proofs begin as slots open. This is a feasibility gate before any full animation
+test; it is not a production rig.
 
 ## Shared rules
 
@@ -30,8 +31,10 @@ assembled front concept v3. This is a feasibility gate before any full animation
 
 ## Gate sequence
 
-1. Four authors build/render in parallel in separate scratch locations.
-2. After every output exists, four independent reviewers review in parallel; no reviewer may review their own work.
+1. Authors build/render in separate scratch locations, with no more than two active at once. Start the next author as
+   soon as a slot opens.
+2. After every output exists, independent reviewers inspect in parallel, up to the same two-agent cap. No reviewer may
+   review their own work.
 3. Orchestrator checks the four reports and artifacts. Failed proofs are recorded and repaired only within their original
    scope. No full animation test until all four pass independently.
 4. Once all four pass, prepare a separate brief for one short full-character animation test.
