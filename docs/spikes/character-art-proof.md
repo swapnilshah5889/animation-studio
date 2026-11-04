@@ -4,6 +4,25 @@
 **Decision:** D-105
 **Outcome:** FAIL; no rig approved.
 
+## 2026-11-03: assembled front concept v3
+
+Generated a complete front-view concept from the approved canonical using the built-in image generator. v1 added
+backpack straps and buckles, changing the canonical rust outer garment; independent review: **NEEDS WORK**. v2 removed
+the buckles but still read as straps and changed Rowan's blue/green eyes to both green with a smile; independent review:
+**NEEDS WORK**. A targeted edit restored the continuous rust outer garment, blue/green heterochromia and quietly
+uncertain expression.
+
+Final candidate: `~/ai-studio/scratch/character-art-proof/rowan-assembled-front-v3.png` (1037×1516 RGBA); visual review
+preview: `rowan-assembled-front-v3-preview.png`. **Independent Rowan Concept Art Reviewer: PASS** for the assembled
+concept. The reviewer found identity, costume, eyes, expression, body proportions, hands, silhouette and storybook style
+acceptable, with no design blockers. It saw the cream-background preview and did not assess native-resolution alpha,
+layers, hidden pixels, pivots or motion. This is not a fully built character, and owner approval remains pending.
+
+Generation used the built-in Codex image tool, not the locally installed ComfyUI pipeline; no downloadable model/license
+was established. Keep this candidate outside the repo until the owner approves it and its provenance is resolved. Next
+gate after owner approval: create the shared-canvas component layers, pass package and underlay checks, then make
+independently reviewed pose proofs. No rigging or animation has started.
+
 ## 2026-11-03: direct-generated torso and arm parts
 
 Following the owner's approval to help create Rowan's art, used the built-in image generator with the approved canonical

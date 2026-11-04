@@ -2,9 +2,40 @@
 
 Update this at the end of every working session. Newest entry at the top.
 
-**Current step:** owner-approved Rowan art creation from the canonical reference (D-110 amendment). The first
-direct-generated torso/arm component draft received independent **NEEDS WORK**; no new part is accepted, and the
-character-build-spec gates remain open. No rigging or animation.
+**Current step:** Rowan assembled front-view concept v3 is owner-approved and independently reviewed. Four bounded
+component-motion proofs (head/face, arm/shoulder, leg/foot, torso) are authorized in parallel with independent reviews.
+No full animation test until all four pass. A complete rig-ready package is still not done.
+
+## 2026-11-03: Owner approves Rowan v3 and four component-motion proofs
+
+The owner approved the assembled front-view concept v3 at
+`~/ai-studio/scratch/character-art-proof/rowan-assembled-front-v3.png` (independent concept review PASS). This is design
+approval, not approval of a flattened image as a rig. Per D-111, run four short, isolated proofs in parallel: head/face,
+arm/shoulder, leg/foot, and torso. Each proof must use direct-generated component art or the already approved concept
+only as a visual reference; do not cut moving parts from the flattened character. Each remains in a separate scratch
+folder, with a separate independent review. No full animation test until all four receive PASS. Production use still
+requires registered layers, hidden underpaint, pivots, character package checks and pose proofs. The specific scopes
+and pass bars are in `docs/steps/STEP-ROWAN-COMPONENT-PROOFS.md`.
+
+## 2026-11-03: Rowan assembled front concept v3 passes independent review
+
+Created a complete front-view Rowan concept from the owner-approved canonical using the built-in image generator,
+then made two focused corrections from independent reviews: replace the backpack-like straps with the canonical rust
+outer garment, and restore Rowan's blue/green heterochromia and quietly uncertain expression. Final scratch image:
+`~/ai-studio/scratch/character-art-proof/rowan-assembled-front-v3.png` (1037×1516, RGBA); cream-background preview:
+`rowan-assembled-front-v3-preview.png` in the same directory. Earlier v1/v2 and review previews remain there as
+iteration evidence.
+
+**Independent review: PASS for concept art.** The reviewer confirmed Rowan's identity, blue/green eyes, expression,
+continuous rust outer garment, proportions, readable relaxed arms/hands, silhouette, detail and storybook texture. No
+design blockers or visible distracting halo on the cream preview. The review did not assess rig layers, hidden underpaint,
+alpha quality at native scale, registration, or animation. The candidate is not rig-ready and is not locked until the
+owner approves this exact image. Image generation used the built-in Codex image tool, not local ComfyUI; generator
+provenance/license is not established for a production manifest. No tests or animation were run, and no art was
+committed.
+
+**Result:** owner approved this exact front concept in the 2026-11-03 follow-up. See D-111 above for the four bounded
+component-motion proofs now in progress.
 
 ## 2026-11-03: Direct-generated Rowan parts need another art pass
 

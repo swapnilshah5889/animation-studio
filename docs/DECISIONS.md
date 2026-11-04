@@ -1902,3 +1902,6 @@ draft received independent **NEEDS WORK** and is not approved for assembly or an
 entry and scratch evidence. This amendment supersedes D-110's assumption that the owner must arrange the art, while
 preserving its quality gates.
 
+## D-111: Approve Rowan front concept and bounded part-motion proofs (2026-11-03)
+The owner approved assembled Rowan front concept v3 (`~/ai-studio/scratch/character-art-proof/rowan-assembled-front-v3.png`), which received an independent concept-art PASS. This approves the front-view design only; it does not approve the flattened illustration as a rig or production asset. The owner authorized four parallel, short component-motion proofs (head/face, arm/shoulder, leg/foot, torso) with independent reviewers running in parallel. Each proof stays isolated in scratch and must report art source, motion range, render evidence and independent verdict. Do not start the full animation test until every component proof passes; a component that cannot be tested without unsupported cutting or missing hidden art is a failed proof, not an assumed pass. The fully layered package and character-build-spec gates remain required before production rigging.
+

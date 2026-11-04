@@ -16,6 +16,14 @@ D-106 and the Reset section of `docs/ROADMAP.md`.
 
 ## Current stop point
 
+- **Rowan front concept (2026-11-03):** assembled concept v3 is at
+  `~/ai-studio/scratch/character-art-proof/rowan-assembled-front-v3.png` with a cream preview beside it. The owner
+  approved this exact concept; independent concept review **PASS**. It is one flattened concept illustration, not a
+  rig-ready layered package.
+- **Current authorized work (D-111):** four short isolated component-motion proofs in parallel (head/face,
+  arm/shoulder, leg/foot, torso), each with its own scratch output and independent reviewer. See
+  `docs/steps/STEP-ROWAN-COMPONENT-PROOFS.md`. Do not start a full animation test until all four pass. No production
+  rigging before the character-build-spec package and underlay gates.
 - **Next gate (D-110 amendment, 2026-11-03):** agents are helping create Rowan's art from the approved canonical.
   Use direct generation for individual parts and hidden underpainting instead of extracting moving parts from the
   flattened full-body picture. The first torso/arm draft received independent **NEEDS WORK**; no new part is approved.
